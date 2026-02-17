@@ -31,15 +31,13 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       ),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     _animationController.forward();
   }
@@ -74,7 +72,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                 children: [
                   // Hero Section
                   const HeroSection(),
-                  
+
                   // Cards de modos
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -83,7 +81,8 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         // Card: Modo Objetivos
                         ModeCard(
                           title: "Modo Objetivos",
-                          subtitle: "Alcanza tus metas con recetas personalizadas según tus objetivos",
+                          subtitle:
+                              "Alcanza tus metas con recetas personalizadas según tus objetivos",
                           icon: Icons.flag_rounded,
                           accentColor: const Color(0xFF27AE60),
                           badgeText: "4 caminos",
@@ -94,7 +93,8 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
                         // Card: Experiencia Culinaria
                         ModeCard(
                           title: "Experiencia Culinaria",
-                          subtitle: "Descubre la cocina auténtica de diferentes países del mundo",
+                          subtitle:
+                              "Descubre la cocina auténtica de diferentes países del mundo",
                           icon: Icons.public_rounded,
                           accentColor: const Color(0xFF3B82F6),
                           badgeText: "Explora",
@@ -172,10 +172,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
       ),
       child: Row(
         children: [
