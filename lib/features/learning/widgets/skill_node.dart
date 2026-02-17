@@ -140,84 +140,109 @@ class _SkillNodeState extends State<SkillNode>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Nodo circular principal
+          // Nodo circular principal con efecto glow
           ScaleTransition(
             scale: widget.status == NodeStatus.active
                 ? _pulseAnimation
                 : _scaleAnimation,
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _getBackgroundColor(),
-                border: Border.all(color: _getNodeColor(), width: 4),
-                boxShadow: widget.status != NodeStatus.locked
-                    ? [
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Glow effect para nodos activos
+                if (widget.status == NodeStatus.active)
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
                         BoxShadow(
-                          color: _getNodeColor().withOpacity(0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+                          color: const Color(0xFFFF6B35).withOpacity(0.4),
+                          blurRadius: 24,
+                          spreadRadius: 4,
                         ),
-                      ]
-                    : [],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: widget.status != NodeStatus.locked
-                      ? widget.onTap
-                      : null,
-                  borderRadius: BorderRadius.circular(45),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Icono principal
-                      Icon(
-                        _getCulinaryIcon(),
-                        size: 40,
-                        color: _getNodeColor(),
+                      ],
+                    ),
+                  ),
+                // Nodo principal
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _getBackgroundColor(),
+                    border: Border.all(color: _getNodeColor(), width: 4),
+                    boxShadow: widget.status != NodeStatus.locked
+                        ? [
+                            BoxShadow(
+                              color: _getNodeColor().withOpacity(0.25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.status != NodeStatus.locked
+                          ? widget.onTap
+                          : null,
+                      borderRadius: BorderRadius.circular(45),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Icono principal
+                          Icon(
+                            _getCulinaryIcon(),
+                            size: 40,
+                            color: _getNodeColor(),
+                          ),
+
+                          // Overlay para completado o bloqueado
+                          if (widget.status == NodeStatus.completed)
+                            Positioned(
+                              bottom: 4,
+                              right: 4,
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF27AE60),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+
+                          if (widget.status == NodeStatus.locked)
+                            Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.3),
+                              ),
+                              child: const Icon(
+                                Icons.lock_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                        ],
                       ),
-
-                      // Overlay para completado o bloqueado
-                      if (widget.status == NodeStatus.completed)
-                        Positioned(
-                          bottom: 4,
-                          right: 4,
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF27AE60),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-
-                      if (widget.status == NodeStatus.locked)
-                        Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withOpacity(0.3),
-                          ),
-                          child: const Icon(
-                            Icons.lock_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
 

@@ -184,6 +184,15 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
       nodeKeys.add(GlobalKey());
     }
 
+    // Calcular estadísticas
+    final completedCount = nodes
+        .where((n) => n['status'] == 'completed')
+        .length;
+    final totalCount = nodes.length;
+    final progressPercent = totalCount > 0
+        ? (completedCount / totalCount * 100).toStringAsFixed(0)
+        : '0';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -200,71 +209,241 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
           nodePositions.add(Offset(x, y));
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 40, bottom: 80),
-          child: SizedBox(
-            height: nodePositions.isNotEmpty
-                ? nodePositions.last.dy + 100
-                : 0,
-            child: Stack(
-              children: [
-                // Dibujar conexiones primero (detrás de los nodos)
-                if (nodePositions.length > 1)
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: PathConnectorPainter(
-                        nodePositions: nodePositions,
-                        lineColor: const Color(0xFFE5E7EB),
-                        strokeWidth: 5,
+        return Stack(
+          children: [
+            // Contenido scrolleable
+            SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 120, bottom: 80),
+              child: SizedBox(
+                height: nodePositions.isNotEmpty
+                    ? nodePositions.last.dy + 100
+                    : 0,
+                child: Stack(
+                  children: [
+                    // Dibujar conexiones primero (detrás de los nodos)
+                    if (nodePositions.length > 1)
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: PathConnectorPainter(
+                            nodePositions: nodePositions,
+                            lineColor: const Color(0xFFE5E7EB),
+                            strokeWidth: 5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
 
-                // Dibujar nodos encima
-                ...List.generate(nodes.length, (index) {
-                  final node = nodes[index] as Map<String, dynamic>;
-                  final nodeId = node['_id'] ?? node['id'] ?? '';
-                  final title = node['title'] ?? 'Nodo ${index + 1}';
-                  final xpReward = node['xpReward'] ?? 0;
-                  final status = _getNodeStatus(node['status'] ?? 'locked');
-                  final nodeType = node['type'] ?? 'recipe';
+                    // Puntos decorativos en las conexiones
+                    if (nodePositions.length > 1)
+                      ...List.generate(nodePositions.length - 1, (index) {
+                        final start = nodePositions[index];
+                        final end = nodePositions[index + 1];
+                        final midX = (start.dx + end.dx) / 2;
+                        final midY = (start.dy + end.dy) / 2;
 
-                  final position = nodePositions[index];
-
-                  return Positioned(
-                    left: position.dx - 60, // Centrar el nodo (120/2)
-                    top: position.dy - 45, // Centrar verticalmente
-                    child: TweenAnimationBuilder<double>(
-                      key: nodeKeys[index],
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 300 + (index * 100)),
-                      curve: Curves.elasticOut,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: Opacity(
-                            opacity: value,
-                            child: child,
+                        return Positioned(
+                          left: midX - 6,
+                          top: midY - 6,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: Duration(
+                              milliseconds: 600 + (index * 150),
+                            ),
+                            curve: Curves.elasticOut,
+                            builder: (context, value, child) {
+                              return Transform.scale(
+                                scale: value,
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(0xFFE5E7EB),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
-                      },
-                      child: SkillNode(
-                        nodeId: nodeId,
-                        title: title,
-                        xpReward: xpReward,
-                        status: status,
-                        nodeType: nodeType,
-                        index: index,
-                        onTap: status != NodeStatus.locked
-                            ? () => _startLesson(nodeId, title, nodeType)
-                            : null,
-                      ),
-                    ),
-                  );
-                }),
-              ],
+                      }),
+
+                    // Dibujar nodos encima
+                    ...List.generate(nodes.length, (index) {
+                      final node = nodes[index] as Map<String, dynamic>;
+                      final nodeId = node['_id'] ?? node['id'] ?? '';
+                      final title = node['title'] ?? 'Nodo ${index + 1}';
+                      final xpReward = node['xpReward'] ?? 0;
+                      final status = _getNodeStatus(node['status'] ?? 'locked');
+                      final nodeType = node['type'] ?? 'recipe';
+
+                      final position = nodePositions[index];
+
+                      return Positioned(
+                        left: position.dx - 60, // Centrar el nodo (120/2)
+                        top: position.dy - 45, // Centrar verticalmente
+                        child: TweenAnimationBuilder<double>(
+                          key: nodeKeys[index],
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: Duration(milliseconds: 300 + (index * 100)),
+                          curve: Curves.elasticOut,
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: Opacity(opacity: value, child: child),
+                            );
+                          },
+                          child: SkillNode(
+                            nodeId: nodeId,
+                            title: title,
+                            xpReward: xpReward,
+                            status: status,
+                            nodeType: nodeType,
+                            index: index,
+                            onTap: status != NodeStatus.locked
+                                ? () => _startLesson(nodeId, title, nodeType)
+                                : null,
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
             ),
-          ),
+
+            // Header flotante con estadísticas
+            Positioned(
+              top: 0,
+              left: 20,
+              right: 20,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, -20 * (1 - value)),
+                    child: Opacity(opacity: value, child: child),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Icono de progreso
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF27AE60).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: CircularProgressIndicator(
+                                value: completedCount / totalCount,
+                                strokeWidth: 4,
+                                backgroundColor: const Color(0xFFE5E7EB),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  Color(0xFF27AE60),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$progressPercent%',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF27AE60),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Información de progreso
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tu Progreso',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$completedCount de $totalCount lecciones',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1F2937),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Badge de motivación
+                      if (completedCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFD93D), Color(0xFFFFA800)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.local_fire_department_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '¡Sigue así!',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -377,6 +556,10 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   }
 }
 
+class _NodeCard extends StatelessWidget {
+  final String nodeId;
+  final String title;
+  final String description;
   final int xpReward;
   final bool isCompleted;
   final bool isLocked;
