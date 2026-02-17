@@ -1,0 +1,173 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
+import 'features/learning/screens/main_experience_screen.dart';
+import 'features/learning/screens/country_selection_screen.dart';
+import 'features/learning/screens/country_hub_screen.dart';
+import 'features/learning/screens/follow_goals_screen.dart';
+import 'features/lessons/lesson_detail_screen.dart';
+import 'features/pantry/pantry_screen.dart';
+import 'features/profile/profile_screen.dart';
+import 'features/admin/admin_panel_screen.dart';
+import 'providers/auth_provider.dart';
+import 'providers/progress_provider.dart';
+
+void main() {
+  runApp(const CappyApp());
+}
+
+class CappyApp extends StatelessWidget {
+  const CappyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => ProgressProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Cappy - Cocina feliz',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
+        home: const SplashScreen(),
+        onGenerateRoute: _onGenerateRoute,
+      ),
+    );
+  }
+}
+
+/// ==============================
+/// SPLASH SCREEN
+/// ==============================
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Escucha los cambios del AuthProvider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      authProvider.addListener(_onAuthStatusChanged);
+      // Si ya terminó de inicializar, navega inmediatamente
+      if (!authProvider.isInitializing) {
+        _navigate(authProvider);
+      }
+    });
+  }
+
+  void _onAuthStatusChanged() {
+    final authProvider = context.read<AuthProvider>();
+    if (!authProvider.isInitializing) {
+      _navigate(authProvider);
+    }
+  }
+
+  void _navigate(AuthProvider authProvider) {
+    if (!mounted) return;
+    if (authProvider.isAuthenticated) {
+      Navigator.of(context).pushReplacementNamed('/main');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
+  @override
+  void dispose() {
+    context.read<AuthProvider>().removeListener(_onAuthStatusChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF3E6),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Logo
+            Image.asset('assets/logo_cappy.png', width: 150, height: 150),
+            const SizedBox(height: 20),
+            // Eslogan
+            const Text(
+              "Cocina feliz",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 40),
+            // Loading
+            const CircularProgressIndicator(color: Colors.orange),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ==============================
+/// ROUTES
+/// ==============================
+Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+  return MaterialPageRoute(
+    settings: settings,
+    builder: (context) {
+      final authProvider = context.watch<AuthProvider>();
+
+      // Si todavía inicializa, mostrar splash
+      if (authProvider.isInitializing) {
+        return const SplashScreen();
+      }
+
+      final name = settings.name ?? "/";
+
+      // Auth routes
+      if (name == "/login") return const LoginScreen();
+      if (name == "/register") return const RegisterScreen();
+
+      if (!authProvider.isAuthenticated) return const LoginScreen();
+
+      // Main routes
+      if (name == "/" || name == "/main" || name == "/experience") {
+        return const MainExperienceScreen();
+      }
+
+      if (name == "/experience/countries") {
+        return const CountrySelectionScreen();
+      }
+
+      if (name == "/goals") {
+        return const FollowGoalsScreen();
+      }
+
+      if (name == "/pantry") return const PantryScreen();
+      if (name == "/profile") return const ProfileScreen();
+      if (name == "/admin") {
+        return authProvider.isAdmin
+            ? const AdminPanelScreen()
+            : const MainExperienceScreen();
+      }
+
+      // Dynamic routes
+      if (name.startsWith("/experience/country/")) {
+        final countryId = name.split('/').last;
+        return CountryHubScreen(countryId: countryId);
+      }
+
+      if (name.startsWith("/lesson/")) return LessonDetailScreen();
+
+      // Default fallback
+      return const MainExperienceScreen();
+    },
+  );
+}
