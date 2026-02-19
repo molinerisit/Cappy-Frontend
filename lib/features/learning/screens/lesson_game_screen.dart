@@ -131,6 +131,9 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   }
 
   void _showCelebration(Map<String, dynamic> result) {
+    final isRepeat = result['isRepeat'] ?? false;
+    final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Leccion Completada!';
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -158,7 +161,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '¡Leccion Completada!',
+                    title,
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,

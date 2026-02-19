@@ -150,6 +150,9 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
 
   /// Muestra el modal de celebración
   void _showCompletionCelebration(Map<String, dynamic> result) {
+    final isRepeat = result['isRepeat'] ?? false;
+    final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Excelente!';
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -181,7 +184,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '¡Excelente!',
+                    title,
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -199,7 +202,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFFFF6B35),
+                          color: Color(0xFFFF6B35),
                         ),
                       ),
                       Text(
@@ -216,7 +219,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF6B7280),
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
