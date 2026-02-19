@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/progress_provider.dart';
 import '../widgets/lesson_progress_header.dart';
 import '../widgets/question_card.dart';
 import '../widgets/option_card.dart';
@@ -131,6 +134,16 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
       final result = await ApiService.completeNode(widget.node.id);
 
       if (!mounted) return;
+
+      // Update user XP and level globally
+      final totalXP = result['totalXP'] as int?;
+      final level = result['level'] as int?;
+      if (totalXP != null && level != null) {
+        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+      }
+
+      // Update progress in ProgressProvider
+      context.read<ProgressProvider>().updateFromNodeCompletion(result);
 
       // Mostrar modal de celebración tipo Duolingo
       _showCompletionCelebration(result);

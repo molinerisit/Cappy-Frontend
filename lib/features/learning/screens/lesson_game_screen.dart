@@ -3,9 +3,12 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/progress_provider.dart';
 
 /// Pantalla de leccion gamificada tipo Duolingo.
 class LessonGameScreen extends StatefulWidget {
@@ -119,6 +122,17 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     try {
       final result = await ApiService.completeNode(widget.node.id);
       if (!mounted) return;
+
+      // Update user XP and level globally
+      final totalXP = result['totalXP'] as int?;
+      final level = result['level'] as int?;
+      if (totalXP != null && level != null) {
+        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+      }
+
+      // Update progress in ProgressProvider
+      context.read<ProgressProvider>().updateFromNodeCompletion(result);
+
       await _playSuccessSound();
       _showCelebration(result);
     } catch (e) {
