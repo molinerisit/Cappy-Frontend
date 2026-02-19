@@ -59,7 +59,7 @@ class AuthProvider extends ChangeNotifier {
       _isInitializing = false;
       notifyListeners();
     } catch (e) {
-      print('Auth initialization error: $e');
+      // Log error locally if needed
       _token = null;
       _isInitializing = false;
       notifyListeners();

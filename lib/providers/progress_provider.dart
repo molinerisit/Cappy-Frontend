@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
 import '../core/api_service.dart';
 import '../models/progress_model.dart';
 
