@@ -1,5 +1,6 @@
 class NodeStep {
   final String title;
+  final String? description;
   final String instruction;
   final String type; // text, image, video, quiz, interactive, checklist
   final String? image;
@@ -14,9 +15,11 @@ class NodeStep {
   final int duration;
   final List<String>? tips;
   final String? media;
+  final List<Map<String, dynamic>>? cards;
 
   NodeStep({
     required this.title,
+    this.description,
     required this.instruction,
     required this.type,
     this.image,
@@ -31,35 +34,150 @@ class NodeStep {
     required this.duration,
     this.tips,
     this.media,
+    this.cards,
   });
 
   factory NodeStep.fromJson(Map<String, dynamic> json) {
+    String _firstNonEmpty(List<dynamic> values, String fallback) {
+      for (final value in values) {
+        if (value == null) {
+          continue;
+        }
+        final text = value.toString().trim();
+        if (text.isNotEmpty) {
+          return text;
+        }
+      }
+      return fallback;
+    }
+
+    List<String>? _parseOptions() {
+      final rawOptions = json['options'] is List
+          ? List<dynamic>.from(json['options'])
+          : (json['answers'] is List
+                ? List<dynamic>.from(json['answers'])
+                : null);
+      if (rawOptions == null) {
+        return null;
+      }
+
+      return rawOptions
+          .map((option) {
+            if (option is Map) {
+              return _firstNonEmpty([
+                option['text'],
+                option['label'],
+                option['value'],
+                option['title'],
+              ], '');
+            }
+            return option?.toString() ?? '';
+          })
+          .map((option) => option.trim())
+          .where((option) => option.isNotEmpty)
+          .toList();
+    }
+
+    final cards = json['cards'] != null
+        ? List<Map<String, dynamic>>.from(json['cards'])
+        : null;
+    final description = json['description']?.toString();
+    String instruction = _firstNonEmpty([
+      json['instruction'],
+      json['content'],
+      json['text'],
+      description,
+    ], '');
+    String? question = json['question'] ?? json['prompt'] ?? json['statement'];
+    List<String>? options = _parseOptions();
+    String? correctAnswer = json['correctAnswer']?.toString();
+
+    if (cards != null && cards.isNotEmpty) {
+      for (final card in cards) {
+        final cardType = card['type']?.toString();
+        final content = card['content'] as Map? ?? {};
+
+        if (instruction.isEmpty) {
+          instruction = _firstNonEmpty([
+            content['text'],
+            content['description'],
+            content['instruction'],
+            content['title'],
+          ], instruction);
+        }
+
+        if ((question == null || question.toString().trim().isEmpty) &&
+            cardType == 'quiz') {
+          question = content['question']?.toString();
+        }
+
+        if ((options == null || options.isEmpty) && cardType == 'quiz') {
+          if (content['options'] is List) {
+            options = (content['options'] as List)
+                .map((option) {
+                  if (option is Map) {
+                    return _firstNonEmpty([
+                      option['text'],
+                      option['label'],
+                      option['value'],
+                      option['title'],
+                    ], '');
+                  }
+                  return option?.toString() ?? '';
+                })
+                .map((option) => option.trim())
+                .where((option) => option.isNotEmpty)
+                .toList();
+          }
+        }
+
+        if ((correctAnswer == null || correctAnswer!.trim().isEmpty) &&
+            cardType == 'quiz' &&
+            content['options'] is List) {
+          for (final option in content['options'] as List) {
+            if (option is Map && option['correct'] == true) {
+              correctAnswer = _firstNonEmpty([
+                option['text'],
+                option['label'],
+                option['value'],
+                option['title'],
+              ], '');
+              break;
+            }
+          }
+        }
+      }
+    }
+
     return NodeStep(
-      title: json['title'] ?? '',
-      instruction: json['instruction'] ?? '',
+      title: json['title'] ?? json['name'] ?? '',
+      description: description,
+      instruction: instruction,
       type: json['type'] ?? 'text',
       image: json['image'],
       video: json['video'],
       animationUrl: json['animationUrl'],
-      question: json['question'],
-      options: json['options'] != null
-          ? List<String>.from(json['options'])
-          : null,
-      correctAnswer: json['correctAnswer'],
+      question: question?.toString(),
+      options: options,
+      correctAnswer: correctAnswer,
       checklist: json['checklist'] != null
           ? List<Map<String, dynamic>>.from(json['checklist'])
           : null,
       validationLogic: json['validationLogic'],
       feedback: json['feedback'],
       duration: json['duration'] ?? 0,
-      tips: json['tips'] != null ? List<String>.from(json['tips']) : null,
+      tips: (json['tips'] as List?)
+          ?.map((item) => item?.toString() ?? '')
+          .toList(),
       media: json['media'],
+      cards: cards,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'title': title,
+      'description': description,
       'instruction': instruction,
       'type': type,
       'image': image,
@@ -74,6 +192,7 @@ class NodeStep {
       'duration': duration,
       'tips': tips,
       'media': media,
+      'cards': cards,
     };
   }
 }
@@ -171,17 +290,21 @@ class LearningNode {
 
   factory LearningNode.fromJson(Map<String, dynamic> json) {
     return LearningNode(
-      id: json['_id'] ?? '',
-      countryId: json['countryId'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      type: json['type'] ?? 'skill',
-      difficulty: json['difficulty'] ?? 'medium',
+      id: json['_id']?.toString() ?? '',
+      countryId: json['countryId']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'skill',
+      difficulty: json['difficulty']?.toString() ?? 'medium',
       xpReward: json['xpReward'] ?? 50,
       order: json['order'] ?? 0,
-      requiredNodes: List<String>.from(json['requiredNodes'] ?? []),
+      requiredNodes:
+          (json['requiredNodes'] as List?)
+              ?.map((item) => item?.toString() ?? '')
+              .toList() ??
+          [],
       level: json['level'] ?? 1,
-      category: json['category'] ?? 'technique',
+      category: json['category']?.toString() ?? 'technique',
       steps:
           (json['steps'] as List?)
               ?.map((item) => NodeStep.fromJson(item))
@@ -197,18 +320,22 @@ class LearningNode {
           ? List<Map<String, dynamic>>.from(json['tools'])
           : null,
       nutrition: json['nutrition'],
-      tips: json['tips'] != null ? List<String>.from(json['tips']) : null,
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
+      tips: (json['tips'] as List?)
+          ?.map((item) => item?.toString() ?? '')
+          .toList(),
+      tags: (json['tags'] as List?)
+          ?.map((item) => item?.toString() ?? '')
+          .toList(),
       isPremium: json['isPremium'] ?? false,
       media: json['media'],
-      unlocksNodes: json['unlocksNodes'] != null
-          ? List<String>.from(json['unlocksNodes'])
-          : null,
+      unlocksNodes: (json['unlocksNodes'] as List?)
+          ?.map((item) => item?.toString() ?? '')
+          .toList(),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
-      status: json['status'],
-      position: json['position'],
+      status: json['status']?.toString(),
+      position: json['position']?.toString(),
     );
   }
 

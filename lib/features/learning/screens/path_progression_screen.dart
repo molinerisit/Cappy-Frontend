@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
-import '../../lessons/lesson_flow_screen.dart';
+import '../../../core/models/learning_node.dart';
+import '../screens/lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
 import '../widgets/path_connector_painter.dart';
 
@@ -22,7 +23,6 @@ class PathProgressionScreen extends StatefulWidget {
 class _PathProgressionScreenState extends State<PathProgressionScreen>
     with TickerProviderStateMixin {
   late Future<Map<String, dynamic>> futurePathData;
-  final List<GlobalKey> nodeKeys = [];
   final List<Offset> nodePositions = [];
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -66,20 +66,16 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
 
     try {
       final nodeData = await ApiService.getLearningNode(nodeId);
-      final steps = nodeData['steps'] as List<dynamic>? ?? [];
 
       if (!mounted) return;
-
       Navigator.of(context).pop();
+
+      // Convertir nodeData a LearningNode
+      final learningNode = LearningNode.fromJson(nodeData);
 
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => LessonFlowScreen(
-            lessonId: nodeId,
-            lessonTitle: title,
-            lessonType: nodeType,
-            steps: steps,
-          ),
+          builder: (context) => LessonGameScreen(node: learningNode),
         ),
       );
 
@@ -179,11 +175,6 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   }
 
   Widget _buildNodePath(List<dynamic> nodes) {
-    nodeKeys.clear();
-    for (int i = 0; i < nodes.length; i++) {
-      nodeKeys.add(GlobalKey());
-    }
-
     // Calcular estadísticas
     final completedCount = nodes
         .where((n) => n['status'] == 'completed')
@@ -215,9 +206,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
             SingleChildScrollView(
               padding: const EdgeInsets.only(top: 120, bottom: 80),
               child: SizedBox(
-                height: nodePositions.isNotEmpty
-                    ? nodePositions.last.dy + 100
-                    : 0,
+                height: nodes.isNotEmpty ? 40.0 + (nodes.length * 180.0) : 0,
                 child: Stack(
                   children: [
                     // Dibujar conexiones primero (detrás de los nodos)
@@ -248,7 +237,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                             duration: Duration(
                               milliseconds: 600 + (index * 150),
                             ),
-                            curve: Curves.elasticOut,
+                            curve: Curves.easeOut,
                             builder: (context, value, child) {
                               return Transform.scale(
                                 scale: value,
@@ -272,42 +261,64 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
 
                     // Dibujar nodos encima
                     ...List.generate(nodes.length, (index) {
-                      final node = nodes[index] as Map<String, dynamic>;
-                      final nodeId = node['_id'] ?? node['id'] ?? '';
-                      final title = node['title'] ?? 'Nodo ${index + 1}';
-                      final xpReward = node['xpReward'] ?? 0;
-                      final status = _getNodeStatus(node['status'] ?? 'locked');
-                      final nodeType = node['type'] ?? 'recipe';
+                      if (index >= nodePositions.length) {
+                        return const SizedBox.shrink();
+                      }
 
-                      final position = nodePositions[index];
+                      try {
+                        final node = nodes[index] as Map<String, dynamic>?;
+                        if (node == null) {
+                          return const SizedBox.shrink();
+                        }
 
-                      return Positioned(
-                        left: position.dx - 60, // Centrar el nodo (120/2)
-                        top: position.dy - 45, // Centrar verticalmente
-                        child: TweenAnimationBuilder<double>(
-                          key: nodeKeys[index],
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: Duration(milliseconds: 300 + (index * 100)),
-                          curve: Curves.elasticOut,
-                          builder: (context, value, child) {
-                            return Transform.scale(
-                              scale: value,
-                              child: Opacity(opacity: value, child: child),
-                            );
-                          },
-                          child: SkillNode(
-                            nodeId: nodeId,
-                            title: title,
-                            xpReward: xpReward,
-                            status: status,
-                            nodeType: nodeType,
-                            index: index,
-                            onTap: status != NodeStatus.locked
-                                ? () => _startLesson(nodeId, title, nodeType)
-                                : null,
+                        final nodeId =
+                            (node['_id'] ?? node['id'] ?? '') as String;
+                        final title =
+                            (node['title'] ?? 'Nodo ${index + 1}') as String;
+                        final xpReward = (node['xpReward'] ?? 0) as int;
+                        final status = _getNodeStatus(
+                          (node['status'] ?? 'locked') as String,
+                        );
+                        final nodeType = (node['type'] ?? 'recipe') as String;
+
+                        final position = nodePositions[index];
+
+                        return Positioned(
+                          left: position.dx - 60, // Centrar el nodo (120/2)
+                          top: position.dy - 45, // Centrar verticalmente
+                          child: TweenAnimationBuilder<double>(
+                            key: ValueKey(nodeId),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: Duration(
+                              milliseconds: 300 + (index * 100),
+                            ),
+                            curve: Curves.easeOut,
+                            builder: (context, value, child) {
+                              return Transform.scale(
+                                scale: 0.8 + (value * 0.2),
+                                child: Opacity(
+                                  opacity: value.clamp(0.0, 1.0),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: SkillNode(
+                              nodeId: nodeId,
+                              title: title,
+                              xpReward: xpReward,
+                              status: status,
+                              nodeType: nodeType,
+                              index: index,
+                              onTap: status != NodeStatus.locked
+                                  ? () => _startLesson(nodeId, title, nodeType)
+                                  : null,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } catch (e) {
+                        debugPrint('Error renderizando nodo $index: $e');
+                        return const SizedBox.shrink();
+                      }
                     }),
                   ],
                 ),
