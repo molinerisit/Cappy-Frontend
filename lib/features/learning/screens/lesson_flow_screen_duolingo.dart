@@ -246,7 +246,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context); // Close dialog
-                        Navigator.pop(context); // Close lesson screen
+                        Navigator.pop(context, true); // Close lesson screen
                         widget.onComplete?.call();
                       },
                       style: ElevatedButton.styleFrom(

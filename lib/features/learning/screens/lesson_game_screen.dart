@@ -219,7 +219,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        Navigator.pop(context);
+                        Navigator.pop(context, true);
                         widget.onComplete?.call();
                       },
                       style: ElevatedButton.styleFrom(
