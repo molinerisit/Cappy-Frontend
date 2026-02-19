@@ -5,6 +5,7 @@ import '../../../core/models/learning_node.dart';
 import '../screens/lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
 import '../widgets/path_connector_painter.dart';
+import '../../../widgets/user_xp_badge.dart';
 
 class PathProgressionScreen extends StatefulWidget {
   final String pathId;
@@ -171,6 +172,12 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         ),
       ),
       centerTitle: true,
+      actions: const [
+        Padding(
+          padding: EdgeInsets.only(right: 16.0),
+          child: Center(child: UserXPBadge()),
+        ),
+      ],
     );
   }
 
@@ -585,7 +592,6 @@ class _NodeCard extends StatelessWidget {
     required this.isCompleted,
     required this.isLocked,
     required this.nodeType,
-    this.onTap,
   });
 
   String _getNodeIcon() {
