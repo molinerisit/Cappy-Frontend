@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'features/auth/welcome_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/learning/screens/main_experience_screen.dart';
@@ -82,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacementNamed('/main');
     } else {
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/welcome');
     }
   }
 
@@ -141,13 +142,15 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
 
       final name = settings.name ?? "/";
 
-      // Auth routes
+      // Auth routes (accesibles sin autenticarse)
+      if (name == "/welcome") return const WelcomeScreen();
       if (name == "/login") return const LoginScreen();
       if (name == "/register") return const RegisterScreen();
 
-      if (!authProvider.isAuthenticated) return const LoginScreen();
+      // Si no está autenticado, redirigir a welcome
+      if (!authProvider.isAuthenticated) return const WelcomeScreen();
 
-      // Main routes
+      // Main routes (requieren autenticación)
       if (name == "/" || name == "/main" || name == "/experience") {
         return const MainExperienceScreen();
       }
