@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
-import '../screens/lesson_game_screen.dart';
+import 'lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
 import '../widgets/path_connector_painter.dart';
 import '../../../widgets/user_xp_badge.dart';

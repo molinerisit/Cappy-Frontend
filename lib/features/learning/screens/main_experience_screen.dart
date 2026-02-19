@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'culinary_experience_screen.dart';
 import 'follow_goals_screen.dart';
-import '../../widgets/user_xp_badge.dart';
+import '../../../widgets/user_xp_badge.dart';
 
 class MainExperienceScreen extends StatefulWidget {
   const MainExperienceScreen({super.key});
