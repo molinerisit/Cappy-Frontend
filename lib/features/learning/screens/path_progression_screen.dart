@@ -111,8 +111,10 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         return NodeStatus.completed;
       case 'locked':
         return NodeStatus.locked;
-      default:
+      case 'active':
         return NodeStatus.active;
+      default:
+        return NodeStatus.locked;
     }
   }
 

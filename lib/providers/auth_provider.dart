@@ -90,6 +90,22 @@ class AuthProvider extends ChangeNotifier {
 
       await _storage.write(key: _tokenKey, value: token);
       await _storage.write(key: _roleKey, value: role);
+
+      // Obtener perfil para sincronizar XP desde servidor
+      try {
+        final profile = await ApiService.getProfile();
+        final userTotalXP = (profile['totalXP'] ?? 0) as int;
+        final userLevel = (profile['level'] ?? 1) as int;
+
+        _totalXP = userTotalXP;
+        _level = userLevel;
+
+        await _storage.write(key: _totalXPKey, value: userTotalXP.toString());
+        await _storage.write(key: _levelKey, value: userLevel.toString());
+      } catch (e) {
+        // Si falla obtener perfil, usar valores guardados localmente
+        // (no es crítico, los datos se actualizarán en la siguiente acción)
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
