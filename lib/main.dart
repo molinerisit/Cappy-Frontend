@@ -49,13 +49,20 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  AuthProvider? _authProvider;
+  bool _hasListener = false;
+
   @override
   void initState() {
     super.initState();
     // Escucha los cambios del AuthProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      authProvider.addListener(_onAuthStatusChanged);
+      _authProvider = authProvider;
+      if (!_hasListener) {
+        authProvider.addListener(_onAuthStatusChanged);
+        _hasListener = true;
+      }
       // Si ya terminó de inicializar, navega inmediatamente
       if (!authProvider.isInitializing) {
         _navigate(authProvider);
@@ -81,7 +88,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
-    context.read<AuthProvider>().removeListener(_onAuthStatusChanged);
+    if (_hasListener) {
+      _authProvider?.removeListener(_onAuthStatusChanged);
+      _hasListener = false;
+    }
     super.dispose();
   }
 

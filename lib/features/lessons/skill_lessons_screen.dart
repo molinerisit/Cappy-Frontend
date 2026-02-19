@@ -12,6 +12,28 @@ class _SkillLessonsScreenState extends State<SkillLessonsScreen> {
   late Map<String, dynamic> skill;
   bool isLoading = false;
 
+  String _stepText(dynamic step) {
+    if (step is String) {
+      return step;
+    }
+
+    if (step is Map) {
+      final instruction = step["instruction"]?.toString();
+      final content = step["content"]?.toString();
+      final text = step["text"]?.toString();
+      final description = step["description"]?.toString();
+      final title = step["title"]?.toString();
+
+      for (final value in [instruction, content, text, description, title]) {
+        if (value != null && value.trim().isNotEmpty) {
+          return value;
+        }
+      }
+    }
+
+    return step?.toString() ?? "";
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -175,7 +197,7 @@ class _SkillLessonsScreenState extends State<SkillLessonsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        step["instruction"] ?? "",
+                                        _stepText(step),
                                         style: const TextStyle(fontSize: 15),
                                       ),
                                       if (step["timer"] != null &&

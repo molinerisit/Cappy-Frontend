@@ -29,6 +29,38 @@ class LessonModel {
 
   factory LessonModel.fromJson(Map<String, dynamic> json) {
     final status = json["status"]?.toString() ?? "locked";
+    final rawSteps = (json["steps"] as List?) ?? const [];
+    final steps = rawSteps
+        .map((step) {
+          if (step is String) {
+            return step;
+          }
+
+          if (step is Map) {
+            final instruction = step["instruction"]?.toString();
+            final content = step["content"]?.toString();
+            final text = step["text"]?.toString();
+            final description = step["description"]?.toString();
+            final title = step["title"]?.toString();
+
+            for (final value in [
+              instruction,
+              content,
+              text,
+              description,
+              title,
+            ]) {
+              if (value != null && value.trim().isNotEmpty) {
+                return value;
+              }
+            }
+          }
+
+          return step.toString();
+        })
+        .where((value) => value.trim().isNotEmpty)
+        .toList();
+
     return LessonModel(
       id: json["id"]?.toString() ?? json["_id"]?.toString() ?? "",
       title: json["title"]?.toString() ?? "",
@@ -38,9 +70,7 @@ class LessonModel {
       completed: status == "completed",
       xpReward: (json["xpReward"] as num?)?.toInt() ?? 0,
       ingredients: (json["ingredients"] as List?) ?? const [],
-      steps: ((json["steps"] as List?) ?? const [])
-          .map((step) => step.toString())
-          .toList(),
+      steps: steps,
       nutrition: json["nutrition"] as Map<String, dynamic>?,
       tips: ((json["tips"] as List?) ?? const [])
           .map((tip) => tip.toString())
