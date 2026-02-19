@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import 'features/auth/welcome_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
+import 'features/auth/onboarding_intro_screen.dart';
+import 'features/auth/onboarding_mode_selection_screen.dart';
+import 'features/auth/onboarding_goals_screen.dart';
+import 'features/auth/onboarding_countries_screen.dart';
 import 'features/learning/screens/main_experience_screen.dart';
 import 'features/learning/screens/country_selection_screen.dart';
 import 'features/learning/screens/country_hub_screen.dart';
@@ -146,6 +150,10 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       if (name == "/welcome") return const WelcomeScreen();
       if (name == "/login") return const LoginScreen();
       if (name == "/register") return const RegisterScreen();
+      if (name == "/onboarding/intro") return const OnboardingIntroScreen();
+      if (name == "/onboarding/mode") return const OnboardingModeSelectionScreen();
+      if (name == "/onboarding/goals") return const OnboardingGoalsScreen();
+      if (name == "/onboarding/countries") return const OnboardingCountriesScreen();
 
       // Si no está autenticado, redirigir a welcome
       if (!authProvider.isAuthenticated) return const WelcomeScreen();
