@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'culinary_experience_screen.dart';
 import 'follow_goals_screen.dart';
+import '../../widgets/user_xp_badge.dart';
 
 class MainExperienceScreen extends StatefulWidget {
   const MainExperienceScreen({super.key});
@@ -39,6 +40,9 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
         ),
         backgroundColor: const Color(0xFFFF6B35),
         elevation: 0,
+        actions: const [
+          Padding(padding: EdgeInsets.only(right: 16.0), child: UserXPBadge()),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
