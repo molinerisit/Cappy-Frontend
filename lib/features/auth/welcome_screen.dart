@@ -189,7 +189,7 @@ class WelcomeScreen extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
-                );
+                ),
               ),
             ),
 
