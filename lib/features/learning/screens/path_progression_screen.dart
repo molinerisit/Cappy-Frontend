@@ -582,7 +582,6 @@ class _NodeCard extends StatelessWidget {
   final bool isCompleted;
   final bool isLocked;
   final String nodeType;
-  final VoidCallback? onTap;
 
   const _NodeCard({
     required this.nodeId,
@@ -616,7 +615,6 @@ class _NodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
