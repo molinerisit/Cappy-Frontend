@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/api_service.dart';
+import '../../../providers/onboarding_selection_provider.dart';
 import 'register_screen.dart';
 
 class OnboardingGoalsScreen extends StatefulWidget {
@@ -118,12 +120,13 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                       final title = goal['title'] ?? 'Objetivo';
                       final description = goal['description'] ?? '';
                       final emoji = _getEmojiForGoal(title);
+                      final goalId = goal['_id'] ?? goal['id'] ?? '';
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: GestureDetector(
                           onTap: () {
-                            _handleGoalSelected(title);
+                            _handleGoalSelected(goalId, title);
                           },
                           child: Container(
                             decoration: BoxDecoration(
@@ -145,16 +148,17 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: () {
-                                  _handleGoalSelected(title);
+                                  _handleGoalSelected(goalId, title);
                                 },
                                 borderRadius: BorderRadius.circular(16),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Row(
                                     children: [
-                                      Text(emoji,
-                                          style: const TextStyle(
-                                              fontSize: 32)),
+                                      Text(
+                                        emoji,
+                                        style: const TextStyle(fontSize: 32),
+                                      ),
                                       const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
@@ -176,12 +180,12 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w400,
-                                                  color:
-                                                      const Color(0xFF666666),
+                                                  color: const Color(
+                                                    0xFF666666,
+                                                  ),
                                                 ),
                                                 maxLines: 1,
-                                                overflow:
-                                                    TextOverflow.ellipsis,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                           ],
@@ -264,7 +268,15 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
     return '🎯';
   }
 
-  void _handleGoalSelected(String goalTitle) {
+  void _handleGoalSelected(String goalId, String goalTitle) async {
+    // Guardar la selección en el provider
+    final selectionProvider = context.read<OnboardingSelectionProvider>();
+    await selectionProvider.saveSelection(
+      mode: 'goals',
+      selectionId: goalId,
+      selectionName: goalTitle,
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡Excelente! Elegiste: $goalTitle'),
@@ -274,11 +286,11 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
     );
 
     Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const RegisterScreen(),
-        ),
-      );
+      if (mounted) {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
+      }
     });
   }
 }

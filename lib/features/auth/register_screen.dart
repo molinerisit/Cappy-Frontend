@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/onboarding_selection_provider.dart';
+import '../../core/api_service.dart';
+import '../learning/screens/follow_goals_screen.dart';
+import '../learning/screens/country_hub_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
 
@@ -75,8 +79,82 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, "/mode");
+        await _navigateAfterRegistration();
       }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _navigateAfterRegistration() async {
+    final selectionProvider = context.read<OnboardingSelectionProvider>();
+    await selectionProvider.loadSelection();
+
+    if (!mounted) return;
+
+    if (selectionProvider.hasSelection()) {
+      final mode = selectionProvider.mode;
+      final selectionId = selectionProvider.selectionId;
+      final selectionName = selectionProvider.selectionName;
+
+      // Limpiar la selección después de usarla
+      await selectionProvider.clearSelection();
+
+      if (mode == 'goals' && selectionId != null) {
+        // Navegar a FollowGoalsScreen
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/goals');
+        }
+      } else if (mode == 'countries' && selectionId != null) {
+        // Navegar a CountryHubScreen con el país seleccionado
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => CountryHubScreen(
+                countryId: selectionId,
+                countryName: selectionName,
+                countryIcon: '🌍',
+              ),
+            ),
+          );
+        }
+      } else {
+        // Sin selección, ir a la pantalla principal
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/main');
+        }
+      }
+    } else {
+      // Sin selección, ir a la pantalla principal
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/main');
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // TODO: Integrar con Google Sign-In cuando esté disponible
+      // Por ahora, mostrar un mensaje de que está en desarrollo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Funcionalidad próximamente'),
+          backgroundColor: const Color(0xFFFF6B35),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -291,6 +369,80 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       ? null
                                       : _handleRegister,
                                   isLoading: _isLoading,
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Divisor
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: const Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      child: Text(
+                                        "o",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF9CA3AF),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: const Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Google Sign-In Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: OutlinedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _handleGoogleSignIn,
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Color(0xFFE5E7EB),
+                                        width: 2,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Text(
+                                          '🔐',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Registrarse con Google",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF1F2937),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

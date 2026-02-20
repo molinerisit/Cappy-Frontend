@@ -17,6 +17,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/admin/admin_panel_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
+import 'providers/onboarding_selection_provider.dart';
 
 void main() {
   runApp(const CappyApp());
@@ -31,6 +32,7 @@ class CappyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
+        ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
       ],
       child: MaterialApp(
         title: 'Cappy - Cocina feliz',
@@ -151,9 +153,11 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       if (name == "/login") return const LoginScreen();
       if (name == "/register") return const RegisterScreen();
       if (name == "/onboarding/intro") return const OnboardingIntroScreen();
-      if (name == "/onboarding/mode") return const OnboardingModeSelectionScreen();
+      if (name == "/onboarding/mode")
+        return const OnboardingModeSelectionScreen();
       if (name == "/onboarding/goals") return const OnboardingGoalsScreen();
-      if (name == "/onboarding/countries") return const OnboardingCountriesScreen();
+      if (name == "/onboarding/countries")
+        return const OnboardingCountriesScreen();
 
       // Si no está autenticado, redirigir a welcome
       if (!authProvider.isAuthenticated) return const WelcomeScreen();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/api_service.dart';
+import '../../../providers/onboarding_selection_provider.dart';
 import 'register_screen.dart';
 
 class OnboardingCountriesScreen extends StatefulWidget {
@@ -115,22 +117,21 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.85,
-                    ),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.85,
+                        ),
                     itemCount: countries.length,
                     itemBuilder: (context, index) {
                       final country = countries[index];
                       final name = country['name'] ?? 'País';
                       final icon = country['icon'] ?? '🌍';
-                      final countryId =
-                          country['_id'] ?? country['id'] ?? '';
+                      final countryId = country['_id'] ?? country['id'] ?? '';
 
                       return GestureDetector(
                         onTap: () {
-                          _handleCountrySelected(name);
+                          _handleCountrySelected(countryId, name);
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -240,7 +241,15 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
     );
   }
 
-  void _handleCountrySelected(String countryName) {
+  void _handleCountrySelected(String countryId, String countryName) async {
+    // Guardar la selección en el provider
+    final selectionProvider = context.read<OnboardingSelectionProvider>();
+    await selectionProvider.saveSelection(
+      mode: 'countries',
+      selectionId: countryId,
+      selectionName: countryName,
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡Genial! Elegiste: $countryName'),
@@ -250,11 +259,11 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
     );
 
     Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const RegisterScreen(),
-        ),
-      );
+      if (mounted) {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
+      }
     });
   }
 }

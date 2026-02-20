@@ -24,9 +24,7 @@ class UserXPBadge extends StatelessWidget {
         return GestureDetector(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const ProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
           },
           child: Container(

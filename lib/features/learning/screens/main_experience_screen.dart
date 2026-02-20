@@ -31,7 +31,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          '🍳 Cappy',
+          'Cappy',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
