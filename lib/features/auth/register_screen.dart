@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/onboarding_selection_provider.dart';
 import '../../core/api_service.dart';
+import 'login_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
 
@@ -413,7 +414,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                           // Link de login
                           TextButton(
                             onPressed: () {
-                              Navigator.pop(context);
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                              );
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
