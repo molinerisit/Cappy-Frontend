@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'widgets/mode_card.dart';
-import 'widgets/hero_section.dart';
+import '../../core/app_colors.dart';
+import 'widgets/game_header.dart';
+import 'widgets/continue_card.dart';
+import 'widgets/explore_card.dart';
 
+/// Pantalla Home rediseñada con estilo moderno tipo Duolingo
+/// Muestra progreso, opciones de continuar y explorar modos
 class ModeSelectionScreen extends StatefulWidget {
   const ModeSelectionScreen({super.key});
 
@@ -20,7 +24,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
@@ -32,10 +36,10 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     );
 
     _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+        Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _animationController,
-            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+            curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
           ),
         );
 
@@ -59,120 +63,140 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: _buildAppBar(),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero Section
-                  const HeroSection(),
-
-                  // Cards de modos
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        // Card: Modo Objetivos
-                        ModeCard(
-                          title: "Modo Objetivos",
-                          subtitle:
-                              "Alcanza tus metas con recetas personalizadas según tus objetivos",
-                          icon: Icons.flag_rounded,
-                          accentColor: const Color(0xFF27AE60),
-                          badgeText: "4 caminos",
-                          onTap: () => _openMode(context, "goal", "Objetivos"),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Card: Experiencia Culinaria
-                        ModeCard(
-                          title: "Experiencia Culinaria",
-                          subtitle:
-                              "Descubre la cocina auténtica de diferentes países del mundo",
-                          icon: Icons.public_rounded,
-                          accentColor: const Color(0xFF3B82F6),
-                          badgeText: "Explora",
-                          onTap: () => _openMode(
-                            context,
-                            "country",
-                            "Experiencia Culinaria",
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Mensaje informativo (opcional)
-                        _buildInfoCard(),
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
+      backgroundColor: AppColors.background,
+      body: Column(
         children: [
-          const Text("🍳", style: TextStyle(fontSize: 24)),
-          const SizedBox(width: 8),
-          Text(
-            "Cappy",
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
-              letterSpacing: 0.3,
+          // Header compacto con nivel y XP
+          const GameHeader(),
+
+          // Contenido scrollable
+          Expanded(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppColors.spacing24,
+                    vertical: AppColors.spacing24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Sección: Continuar
+                      const ContinueCard(),
+
+                      const SizedBox(height: AppColors.spacing32),
+
+                      // Título: Explorar
+                      Text(
+                        'Explorar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+
+                      const SizedBox(height: AppColors.spacing8),
+
+                      Text(
+                        'Elige tu camino de aprendizaje',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+
+                      const SizedBox(height: AppColors.spacing20),
+
+                      // Lista horizontal de opciones
+                      SizedBox(
+                        height: 200,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            // Card: Experiencia Culinaria
+                            ExploreCard(
+                              emoji: '🌍',
+                              title: 'Experiencia Culinaria',
+                              subtitle: 'Explora cocinas del mundo',
+                              accentColor: AppColors.info,
+                              onTap: () => _openMode(
+                                context,
+                                "country",
+                                "Experiencia Culinaria",
+                              ),
+                            ),
+
+                            const SizedBox(width: AppColors.spacing16),
+
+                            // Card: Modo Objetivos
+                            ExploreCard(
+                              emoji: '🎯',
+                              title: 'Mis Objetivos',
+                              subtitle: 'Alcanza tus metas personales',
+                              accentColor: AppColors.success,
+                              onTap: () =>
+                                  _openMode(context, "goal", "Objetivos"),
+                            ),
+
+                            const SizedBox(width: AppColors.spacing16),
+
+                            // Card placeholder: Próximamente
+                            ExploreCard(
+                              emoji: '🔥',
+                              title: 'Desafíos',
+                              subtitle: 'Próximamente',
+                              accentColor: AppColors.warning,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Próximamente disponible'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: AppColors.spacing32),
+
+                      // Tips motivacionales
+                      _buildMotivationalTip(),
+
+                      const SizedBox(height: AppColors.spacing32),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: IconButton(
-            onPressed: () {
-              // TODO: Implementar navegación a perfil
-            },
-            icon: const Icon(
-              Icons.person_outline_rounded,
-              color: Color(0xFF6B7280),
-              size: 24,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFF8FAFC),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildMotivationalTip() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppColors.spacing20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.warning.withOpacity(0.1),
+            AppColors.warningLight.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        border: Border.all(color: AppColors.warning.withOpacity(0.3), width: 1),
       ),
       child: Row(
         children: [
@@ -180,33 +204,33 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.warning.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(AppColors.radiusMedium),
             ),
             child: const Center(
-              child: Text("💡", style: TextStyle(fontSize: 24)),
+              child: Text('💡', style: TextStyle(fontSize: 24)),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppColors.spacing16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Aprende a tu ritmo",
+                  'Consejo del día',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1F2937),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Cada camino está diseñado para progresar paso a paso",
+                  'Practica al menos 15 minutos diarios para mejores resultados',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
                     height: 1.4,
                   ),
                 ),

@@ -44,6 +44,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   @override
   void dispose() {
     _shakeController.dispose();
+    // Dispose audio player
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -133,8 +134,22 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       // Update progress in ProgressProvider
       context.read<ProgressProvider>().updateFromNodeCompletion(result);
 
-      await _playSuccessSound();
-      _showCelebration(result);
+      // Remove loading overlay before showing dialog
+      setState(() => _currentState = 'answering');
+
+      // Play success sound
+      _playSuccessSound();
+
+      // Wait a frame to ensure UI is updated
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      // Show celebration dialog (will wait until it closes)
+      await _showCelebration(result);
+
+      // After dialog closes, close lesson screen and return true
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -144,11 +159,11 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     }
   }
 
-  void _showCelebration(Map<String, dynamic> result) {
+  Future<void> _showCelebration(Map<String, dynamic> result) async {
     final isRepeat = result['isRepeat'] ?? false;
     final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Leccion Completada!';
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
@@ -218,9 +233,8 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context, true);
-                        widget.onComplete?.call();
+                        // Just close the dialog
+                        Navigator.of(context).pop();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF27AE60),
@@ -886,7 +900,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             ),
           if (_currentState == 'loading')
             Container(
-              color: Colors.black26,
+              color: Colors.black54,
               child: const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF27AE60),

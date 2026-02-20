@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart';
-import 'register_screen.dart';
 import 'onboarding_intro_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -9,8 +8,6 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2), // Fondo crema claro
       body: SafeArea(

@@ -17,7 +17,6 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
   bool _showChecklist = true;
   List<bool> _checklistItems = [];
   bool _isCompleting = false;
-  Map<String, dynamic>? _completionResult;
 
   @override
   void initState() {
@@ -99,8 +98,10 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Close lesson screen
+              // Only pop the dialog
+              Navigator.pop(context);
+              // Then pop the lesson screen
+              Navigator.pop(context, true);
               widget.onComplete?.call();
             },
             child: const Text('Continuar'),
@@ -112,12 +113,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_completionResult != null) {
-      return const SizedBox.expand(
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
+    // Don't show loading screen separately - show it in dialog
     final step = widget.node.steps[_currentStepIndex];
 
     return WillPopScope(

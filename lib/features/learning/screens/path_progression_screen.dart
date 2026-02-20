@@ -80,6 +80,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         ),
       );
 
+      // Refresh path data if lesson was completed successfully
       if (result == true && mounted) {
         setState(() {
           futurePathData = ApiService.getPath(widget.pathId);

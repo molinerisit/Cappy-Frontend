@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/onboarding_selection_provider.dart';
-import '../../core/api_service.dart';
 import 'login_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';

@@ -83,6 +83,34 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    // TODO: Implementar Google Sign-In cuando esté listo el backend
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Login con Google próximamente disponible',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF3B82F6),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -231,6 +259,69 @@ class _LoginScreenState extends State<LoginScreen>
                               text: "Iniciar Sesión",
                               onPressed: _isLoading ? null : _handleLogin,
                               isLoading: _isLoading,
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Divider con texto
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Text(
+                                    'O continúa con',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: const Color(0xFF9CA3AF),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Botón de Google
+                            OutlinedButton.icon(
+                              onPressed: _isLoading ? null : _handleGoogleLogin,
+                              icon: Image.asset(
+                                'assets/google_logo.png',
+                                height: 24,
+                                width: 24,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Fallback a emoji si no hay imagen
+                                  return const Text(
+                                    '🔍',
+                                    style: TextStyle(fontSize: 20),
+                                  );
+                                },
+                              ),
+                              label: Text(
+                                'Continuar con Google',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1F2937),
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                side: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                backgroundColor: Colors.white,
+                              ),
                             ),
                           ],
                         ),
