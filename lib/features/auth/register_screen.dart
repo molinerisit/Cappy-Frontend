@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import 'login_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
 
@@ -75,8 +76,44 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, "/mode");
+        await _navigateAfterRegistration();
       }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _navigateAfterRegistration() async {
+    if (!mounted) return;
+
+    // Siempre ir a /main después del registro
+    // MainExperienceScreen manejará la selección guardada
+    Navigator.of(context).pushReplacementNamed('/main');
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // TODO: Integrar con Google Sign-In cuando esté disponible
+      // Por ahora, mostrar un mensaje de que está en desarrollo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Funcionalidad próximamente'),
+          backgroundColor: const Color(0xFFFF6B35),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -292,6 +329,80 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       : _handleRegister,
                                   isLoading: _isLoading,
                                 ),
+
+                                const SizedBox(height: 20),
+
+                                // Divisor
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: const Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      child: Text(
+                                        "o",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: const Color(0xFF9CA3AF),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: const Color(0xFFE5E7EB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Google Sign-In Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: OutlinedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _handleGoogleSignIn,
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Color(0xFFE5E7EB),
+                                        width: 2,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Text(
+                                          '🔐',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          "Registrarse con Google",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF1F2937),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -301,7 +412,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                           // Link de login
                           TextButton(
                             onPressed: () {
-                              Navigator.pop(context);
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
+                                ),
+                              );
                             },
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),

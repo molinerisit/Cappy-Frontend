@@ -5,16 +5,22 @@ import '../core/api_service.dart';
 class AuthProvider extends ChangeNotifier {
   static const _tokenKey = "cooklevel_jwt";
   static const _roleKey = "cooklevel_role";
+  static const _totalXPKey = "cooklevel_totalxp";
+  static const _levelKey = "cooklevel_level";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   String? _token;
   String _role = "user";
+  int _totalXP = 0;
+  int _level = 1;
   bool _isLoading = false;
   bool _isInitializing = true;
 
   String? get token => _token;
   String get role => _role;
+  int get totalXP => _totalXP;
+  int get level => _level;
   bool get isAdmin => _role == "admin";
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing;
@@ -28,9 +34,18 @@ class AuthProvider extends ChangeNotifier {
       _isInitializing = true;
       notifyListeners();
 
-      // Read stored token and role
+      // Read stored token, role, and user stats
       _token = await _storage.read(key: _tokenKey);
       _role = await _storage.read(key: _roleKey) ?? "user";
+      final savedXP = await _storage.read(key: _totalXPKey);
+      final savedLevel = await _storage.read(key: _levelKey);
+
+      if (savedXP != null) {
+        _totalXP = int.tryParse(savedXP) ?? 0;
+      }
+      if (savedLevel != null) {
+        _level = int.tryParse(savedLevel) ?? 1;
+      }
 
       // If token exists, set it in API service for later requests
       if (_token != null && _token!.isNotEmpty) {
@@ -44,7 +59,7 @@ class AuthProvider extends ChangeNotifier {
       _isInitializing = false;
       notifyListeners();
     } catch (e) {
-      print('Auth initialization error: $e');
+      // Log error locally if needed
       _token = null;
       _isInitializing = false;
       notifyListeners();
@@ -75,6 +90,22 @@ class AuthProvider extends ChangeNotifier {
 
       await _storage.write(key: _tokenKey, value: token);
       await _storage.write(key: _roleKey, value: role);
+
+      // Obtener perfil para sincronizar XP desde servidor
+      try {
+        final profile = await ApiService.getProfile();
+        final userTotalXP = (profile['totalXP'] ?? 0) as int;
+        final userLevel = (profile['level'] ?? 1) as int;
+
+        _totalXP = userTotalXP;
+        _level = userLevel;
+
+        await _storage.write(key: _totalXPKey, value: userTotalXP.toString());
+        await _storage.write(key: _levelKey, value: userLevel.toString());
+      } catch (e) {
+        // Si falla obtener perfil, usar valores guardados localmente
+        // (no es crítico, los datos se actualizarán en la siguiente acción)
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -105,16 +136,33 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// ==============================
+  /// UPDATE USER XP AND LEVEL
+  /// ==============================
+  Future<void> updateXPAndLevel(int xp, int level) async {
+    _totalXP = xp;
+    _level = level;
+
+    await _storage.write(key: _totalXPKey, value: xp.toString());
+    await _storage.write(key: _levelKey, value: level.toString());
+
+    notifyListeners();
+  }
+
+  /// ==============================
   /// CLEAR SESSION (interno)
   /// ==============================
   Future<void> _clearSession() async {
     _token = null;
     _role = "user";
+    _totalXP = 0;
+    _level = 1;
 
     ApiService.logout();
 
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _roleKey);
+    await _storage.delete(key: _totalXPKey);
+    await _storage.delete(key: _levelKey);
 
     notifyListeners();
   }

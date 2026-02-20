@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'features/auth/welcome_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
+import 'features/auth/onboarding_intro_screen.dart';
+import 'features/auth/onboarding_mode_selection_screen.dart';
+import 'features/auth/onboarding_goals_screen.dart';
+import 'features/auth/onboarding_countries_screen.dart';
 import 'features/learning/screens/main_experience_screen.dart';
 import 'features/learning/screens/country_selection_screen.dart';
 import 'features/learning/screens/country_hub_screen.dart';
@@ -12,6 +17,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/admin/admin_panel_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
+import 'providers/onboarding_selection_provider.dart';
 
 void main() {
   runApp(const CappyApp());
@@ -26,6 +32,7 @@ class CappyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
+        ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
       ],
       child: MaterialApp(
         title: 'Cappy - Cocina feliz',
@@ -82,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacementNamed('/main');
     } else {
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/welcome');
     }
   }
 
@@ -141,13 +148,21 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
 
       final name = settings.name ?? "/";
 
-      // Auth routes
+      // Auth routes (accesibles sin autenticarse)
+      if (name == "/welcome") return const WelcomeScreen();
       if (name == "/login") return const LoginScreen();
       if (name == "/register") return const RegisterScreen();
+      if (name == "/onboarding/intro") return const OnboardingIntroScreen();
+      if (name == "/onboarding/mode")
+        return const OnboardingModeSelectionScreen();
+      if (name == "/onboarding/goals") return const OnboardingGoalsScreen();
+      if (name == "/onboarding/countries")
+        return const OnboardingCountriesScreen();
 
-      if (!authProvider.isAuthenticated) return const LoginScreen();
+      // Si no está autenticado, redirigir a welcome
+      if (!authProvider.isAuthenticated) return const WelcomeScreen();
 
-      // Main routes
+      // Main routes (requieren autenticación)
       if (name == "/" || name == "/main" || name == "/experience") {
         return const MainExperienceScreen();
       }

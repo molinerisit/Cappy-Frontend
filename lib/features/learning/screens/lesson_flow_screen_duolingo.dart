@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/progress_provider.dart';
 import '../widgets/lesson_progress_header.dart';
 import '../widgets/question_card.dart';
 import '../widgets/option_card.dart';
@@ -132,6 +135,16 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
 
       if (!mounted) return;
 
+      // Update user XP and level globally
+      final totalXP = result['totalXP'] as int?;
+      final level = result['level'] as int?;
+      if (totalXP != null && level != null) {
+        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+      }
+
+      // Update progress in ProgressProvider
+      context.read<ProgressProvider>().updateFromNodeCompletion(result);
+
       // Mostrar modal de celebración tipo Duolingo
       _showCompletionCelebration(result);
     } catch (e) {
@@ -150,6 +163,9 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
 
   /// Muestra el modal de celebración
   void _showCompletionCelebration(Map<String, dynamic> result) {
+    final isRepeat = result['isRepeat'] ?? false;
+    final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Excelente!';
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -181,7 +197,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '¡Excelente!',
+                    title,
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -199,7 +215,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFFFF6B35),
+                          color: Color(0xFFFF6B35),
                         ),
                       ),
                       Text(
@@ -216,7 +232,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF6B7280),
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
@@ -230,7 +246,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context); // Close dialog
-                        Navigator.pop(context); // Close lesson screen
+                        Navigator.pop(context, true); // Close lesson screen
                         widget.onComplete?.call();
                       },
                       style: ElevatedButton.styleFrom(

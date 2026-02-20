@@ -3,9 +3,12 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/progress_provider.dart';
 
 /// Pantalla de leccion gamificada tipo Duolingo.
 class LessonGameScreen extends StatefulWidget {
@@ -41,6 +44,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   @override
   void dispose() {
     _shakeController.dispose();
+    // Dispose audio player
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -119,8 +123,33 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     try {
       final result = await ApiService.completeNode(widget.node.id);
       if (!mounted) return;
-      await _playSuccessSound();
-      _showCelebration(result);
+
+      // Update user XP and level globally
+      final totalXP = result['totalXP'] as int?;
+      final level = result['level'] as int?;
+      if (totalXP != null && level != null) {
+        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+      }
+
+      // Update progress in ProgressProvider
+      context.read<ProgressProvider>().updateFromNodeCompletion(result);
+
+      // Remove loading overlay before showing dialog
+      setState(() => _currentState = 'answering');
+
+      // Play success sound
+      _playSuccessSound();
+
+      // Wait a frame to ensure UI is updated
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      // Show celebration dialog (will wait until it closes)
+      await _showCelebration(result);
+
+      // After dialog closes, close lesson screen and return true
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -130,8 +159,11 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     }
   }
 
-  void _showCelebration(Map<String, dynamic> result) {
-    showDialog(
+  Future<void> _showCelebration(Map<String, dynamic> result) async {
+    final isRepeat = result['isRepeat'] ?? false;
+    final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Leccion Completada!';
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
@@ -158,7 +190,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '¡Leccion Completada!',
+                    title,
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -201,9 +233,8 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                        widget.onComplete?.call();
+                        // Just close the dialog
+                        Navigator.of(context).pop();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF27AE60),
@@ -869,7 +900,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             ),
           if (_currentState == 'loading')
             Container(
-              color: Colors.black26,
+              color: Colors.black54,
               child: const Center(
                 child: CircularProgressIndicator(
                   color: Color(0xFF27AE60),

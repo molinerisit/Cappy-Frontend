@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
-import '../screens/lesson_game_screen.dart';
+import 'lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
 import '../widgets/path_connector_painter.dart';
+import '../../../widgets/user_xp_badge.dart';
 
 class PathProgressionScreen extends StatefulWidget {
   final String pathId;
@@ -79,6 +80,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         ),
       );
 
+      // Refresh path data if lesson was completed successfully
       if (result == true && mounted) {
         setState(() {
           futurePathData = ApiService.getPath(widget.pathId);
@@ -110,8 +112,10 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         return NodeStatus.completed;
       case 'locked':
         return NodeStatus.locked;
-      default:
+      case 'active':
         return NodeStatus.active;
+      default:
+        return NodeStatus.locked;
     }
   }
 
@@ -171,6 +175,12 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         ),
       ),
       centerTitle: true,
+      actions: const [
+        Padding(
+          padding: EdgeInsets.only(right: 16.0),
+          child: Center(child: UserXPBadge()),
+        ),
+      ],
     );
   }
 
@@ -575,7 +585,6 @@ class _NodeCard extends StatelessWidget {
   final bool isCompleted;
   final bool isLocked;
   final String nodeType;
-  final VoidCallback? onTap;
 
   const _NodeCard({
     required this.nodeId,
@@ -585,7 +594,6 @@ class _NodeCard extends StatelessWidget {
     required this.isCompleted,
     required this.isLocked,
     required this.nodeType,
-    this.onTap,
   });
 
   String _getNodeIcon() {
@@ -610,7 +618,6 @@ class _NodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
