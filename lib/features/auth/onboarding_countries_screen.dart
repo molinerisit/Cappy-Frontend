@@ -153,7 +153,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () {
-                                _handleCountrySelected(name);
+                                _handleCountrySelected(countryId, name);
                               },
                               borderRadius: BorderRadius.circular(20),
                               child: Column(
