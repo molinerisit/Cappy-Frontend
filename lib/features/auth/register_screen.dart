@@ -4,8 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/onboarding_selection_provider.dart';
 import '../../core/api_service.dart';
-import '../learning/screens/follow_goals_screen.dart';
-import '../learning/screens/country_hub_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
 
@@ -90,49 +88,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<void> _navigateAfterRegistration() async {
-    final selectionProvider = context.read<OnboardingSelectionProvider>();
-    await selectionProvider.loadSelection();
-
     if (!mounted) return;
 
-    if (selectionProvider.hasSelection()) {
-      final mode = selectionProvider.mode;
-      final selectionId = selectionProvider.selectionId;
-      final selectionName = selectionProvider.selectionName;
-
-      // Limpiar la selección después de usarla
-      await selectionProvider.clearSelection();
-
-      if (mode == 'goals' && selectionId != null) {
-        // Navegar a FollowGoalsScreen
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/goals');
-        }
-      } else if (mode == 'countries' && selectionId != null) {
-        // Navegar a CountryHubScreen con el país seleccionado
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => CountryHubScreen(
-                countryId: selectionId,
-                countryName: selectionName,
-                countryIcon: '🌍',
-              ),
-            ),
-          );
-        }
-      } else {
-        // Sin selección, ir a la pantalla principal
-        if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/main');
-        }
-      }
-    } else {
-      // Sin selección, ir a la pantalla principal
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/main');
-      }
-    }
+    // Siempre ir a /main después del registro
+    // MainExperienceScreen manejará la selección guardada
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<void> _handleGoogleSignIn() async {
