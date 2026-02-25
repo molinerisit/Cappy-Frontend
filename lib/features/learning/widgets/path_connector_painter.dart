@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../../theme/colors.dart';
 
 class PathConnectorPainter extends CustomPainter {
   final List<Offset> nodePositions;
   final Color lineColor;
   final double strokeWidth;
+  final Set<int>
+  breakIndices; // Índices donde NO dibujar línea (inicio de grupos)
 
   PathConnectorPainter({
     required this.nodePositions,
-    this.lineColor = const Color(0xFFE5E7EB),
-    this.strokeWidth = 4.0,
+    this.lineColor = AppColors.border,
+    this.strokeWidth = 2.0,
+    this.breakIndices = const {},
   });
 
   @override
@@ -23,6 +27,11 @@ class PathConnectorPainter extends CustomPainter {
 
     // Dibujar líneas curvas entre cada par de nodos
     for (int i = 0; i < nodePositions.length - 1; i++) {
+      // Saltar si el siguiente índice es un inicio de grupo (breakIndex)
+      if (breakIndices.contains(i + 1)) {
+        continue;
+      }
+
       final start = nodePositions[i];
       final end = nodePositions[i + 1];
 
@@ -59,6 +68,7 @@ class PathConnectorPainter extends CustomPainter {
   bool shouldRepaint(PathConnectorPainter oldDelegate) {
     return oldDelegate.nodePositions != nodePositions ||
         oldDelegate.lineColor != lineColor ||
-        oldDelegate.strokeWidth != strokeWidth;
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.breakIndices != breakIndices;
   }
 }

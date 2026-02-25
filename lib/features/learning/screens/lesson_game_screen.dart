@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
@@ -9,6 +10,7 @@ import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/progress_provider.dart';
+import '../../../widgets/step_timer_widget.dart';
 
 /// Pantalla de leccion gamificada tipo Duolingo.
 class LessonGameScreen extends StatefulWidget {
@@ -29,11 +31,13 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   late AnimationController _shakeController;
   late final AudioPlayer _audioPlayer;
   String _currentState = 'answering'; // answering, feedback, loading
+  late Completer<void> _celebrationCompleter;
 
   @override
   void initState() {
     super.initState();
     _currentStepIndex = 0;
+    _celebrationCompleter = Completer<void>();
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -44,16 +48,20 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   @override
   void dispose() {
     _shakeController.dispose();
-    // Dispose audio player
-    _audioPlayer.dispose();
+    // NO disponer el audio player inmediatamente para evitar cortar el sonido
+    // Se dispondrá cuando se cierre completamente la pantalla
+    Future.delayed(const Duration(milliseconds: 4000), () {
+      _audioPlayer.dispose();
+    });
     super.dispose();
   }
 
   Future<void> _playSuccessSound() async {
     try {
       await _audioPlayer.play(AssetSource('sounds/success.mp3'));
-    } catch (_) {
-      // Audio is optional; ignore failures silently.
+      // No esperar aquí - permitir que el sonido siga mientras se muestra el dialog
+    } catch (e) {
+      debugPrint('Error reproducing success sound: $e');
     }
   }
 
@@ -134,22 +142,21 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       // Update progress in ProgressProvider
       context.read<ProgressProvider>().updateFromNodeCompletion(result);
 
-      // Remove loading overlay before showing dialog
+      // Remove loading overlay
       setState(() => _currentState = 'answering');
 
+      // Reset celebration completer for this celebration
+      _celebrationCompleter = Completer<void>();
+
       // Play success sound
-      _playSuccessSound();
+      await _playSuccessSound();
 
-      // Wait a frame to ensure UI is updated
-      await Future.delayed(Duration.zero);
-      if (!mounted) return;
-
-      // Show celebration dialog (will wait until it closes)
+      // Show celebration dialog and wait for user to press button
       await _showCelebration(result);
-
-      // After dialog closes, close lesson screen and return true
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+
+      // Close lesson and return to path progression (node tree)
+      Navigator.of(context).pop(true); // Only pop one route
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -166,97 +173,103 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('🎉', style: TextStyle(fontSize: 100)),
-            const SizedBox(height: 30),
-            Container(
-              padding: const EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 40,
-                    offset: const Offset(0, 20),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF27AE60),
+      builder: (BuildContext dialogContext) => WillPopScope(
+        onWillPop: () async => false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 100)),
+              const SizedBox(height: 30),
+              Container(
+                padding: const EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        '+',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
-                        ),
-                      ),
-                      Text(
-                        '${result['xpEarned'] ?? 100}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFFFF6B35),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'XP',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Just close the dialog
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF27AE60),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        'Continuar',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF27AE60),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          '+',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFFF6B35),
+                          ),
+                        ),
+                        Text(
+                          '${result['xpEarned'] ?? 100}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFFFF6B35),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'XP',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          if (!_celebrationCompleter.isCompleted) {
+                            _celebrationCompleter.complete();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF27AE60),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'Continuar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -312,12 +325,62 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     );
   }
 
-  List<Widget> _buildContentCards(NodeStep step) {
+  List<Widget> _buildContentCards(NodeStep step, {bool excludeQuiz = false}) {
     final cards = <Widget>[];
+    final hasCards = step.cards != null && step.cards!.isNotEmpty;
 
-    if (step.cards != null && step.cards!.isNotEmpty) {
+    if (hasCards) {
       for (final card in step.cards!) {
-        final content = card['content'] as Map? ?? {};
+        final cardType = card['type']?.toString();
+        if (excludeQuiz && cardType == 'quiz') {
+          continue;
+        }
+        final content =
+            (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+        if (cardType == 'timer') {
+          final duration =
+              int.tryParse(
+                content['duration']?.toString() ??
+                    content['seconds']?.toString() ??
+                    content['time']?.toString() ??
+                    '',
+              ) ??
+              0;
+
+          cards.add(
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF1F2937)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.timer, color: Color(0xFFFF6B35), size: 36),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Timer',
+                    style: TextStyle(
+                      color: Color(0xFFFF6B35),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  StepTimerWidget(durationSeconds: duration, onTimerEnd: () {}),
+                ],
+              ),
+            ),
+          );
+          continue;
+        }
+
+        final listItems = content['items'] is List
+            ? List<dynamic>.from(content['items'])
+            : (card['items'] is List ? List<dynamic>.from(card['items']) : []);
+
         final cardTitle = _firstNonEmpty([
           content['title']?.toString(),
           card['title']?.toString(),
@@ -337,6 +400,70 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             content['media']?.toString() ??
             card['image']?.toString() ??
             card['media']?.toString();
+
+        if (cardType == 'list' && listItems.isNotEmpty) {
+          cards.add(
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (cardTitle.isNotEmpty)
+                    Text(
+                      cardTitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1F2937),
+                      ),
+                    ),
+                  if (cardTitle.isNotEmpty) const SizedBox(height: 8),
+                  ...listItems
+                      .map((item) => item?.toString() ?? '')
+                      .where((item) => item.trim().isNotEmpty)
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                                color: Color(0xFF27AE60),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: const Color(0xFF1F2937),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ],
+              ),
+            ),
+          );
+          continue;
+        }
+
+        if (cardBody.isEmpty && cardImage == null) {
+          continue;
+        }
 
         cards.add(
           Container(
@@ -390,7 +517,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       }
     }
 
-    if (step.instruction.isNotEmpty) {
+    if (!hasCards && step.instruction.isNotEmpty) {
       cards.add(_buildTextCard(text: step.instruction));
     }
 
@@ -588,6 +715,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     final step = widget.node.steps[_currentStepIndex];
     final options = _sanitizeOptions(step.options);
     final isQuizStep = options.length >= 2;
+    final contentCards = _buildContentCards(step, excludeQuiz: isQuizStep);
     final questionText = _firstNonEmpty([
       step.question,
       step.title,
@@ -685,6 +813,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                         ),
                       ),
                     const SizedBox(height: 40),
+                    if (contentCards.isNotEmpty) ...contentCards,
                     if (isQuizStep)
                       GridView.count(
                         crossAxisCount: 2,
@@ -828,7 +957,8 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                           return card;
                         }),
                       ),
-                    if (!isQuizStep) ..._buildContentCards(step),
+                    if (!isQuizStep && contentCards.isEmpty)
+                      ..._buildContentCards(step),
                   ]),
                 ),
               ),

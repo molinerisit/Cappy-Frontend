@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
-import 'path_progression_screen.dart';
+import '../../../theme/colors.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/typography.dart';
+import '../../../widgets/app_badge.dart';
+import '../../../widgets/app_button.dart';
+import '../../../widgets/app_card.dart';
+import '../../../widgets/app_header.dart';
+import '../../../widgets/app_scaffold.dart';
 
 class FollowGoalsScreen extends StatefulWidget {
   const FollowGoalsScreen({super.key});
@@ -15,6 +21,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
   late Future<List<dynamic>> futureGoalPaths;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  bool _isChangingPath = false;
 
   @override
   void initState() {
@@ -40,33 +47,37 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
     super.dispose();
   }
 
+  Future<void> _selectPath(String pathId, String pathTitle) async {
+    setState(() => _isChangingPath = true);
+    try {
+      await ApiService.changeCurrentPath(pathId);
+      if (!mounted) return;
+      // Navega de vuelta a main experience (el árbol del camino)
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _isChangingPath = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+    if (_isChangingPath) {
+      return const AppScaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return AppScaffold(
+      appBar: AppHeader(
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-          color: const Color(0xFF6B7280),
-          style: IconButton.styleFrom(
-            backgroundColor: const Color(0xFFF8FAFC),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+          icon: const Icon(Icons.arrow_back_ios_rounded),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Objetivos',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF1F2937),
-          ),
-        ),
-        centerTitle: true,
+        title: Text('Objetivos', style: AppTypography.cardTitle),
       ),
       body: FutureBuilder<List<dynamic>>(
         future: futureGoalPaths,
@@ -87,37 +98,33 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
             opacity: _fadeAnimation,
             child: Column(
               children: [
-                // Header section
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '¿Cuál es tu objetivo?',
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      Text('¿Cual es tu objetivo?', style: AppTypography.title),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'Elige un camino personalizado para alcanzar tu meta',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: const Color(0xFF6B7280),
-                        ),
+                        style: AppTypography.subtitle,
                       ),
                     ],
                   ),
                 ),
-
-                // Goals list
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
                     itemCount: goalPaths.length,
                     itemBuilder: (context, index) {
                       final goalPath = goalPaths[index];
@@ -129,16 +136,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
                       final nodes = goalPath['nodes'] as List<dynamic>? ?? [];
                       final accentColor = _getGoalColor(goalType);
 
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 400 + (index * 100)),
-                        curve: Curves.easeOut,
-                        builder: (context, value, child) {
-                          return Transform.translate(
-                            offset: Offset(0, 20 * (1 - value)),
-                            child: Opacity(opacity: value, child: child),
-                          );
-                        },
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: _GoalCard(
                           pathId: pathId,
                           title: title,
@@ -147,6 +146,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
                           goalType: goalType,
                           nodesCount: nodes.length,
                           accentColor: accentColor,
+                          onSelected: _selectPath,
                         ),
                       );
                     },
@@ -163,15 +163,15 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
   Color _getGoalColor(String goalType) {
     switch (goalType) {
       case 'cooking_school':
-        return const Color(0xFFF59E0B); // Amber
+        return const Color(0xFFB45309);
       case 'lose_weight':
-        return const Color(0xFF3B82F6); // Blue
+        return const Color(0xFF1D4ED8);
       case 'gain_muscle':
-        return const Color(0xFFEF4444); // Red
+        return const Color(0xFFB91C1C);
       case 'become_vegan':
-        return const Color(0xFF10B981); // Green
+        return AppColors.success;
       default:
-        return const Color(0xFF8B5CF6); // Purple
+        return AppColors.primary;
     }
   }
 
@@ -186,54 +186,32 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
               ),
               child: const Icon(
                 Icons.error_outline_rounded,
                 size: 40,
-                color: Color(0xFFEF4444),
+                color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Error al cargar objetivos',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
-              ),
-            ),
+            Text('Error al cargar objetivos', style: AppTypography.cardTitle),
             const SizedBox(height: 8),
             Text(
-              'Intenta nuevamente más tarde',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6B7280),
-              ),
+              'Intenta de nuevo en unos momentos',
+              textAlign: TextAlign.center,
+              style: AppTypography.body,
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            AppButton(
+              label: 'Reintentar',
               onPressed: () {
                 setState(() {
                   futureGoalPaths = ApiService.getGoalPaths();
                 });
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF27AE60),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Reintentar',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              ),
             ),
           ],
         ),
@@ -250,22 +228,12 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
           children: [
             const Text('🎯', style: TextStyle(fontSize: 80)),
             const SizedBox(height: 24),
-            Text(
-              'Aún no hay objetivos',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F2937),
-              ),
-            ),
+            Text('Aun no hay objetivos', style: AppTypography.cardTitle),
             const SizedBox(height: 8),
             Text(
               'Pronto agregaremos nuevos caminos de aprendizaje',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6B7280),
-              ),
+              style: AppTypography.body,
             ),
           ],
         ),
@@ -282,6 +250,7 @@ class _GoalCard extends StatefulWidget {
   final String goalType;
   final int nodesCount;
   final Color accentColor;
+  final Function(String, String) onSelected;
 
   const _GoalCard({
     required this.pathId,
@@ -291,6 +260,7 @@ class _GoalCard extends StatefulWidget {
     required this.goalType,
     required this.nodesCount,
     required this.accentColor,
+    required this.onSelected,
   });
 
   @override
@@ -298,115 +268,48 @@ class _GoalCard extends StatefulWidget {
 }
 
 class _GoalCardState extends State<_GoalCard> {
-  bool _isPressed = false;
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => PathProgressionScreen(
-              pathId: widget.pathId,
-              pathTitle: widget.title,
+    return AppCard(
+      onTap: () => widget.onSelected(widget.pathId, widget.title),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: widget.accentColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Center(
+              child: Text(widget.icon, style: const TextStyle(fontSize: 32)),
             ),
           ),
-        );
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.title, style: AppTypography.cardTitle),
+                const SizedBox(height: 6),
+                Text(
+                  widget.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body,
+                ),
+                const SizedBox(height: 10),
+                AppBadge(text: '${widget.nodesCount} lecciones'),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              // Icono circular con color de fondo
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: widget.accentColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    widget.icon,
-                    style: const TextStyle(fontSize: 40),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Contenido
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: const Color(0xFF6B7280),
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Badge con número de lecciones
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.accentColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${widget.nodesCount} lecciones',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: widget.accentColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Flecha
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 18,
-                color: widget.accentColor,
-              ),
-            ],
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 22,
+            color: AppColors.textSecondary,
           ),
-        ),
+        ],
       ),
     );
   }

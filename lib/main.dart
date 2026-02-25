@@ -14,10 +14,11 @@ import 'features/learning/screens/follow_goals_screen.dart';
 import 'features/lessons/lesson_detail_screen.dart';
 import 'features/pantry/pantry_screen.dart';
 import 'features/profile/profile_screen.dart';
-import 'features/admin/admin_panel_screen.dart';
+import 'features/admin_v2/layout/admin_shell_modern.dart';
 import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const CappyApp());
@@ -37,7 +38,7 @@ class CappyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Cappy - Cocina feliz',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(primarySwatch: Colors.orange, useMaterial3: true),
+        theme: AppTheme.lightTheme,
         home: const SplashScreen(),
         onGenerateRoute: _onGenerateRoute,
       ),
@@ -153,11 +154,13 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       if (name == "/login") return const LoginScreen();
       if (name == "/register") return const RegisterScreen();
       if (name == "/onboarding/intro") return const OnboardingIntroScreen();
-      if (name == "/onboarding/mode")
+      if (name == "/onboarding/mode") {
         return const OnboardingModeSelectionScreen();
+      }
       if (name == "/onboarding/goals") return const OnboardingGoalsScreen();
-      if (name == "/onboarding/countries")
+      if (name == "/onboarding/countries") {
         return const OnboardingCountriesScreen();
+      }
 
       // Si no está autenticado, redirigir a welcome
       if (!authProvider.isAuthenticated) return const WelcomeScreen();
@@ -177,10 +180,18 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
 
       if (name == "/pantry") return const PantryScreen();
       if (name == "/profile") return const ProfileScreen();
-      if (name == "/admin") {
-        return authProvider.isAdmin
-            ? const AdminPanelScreen()
-            : const MainExperienceScreen();
+      if (name == "/admin" || name == "/admin-v2") {
+        if (!authProvider.isAdmin) {
+          return const MainExperienceScreen();
+        }
+
+        final args = settings.arguments is Map
+            ? settings.arguments as Map
+            : const {};
+        return AdminShellModern(
+          initialPathId: args['pathId']?.toString(),
+          initialNodeId: args['nodeId']?.toString(),
+        );
       }
 
       // Dynamic routes

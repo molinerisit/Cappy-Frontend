@@ -12,10 +12,11 @@ class CreatePathDialog extends StatefulWidget {
 
 class _CreatePathDialogState extends State<CreatePathDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _goalTypeController = TextEditingController();
+  final _newCountryController = TextEditingController();
   String _pathType = 'country_recipe'; // country_recipe, country_culture, goal
   String? _selectedCountryId;
-  String _goalType =
-      'cooking_school'; // cooking_school, lose_weight, become_vegan
+  String _goalType = '';
   String _title = '';
   String _description = '';
   bool _isPremium = false;
@@ -23,11 +24,19 @@ class _CreatePathDialogState extends State<CreatePathDialog> {
   List<dynamic> _countries = [];
   bool _isLoading = false;
   bool _isLoadingCountries = false;
+  bool _showNewCountryField = false;
 
   @override
   void initState() {
     super.initState();
     _loadCountries();
+  }
+
+  @override
+  void dispose() {
+    _goalTypeController.dispose();
+    _newCountryController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCountries() async {
@@ -50,7 +59,32 @@ class _CreatePathDialogState extends State<CreatePathDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final data = {
+      String? countryId = _selectedCountryId;
+
+      // Si se está creando un nuevo país
+      if (_pathType.startsWith('country_') && _showNewCountryField) {
+        if (_newCountryController.text.isEmpty) {
+          throw Exception("Ingresa el nombre del nuevo país");
+        }
+
+        // Generar código del país desde el nombre
+        final countryName = _newCountryController.text;
+        final countryCode = countryName
+            .toLowerCase()
+            .replaceAll(' ', '_')
+            .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+
+        // Crear el nuevo país
+        final newCountry = await ApiService.adminCreateCountry({
+          'name': countryName,
+          'code': countryCode,
+          'icon': _icon,
+        });
+        countryId = (newCountry['_id'] ?? newCountry['id']).toString();
+      }
+
+      // Crear el map de datos del camino
+      final Map<String, dynamic> data = {
         'type': _pathType,
         'title': _title,
         'description': _description,
@@ -59,12 +93,16 @@ class _CreatePathDialogState extends State<CreatePathDialog> {
       };
 
       if (_pathType.startsWith('country_')) {
-        if (_selectedCountryId == null) {
-          throw Exception("Selecciona un país");
+        if (countryId == null) {
+          throw Exception("Selecciona un país o crea uno nuevo");
         }
-        data['countryId'] = _selectedCountryId!;
+        data['countryId'] = countryId;
       } else if (_pathType == 'goal') {
-        data['goalType'] = _goalType;
+        final goalTypeText = _goalTypeController.text.trim();
+        if (goalTypeText.isEmpty) {
+          throw Exception("Ingresa el tipo de objetivo");
+        }
+        data['goalType'] = goalTypeText;
       }
 
       await ApiService.adminCreateLearningPath(data);
@@ -122,58 +160,82 @@ class _CreatePathDialogState extends State<CreatePathDialog> {
               const SizedBox(height: 16),
 
               // País (si es country_*)
-              if (_pathType.startsWith('country_'))
-                _isLoadingCountries
-                    ? const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      )
-                    : DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: "Selecciona País",
-                        ),
-                        value: _selectedCountryId,
-                        items: _countries
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: (c['_id'] ?? c['id']).toString(),
-                                child: Text(c['name'] ?? 'Sin nombre'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() => _selectedCountryId = value);
-                        },
-                        validator: (_pathType.startsWith('country_'))
-                            ? (value) => value == null ? "Requerido" : null
-                            : null,
+              if (_pathType.startsWith('country_')) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _showNewCountryField
+                            ? "Crear Nuevo País"
+                            : "Seleccionar País Existente",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
+                    ),
+                    Switch(
+                      value: _showNewCountryField,
+                      onChanged: (value) {
+                        setState(() {
+                          _showNewCountryField = value;
+                          if (value) {
+                            _selectedCountryId = null;
+                          } else {
+                            _newCountryController.clear();
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_showNewCountryField)
+                  TextFormField(
+                    controller: _newCountryController,
+                    decoration: const InputDecoration(
+                      labelText: "Nombre del Nuevo País",
+                      hintText: "Ej: Argentina",
+                    ),
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? "Requerido" : null,
+                  )
+                else
+                  _isLoadingCountries
+                      ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(),
+                        )
+                      : DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: "Selecciona País",
+                          ),
+                          value: _selectedCountryId,
+                          items: _countries
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: (c['_id'] ?? c['id']).toString(),
+                                  child: Text(c['name'] ?? 'Sin nombre'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedCountryId = value);
+                          },
+                          validator: (value) =>
+                              value == null ? "Requerido" : null,
+                        ),
+              ],
               const SizedBox(height: 16),
 
               // Tipo de Objetivo (si es goal)
               if (_pathType == 'goal')
-                DropdownButtonFormField<String>(
+                TextFormField(
+                  controller: _goalTypeController,
                   decoration: const InputDecoration(
                     labelText: "Tipo de Objetivo",
+                    hintText:
+                        "Ej: Hacerse Vegano, Perder Peso, Cocina Saludable",
                   ),
-                  value: _goalType,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'cooking_school',
-                      child: Text("Escuela de Cocina"),
-                    ),
-                    DropdownMenuItem(
-                      value: 'lose_weight',
-                      child: Text("Perder Peso"),
-                    ),
-                    DropdownMenuItem(
-                      value: 'become_vegan',
-                      child: Text("Hacerse Vegano"),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _goalType = value ?? 'cooking_school');
-                  },
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? "Requerido" : null,
                 ),
               const SizedBox(height: 16),
 

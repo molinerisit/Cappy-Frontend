@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/api_service.dart';
+import '../core/lives_service.dart';
 import '../core/models/learning_path.dart';
-import 'path_progression_screen.dart';
+import '../widgets/lives_widget.dart';
+import '../features/learning/screens/recipes_list_screen.dart';
+import '../features/learning/screens/culture_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
   final String countryId;
@@ -22,10 +25,63 @@ class CountryHubScreen extends StatefulWidget {
 class _CountryHubScreenState extends State<CountryHubScreen> {
   late Future<CountryHub> futureCountryHub;
 
+  // Lives system
+  late LivesService _livesService;
+  int _currentLives = 3;
+  int _maxLives = 3;
+  DateTime? _nextRefillAt;
+  bool _livesLoaded = false;
+
   @override
   void initState() {
     super.initState();
     futureCountryHub = _loadCountryHub();
+    _initializeLives();
+  }
+
+  void _initializeLives() {
+    _livesService = LivesService(baseUrl: ApiService.baseUrl);
+    _loadLives();
+  }
+
+  Future<void> _loadLives() async {
+    try {
+      final token = ApiService.getToken();
+      if (token == null) {
+        if (mounted) {
+          setState(() {
+            _currentLives = 3;
+            _maxLives = 3;
+            _nextRefillAt = null;
+            _livesLoaded = true;
+          });
+        }
+        return;
+      }
+
+      final status = await _livesService.getLivesStatus(token);
+
+      if (mounted) {
+        setState(() {
+          _currentLives = status['lives'] ?? 3;
+          _maxLives = 3;
+          _nextRefillAt = status['nextRefillAt'] != null
+              ? DateTime.parse(status['nextRefillAt'].toString())
+              : null;
+          _livesLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading lives: $e');
+      if (mounted) {
+        setState(() {
+          _currentLives = 3;
+          _maxLives = 3;
+          _nextRefillAt = null;
+          _livesLoaded = true;
+        });
+      }
+    }
   }
 
   Future<CountryHub> _loadCountryHub() async {
@@ -42,6 +98,18 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
         ),
         backgroundColor: const Color(0xFFFF6B35),
         elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: LivesWidget(
+                lives: _currentLives,
+                maxLives: _maxLives,
+                nextRefillAt: _nextRefillAt,
+              ),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<CountryHub>(
         future: futureCountryHub,
@@ -133,9 +201,11 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => PathProgressionScreen(
+                              builder: (context) => RecipesListScreen(
+                                countryId: widget.countryId,
                                 pathId: hub.recipes.id,
                                 pathTitle: hub.recipes.title,
+                                countryName: widget.countryName ?? 'País',
                               ),
                             ),
                           );
@@ -147,9 +217,11 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => PathProgressionScreen(
+                              builder: (context) => CultureListScreen(
+                                countryId: widget.countryId,
                                 pathId: hub.culture.id,
                                 pathTitle: hub.culture.title,
+                                countryName: widget.countryName ?? 'País',
                               ),
                             ),
                           );

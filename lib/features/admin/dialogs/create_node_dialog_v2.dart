@@ -1,161 +1,189 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
-import 'step_builder.dart';
 
-// ==========================================
-// CREATE NODE DIALOG V2: Dialog mejorado con tabs
-// ==========================================
 class CreateNodeDialogV2 extends StatefulWidget {
-  final String pathId;
+  final String? pathId;
   final VoidCallback onSaved;
 
-  const CreateNodeDialogV2({
-    super.key,
-    required this.pathId,
-    required this.onSaved,
-  });
+  const CreateNodeDialogV2({super.key, this.pathId, required this.onSaved});
 
   @override
   State<CreateNodeDialogV2> createState() => _CreateNodeDialogV2State();
 }
 
-class _CreateNodeDialogV2State extends State<CreateNodeDialogV2>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-
+class _CreateNodeDialogV2State extends State<CreateNodeDialogV2> {
+  final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _orderCtrl = TextEditingController(text: '1');
-  final _xpCtrl = TextEditingController(text: '50');
-  final _prepTimeCtrl = TextEditingController(text: '0');
-  final _cookTimeCtrl = TextEditingController(text: '0');
-  final _servingsCtrl = TextEditingController(text: '1');
+  final _levelCtrl = TextEditingController(text: '1');
+  final _positionCtrl = TextEditingController(text: '1');
+  final _xpCtrl = TextEditingController(text: '0');
 
+  List<dynamic> _paths = [];
+  List<dynamic> _groups = [];
+
+  String? _selectedPathId;
+  String? _selectedGroupId;
   String _nodeType = 'recipe';
-  int _difficulty = 2;
+  String _status = 'active';
   bool _isLoading = false;
-
-  final List<Map<String, dynamic>> _steps = [];
-  final List<Map<String, dynamic>> _ingredients = [];
-  final List<Map<String, dynamic>> _tools = [];
+  bool _isLoadingGroups = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _loadPaths();
+    _selectedPathId = widget.pathId;
+    if (widget.pathId != null) {
+      _loadGroups(widget.pathId!);
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _titleCtrl.dispose();
-    _descCtrl.dispose();
-    _orderCtrl.dispose();
+    _levelCtrl.dispose();
+    _positionCtrl.dispose();
     _xpCtrl.dispose();
-    _prepTimeCtrl.dispose();
-    _cookTimeCtrl.dispose();
-    _servingsCtrl.dispose();
     super.dispose();
   }
 
-  void _addStep() {
-    showDialog(
-      context: context,
-      builder: (context) => AddStepDialogV2(
-        stepType: 'text',
-        onSave: (step) {
-          setState(() => _steps.add(step));
-        },
-      ),
-    );
+  Future<void> _loadPaths() async {
+    setState(() => _isLoading = true);
+    try {
+      final paths = await ApiService.adminGetAllLearningPaths();
+      setState(() => _paths = paths);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error cargando caminos: $e')));
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _addIngredient() {
-    showDialog(
-      context: context,
-      builder: (context) => AddIngredientDialog(
-        onSave: (ingredient) {
-          setState(() => _ingredients.add(ingredient));
-        },
-      ),
-    );
+  Future<void> _loadGroups(String pathId) async {
+    setState(() => _isLoadingGroups = true);
+    try {
+      final groups = await ApiService.adminGetGroupsByPath(pathId);
+      setState(() => _groups = groups);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error cargando grupos: $e')));
+      }
+    } finally {
+      setState(() => _isLoadingGroups = false);
+    }
   }
 
-  void _addTool() {
-    final controller = TextEditingController();
-    showDialog(
+  Future<void> _openCreateGroupDialog() async {
+    if (_selectedPathId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un camino primero.')),
+      );
+      return;
+    }
+
+    final titleCtrl = TextEditingController();
+    final orderCtrl = TextEditingController(text: '1');
+
+    final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Agregar Herramienta'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Nombre de herramienta'),
+        title: const Text('Crear grupo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(labelText: 'Titulo del grupo'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: orderCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Orden'),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                setState(
-                  () =>
-                      _tools.add({'name': controller.text, 'optional': false}),
-                );
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Crear'),
           ),
         ],
       ),
     );
-  }
 
-  Future<void> _save() async {
-    if (_titleCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('El título es requerido')));
-      return;
-    }
-
-    setState(() => _isLoading = true);
+    if (result != true) return;
 
     try {
-      await ApiService.adminCreateLearningNode({
-        'pathId': widget.pathId,
-        'title': _titleCtrl.text,
-        'description': _descCtrl.text,
-        'type': _nodeType,
-        'difficulty': _difficulty,
-        'xpReward': int.tryParse(_xpCtrl.text) ?? 50,
-        'order': int.tryParse(_orderCtrl.text) ?? 1,
-        'prepTime': int.tryParse(_prepTimeCtrl.text) ?? 0,
-        'cookTime': int.tryParse(_cookTimeCtrl.text) ?? 0,
-        'servings': int.tryParse(_servingsCtrl.text) ?? 1,
-        'steps': _steps,
-        'ingredients': _ingredients,
-        'tools': _tools,
-        'nutrition': {},
-        'tips': [],
-        'tags': [],
-        'media': null,
+      final response = await ApiService.adminCreateGroup(_selectedPathId!, {
+        'title': titleCtrl.text.trim(),
+        'order': int.tryParse(orderCtrl.text) ?? 1,
       });
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Nodo creado exitosamente')),
-        );
-        widget.onSaved();
+      final group = response['group'] ?? response;
+      await _loadGroups(_selectedPathId!);
+      if (mounted && group is Map) {
+        setState(() => _selectedGroupId = group['_id']?.toString());
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('❌ Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error creando grupo: $e')));
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedPathId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecciona un camino.')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final payload = {
+        'pathId': _selectedPathId,
+        'title': _titleCtrl.text.trim(),
+        'type': _nodeType,
+        'status': _status,
+        'level': int.tryParse(_levelCtrl.text) ?? 1,
+        'positionIndex': int.tryParse(_positionCtrl.text) ?? 1,
+        'xpReward': int.tryParse(_xpCtrl.text) ?? 0,
+      };
+
+      // groupId es opcional - si se selecciona, se incluye
+      if (_selectedGroupId != null) {
+        payload['groupId'] = _selectedGroupId;
+      }
+
+      await ApiService.adminCreateContentNode(payload);
+
+      if (mounted) {
+        widget.onSaved();
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nodo creado correctamente.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       setState(() => _isLoading = false);
@@ -164,504 +192,171 @@ class _CreateNodeDialogV2State extends State<CreateNodeDialogV2>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: SizedBox(
-        width: 700,
-        height: 700,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              color: Colors.orange.shade700,
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.add_circle, color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Crear Nodo Completo',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            // TabBar
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(icon: Icon(Icons.info), text: 'Básico'),
-                Tab(icon: Icon(Icons.list), text: 'Pasos'),
-                Tab(icon: Icon(Icons.shopping_cart), text: 'Ingredientes'),
-                Tab(icon: Icon(Icons.build), text: 'Herramientas'),
-              ],
-            ),
-            // TabView
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // TAB 0: BÁSICO
-                  _buildBasicTab(),
-                  // TAB 1: PASOS
-                  _buildStepsTab(),
-                  // TAB 2: INGREDIENTES
-                  _buildIngredientsTab(),
-                  // TAB 3: HERRAMIENTAS
-                  _buildToolsTab(),
-                ],
-              ),
-            ),
-            // Acciones
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _save,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check),
-                    label: Text(_isLoading ? 'Guardando...' : 'Crear Nodo'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBasicTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Título del Nodo',
-              hintText: 'ej. Cómo picar una cebolla',
-              prefixIcon: Icon(Icons.title),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _descCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Descripción',
-              hintText: 'Describe qué aprenderá el usuario',
-              prefixIcon: Icon(Icons.description),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _nodeType,
-            items: const [
-              DropdownMenuItem(value: 'recipe', child: Text('🍳 Receta')),
-              DropdownMenuItem(value: 'skill', child: Text('💡 Habilidad')),
-              DropdownMenuItem(value: 'quiz', child: Text('❓ Quiz')),
-            ],
-            onChanged: (value) {
-              if (value != null) setState(() => _nodeType = value);
-            },
-            decoration: const InputDecoration(
-              labelText: 'Tipo de Nodo',
-              prefixIcon: Icon(Icons.category),
-            ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<int>(
-            value: _difficulty,
-            items: const [
-              DropdownMenuItem(value: 1, child: Text('🟢 Fácil')),
-              DropdownMenuItem(value: 2, child: Text('🟡 Medio')),
-              DropdownMenuItem(value: 3, child: Text('🔴 Difícil')),
-            ],
-            onChanged: (value) {
-              if (value != null) setState(() => _difficulty = value);
-            },
-            decoration: const InputDecoration(
-              labelText: 'Dificultad',
-              prefixIcon: Icon(Icons.trending_up),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _orderCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Orden',
-                    prefixIcon: Icon(Icons.numbers),
-                  ),
+    return AlertDialog(
+      title: const Text('Crear nodo'),
+      content: SizedBox(
+        width: 520,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _selectedPathId,
+                  items: _paths
+                      .map(
+                        (path) => DropdownMenuItem(
+                          value:
+                              path['_id']?.toString() ?? path['id']?.toString(),
+                          child: Text(path['title'] ?? 'Sin titulo'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPathId = value;
+                      _selectedGroupId = null;
+                      _groups = [];
+                    });
+                    if (value != null) {
+                      _loadGroups(value);
+                    }
+                  },
+                  decoration: const InputDecoration(labelText: 'Camino'),
+                  validator: (value) => value == null ? 'Requerido' : null,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
+                const SizedBox(height: 12),
+                if (_isLoadingGroups)
+                  const LinearProgressIndicator()
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedGroupId,
+                        items: _groups
+                            .map(
+                              (group) => DropdownMenuItem(
+                                value: group['_id']?.toString(),
+                                child: Text(group['title'] ?? 'Sin titulo'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _selectedGroupId = value),
+                        decoration: const InputDecoration(labelText: 'Grupo'),
+                        validator: (value) =>
+                            value == null ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _openCreateGroupDialog,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Crear grupo'),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Titulo'),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Requerido'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _nodeType,
+                  decoration: const InputDecoration(labelText: 'Tipo'),
+                  items: const [
+                    DropdownMenuItem(value: 'recipe', child: Text('Recipe')),
+                    DropdownMenuItem(
+                      value: 'explanation',
+                      child: Text('Explanation'),
+                    ),
+                    DropdownMenuItem(value: 'tips', child: Text('Tips')),
+                    DropdownMenuItem(value: 'quiz', child: Text('Quiz')),
+                    DropdownMenuItem(
+                      value: 'technique',
+                      child: Text('Technique'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'cultural',
+                      child: Text('Cultural'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'challenge',
+                      child: Text('Challenge'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _nodeType = value ?? 'recipe'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _status,
+                  decoration: const InputDecoration(labelText: 'Estado'),
+                  items: const [
+                    DropdownMenuItem(value: 'active', child: Text('Active')),
+                    DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                    DropdownMenuItem(
+                      value: 'archived',
+                      child: Text('Archived'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _status = value ?? 'active'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _levelCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Level'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _positionCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Position',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
                   controller: _xpCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'XP',
-                    prefixIcon: Icon(Icons.star),
-                  ),
+                  decoration: const InputDecoration(labelText: 'XP Reward'),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _prepTimeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Prep Time',
-                    suffixText: 'min',
-                    prefixIcon: Icon(Icons.schedule),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _cookTimeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Cook Time',
-                    suffixText: 'min',
-                    prefixIcon: Icon(Icons.local_fire_department),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _servingsCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Servings',
-                    prefixIcon: Icon(Icons.people),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Pasos',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                onPressed: _addStep,
-                icon: const Icon(Icons.add),
-                label: const Text('Agregar Paso'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_steps.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text('📝 Sin pasos aún. Comienza agregando uno.'),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _steps.length,
-              itemBuilder: (context, index) {
-                final step = _steps[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.orange,
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    title: Text(
-                      step['title'] ?? 'Sin título',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      step['instruction'] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() => _steps.removeAt(index));
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIngredientsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Ingredientes',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                onPressed: _addIngredient,
-                icon: const Icon(Icons.add),
-                label: const Text('Agregar'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_ingredients.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text('🥘 Sin ingredientes aún. Agrega uno.'),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _ingredients.length,
-              itemBuilder: (context, index) {
-                final ing = _ingredients[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.local_grocery_store,
-                      color: Colors.orange,
-                    ),
-                    title: Text(ing['name'] ?? '?'),
-                    subtitle: Text(
-                      '${ing['quantity']} ${ing['unit']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() => _ingredients.removeAt(index));
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Herramientas',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                onPressed: _addTool,
-                icon: const Icon(Icons.add),
-                label: const Text('Agregar'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_tools.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text('🔧 Sin herramientas aún. Agrega una.'),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _tools.length,
-              itemBuilder: (context, index) {
-                final tool = _tools[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const Icon(Icons.build, color: Colors.orange),
-                    title: Text(tool['name'] ?? '?'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() => _tools.removeAt(index));
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==========================================
-// ADD INGREDIENT DIALOG
-// ==========================================
-class AddIngredientDialog extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSave;
-
-  const AddIngredientDialog({super.key, required this.onSave});
-
-  @override
-  State<AddIngredientDialog> createState() => _AddIngredientDialogState();
-}
-
-class _AddIngredientDialogState extends State<AddIngredientDialog> {
-  final _nameCtrl = TextEditingController();
-  final _quantityCtrl = TextEditingController(text: '1');
-  String _unit = 'g';
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _quantityCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('🥘 Agregar Ingrediente'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Ingrediente',
-              hintText: 'ej. Cebolla',
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _quantityCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Cantidad'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _unit,
-                  items: const [
-                    DropdownMenuItem(value: 'g', child: Text('g')),
-                    DropdownMenuItem(value: 'kg', child: Text('kg')),
-                    DropdownMenuItem(value: 'ml', child: Text('ml')),
-                    DropdownMenuItem(value: 'l', child: Text('l')),
-                    DropdownMenuItem(value: 'cup', child: Text('cup')),
-                    DropdownMenuItem(value: 'tbsp', child: Text('tbsp')),
-                    DropdownMenuItem(value: 'tsp', child: Text('tsp')),
-                    DropdownMenuItem(value: 'unit', child: Text('unit')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _unit = value);
-                  },
-                  decoration: const InputDecoration(labelText: 'Unidad'),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_nameCtrl.text.isNotEmpty && _quantityCtrl.text.isNotEmpty) {
-              widget.onSave({
-                'name': _nameCtrl.text,
-                'quantity': double.tryParse(_quantityCtrl.text) ?? 1,
-                'unit': _unit,
-                'optional': false,
-              });
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('Agregar'),
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Crear'),
         ),
       ],
     );

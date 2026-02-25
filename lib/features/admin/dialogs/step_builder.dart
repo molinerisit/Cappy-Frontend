@@ -377,6 +377,8 @@ class _CardPreview extends StatelessWidget {
         return '🎬';
       case 'video':
         return '🎥';
+      case 'timer':
+        return '⏱️';
       default:
         return '📌';
     }
@@ -403,6 +405,8 @@ class _CardPreview extends StatelessWidget {
         return '$question (${options.length} opciones)';
       case 'fill-blank':
         return content['sentence'] ?? 'Sin frase';
+      case 'timer':
+        return '${content['duration'] ?? 0} seg';
       default:
         return 'Sin preview';
     }
@@ -514,6 +518,7 @@ class _AddCardDialogState extends State<AddCardDialog> {
       'animation',
       'quiz',
       'fill-blank',
+      'timer',
     }.contains(_cardType)) {
       _cardType = 'text';
     }
@@ -616,6 +621,12 @@ class _AddCardDialogState extends State<AddCardDialog> {
             ],
           },
         };
+      case 'timer':
+        return {
+          'type': 'timer',
+          'order': widget.cardIndex,
+          'content': {'duration': int.tryParse(_getCtrl('duration').text) ?? 0},
+        };
       case 'fill-blank':
         final sentence = _getCtrl('sentence').text;
         final blanks = RegExp(r'_+').allMatches(sentence).length;
@@ -669,6 +680,9 @@ class _AddCardDialogState extends State<AddCardDialog> {
             break;
           case 'sentence':
             _controllers[key]!.text = content['sentence'] ?? '';
+            break;
+          case 'duration':
+            _controllers[key]!.text = (content['duration'] ?? '').toString();
             break;
           default:
             if (key.startsWith('option')) {
@@ -742,6 +756,7 @@ class _AddCardDialogState extends State<AddCardDialog> {
                     value: 'fill-blank',
                     child: Text('✏️ Llenar Blancos'),
                   ),
+                  DropdownMenuItem(value: 'timer', child: Text('⏱️ Timer')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -906,6 +921,23 @@ class _AddCardDialogState extends State<AddCardDialog> {
           ),
           const SizedBox(height: 16),
           ..._buildBlankAnswers(),
+        ];
+      case 'timer':
+        return [
+          TextFormField(
+            controller: _getCtrl('duration'),
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Duracion',
+              suffixText: 'seg',
+            ),
+            validator: (v) => v?.isEmpty ?? true ? 'Requiere duracion' : null,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'El timer se renderiza como widget fijo en la app.',
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
         ];
       default:
         return [];

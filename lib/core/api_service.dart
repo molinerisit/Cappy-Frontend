@@ -2,11 +2,89 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/path.dart';
 import '../models/lesson.dart';
-// import './models/learning_path.dart'; // Not used in this version
 
 class ApiService {
-  static const String baseUrl = "http://localhost:5000/api";
+  static const String baseUrl = "http://localhost:3000/api";
   static String? _token;
+
+  // CRUD Nodos
+  static Future<Map<String, dynamic>> createNode(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/nodes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) return jsonDecode(response.body);
+    throw Exception(
+      jsonDecode(response.body)['message'] ?? "Error creando nodo",
+    );
+  }
+
+  static Future<Map<String, dynamic>> updateNode(
+    String nodeId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/nodes/$nodeId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception(
+      jsonDecode(response.body)['message'] ?? "Error actualizando nodo",
+    );
+  }
+
+  static Future<void> deleteNode(String nodeId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/nodes/$nodeId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        jsonDecode(response.body)['message'] ?? "Error eliminando nodo",
+      );
+    }
+  }
+
+  // Importar nodos/recetas
+  static Future<List<dynamic>> importContent({
+    required String targetPathId,
+    List<String>? nodeIds,
+    List<String>? recipeIds,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/nodes/import"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({
+        "targetPathId": targetPathId,
+        "nodeIds": nodeIds ?? [],
+        "recipeIds": recipeIds ?? [],
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['imported'] ?? [];
+    }
+    throw Exception(
+      jsonDecode(response.body)['message'] ?? "Error importando contenido",
+    );
+  }
+  // Removed duplicate baseUrl and _token declarations
 
   // Auth methods
   static Future<Map<String, dynamic>> register(
@@ -55,6 +133,10 @@ class ApiService {
     return _token;
   }
 
+  static String? get token {
+    return _token;
+  }
+
   static void logout() {
     _token = null;
   }
@@ -75,6 +157,26 @@ class ApiService {
     final body = jsonDecode(response.body);
     throw Exception(
       body['message'] ?? body['error'] ?? "Error cargando perfil",
+    );
+  }
+
+  static Future<Map<String, dynamic>> changeCurrentPath(String pathId) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/auth/change-path"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({"pathId": pathId}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(
+      body['message'] ?? body['error'] ?? "Error cambiando camino",
     );
   }
 
@@ -466,6 +568,38 @@ class ApiService {
     }
 
     throw Exception("Error cargando recetas");
+  }
+
+  static Future<List<dynamic>> getCultureByCountry(String countryId) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/culture/country/$countryId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando artículos culturales");
+  }
+
+  static Future<Map<String, dynamic>> getCulture(String cultureId) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/culture/$cultureId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando artículo cultural");
   }
 
   static Future<Map<String, dynamic>> getRecipe(String recipeId) async {
@@ -1182,7 +1316,7 @@ class ApiService {
 
   static Future<List<dynamic>> adminGetNodesByPath(String pathId) async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/learning-paths/$pathId/nodes"),
+      Uri.parse("$baseUrl/admin/paths/$pathId/nodes"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1194,6 +1328,22 @@ class ApiService {
     }
 
     throw Exception("Error cargando nodos");
+  }
+
+  static Future<List<dynamic>> adminGetAllNodes() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/learning-nodes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando todos los nodos");
   }
 
   static Future<Map<String, dynamic>> adminCreateLearningNode(
@@ -1292,9 +1442,521 @@ class ApiService {
     throw Exception("Error reordenando nodos");
   }
 
+  // ====================================
+  // ADMIN CONTENT V2 (Groups + Nodes)
+  // ====================================
+
+  static Future<List<dynamic>> adminGetGroupsByPath(String pathId) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando grupos");
+  }
+
+  static Future<Map<String, dynamic>> adminCreateGroup(
+    String pathId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error creando grupo");
+  }
+
+  static Future<Map<String, dynamic>> adminUpdateGroup(
+    String groupId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/groups/$groupId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error actualizando grupo");
+  }
+
+  static Future<void> adminDeleteGroup(String groupId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/groups/$groupId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Error eliminando grupo");
+    }
+  }
+
+  static Future<List<dynamic>> adminGetContentNodesByPath(String pathId) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/paths/$pathId/nodes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando nodos");
+  }
+
+  static Future<Map<String, dynamic>> adminCreateContentNode(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/nodes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error creando nodo");
+  }
+
+  static Future<Map<String, dynamic>> adminUpdateContentNode(
+    String nodeId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error actualizando nodo");
+  }
+
+  static Future<void> adminDeleteContentNode(String nodeId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Error eliminando nodo");
+    }
+  }
+
+  static Future<List<dynamic>> adminReorderContentNodes(
+    String pathId,
+    List<Map<String, dynamic>> updates,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/paths/$pathId/nodes/reorder"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({"updates": updates}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error reordenando nodos");
+  }
+
+  static Future<Map<String, dynamic>> adminImportNode(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/nodes/import"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error importando nodo");
+  }
+
+  static Future<Map<String, dynamic>> adminArchiveNode(String nodeId) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/archive"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error archivando nodo");
+  }
+
+  static Future<Map<String, dynamic>> adminDuplicateNode(
+    String nodeId, {
+    String? targetPathId,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/duplicate"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({"targetPathId": targetPathId}),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error duplicando nodo");
+  }
+
+  static Future<Map<String, dynamic>> adminGetNodeRelations(
+    String nodeId,
+  ) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/relations"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error cargando relaciones");
+  }
+
+  static Future<List<dynamic>> adminGetNodeLibrary({
+    String? pathId,
+    String? groupId,
+    String? type,
+    String? status,
+    String? search,
+  }) async {
+    final query = <String, String>{};
+    if (pathId != null) query['pathId'] = pathId;
+    if (groupId != null) query['groupId'] = groupId;
+    if (type != null) query['type'] = type;
+    if (status != null) query['status'] = status;
+    if (search != null) query['search'] = search;
+
+    final uri = Uri.parse(
+      "$baseUrl/admin/node-library",
+    ).replace(queryParameters: query.isEmpty ? null : query);
+
+    final response = await http.get(
+      uri,
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando biblioteca");
+  }
+
+  static Future<Map<String, dynamic>> adminAddNodeStep(
+    String nodeId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error agregando paso");
+  }
+
+  static Future<Map<String, dynamic>> adminUpdateNodeStep(
+    String nodeId,
+    String stepId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error actualizando paso");
+  }
+
+  static Future<void> adminDeleteNodeStep(String nodeId, String stepId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Error eliminando paso");
+    }
+  }
+
+  static Future<void> adminDeleteNode(String nodeId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        "Error eliminando nodo: ${response.statusCode} - ${response.body}",
+      );
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminAddStepCard(
+    String nodeId,
+    String stepId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error agregando card");
+  }
+
+  static Future<Map<String, dynamic>> adminUpdateStepCard(
+    String nodeId,
+    String stepId,
+    String cardId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards/$cardId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error actualizando card");
+  }
+
+  static Future<void> adminDeleteStepCard(
+    String nodeId,
+    String stepId,
+    String cardId,
+  ) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards/$cardId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Error eliminando card");
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminImportModuleToNode(
+    String nodeId,
+    String type,
+    String referenceId,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/learning-nodes/$nodeId/import-module"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({"type": type, "referenceId": referenceId}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error importando módulo");
+  }
+
+  static Future<Map<String, dynamic>> adminRemoveModuleFromNode(
+    String nodeId,
+    String type,
+    String referenceId,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/learning-nodes/$nodeId/remove-module"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode({"type": type, "referenceId": referenceId}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error desvinculando módulo");
+  }
+
   // ======================================
   // RECIPES ADMIN METHODS
   // ======================================
+
+  static Future<List<dynamic>> adminGetAllRecipes() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/recipes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando recetas");
+  }
+
+  static Future<List<dynamic>> adminGetRecipesByCountry(
+    String countryId,
+  ) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/recipes/country/$countryId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando recetas del país");
+  }
+
+  static Future<Map<String, dynamic>> adminCreateRecipe(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/recipes"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error creando receta");
+  }
 
   static Future<Map<String, dynamic>> adminUpdateRecipe(
     String recipeId,
@@ -1487,5 +2149,107 @@ class ApiService {
     }
 
     throw Exception("Error cargando países");
+  }
+
+  static Future<Map<String, dynamic>> adminCreateCountry(
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/admin/countries"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error creando país");
+  }
+
+  static Future<Map<String, dynamic>> adminUpdateCountry(
+    String countryId,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/admin/countries/$countryId"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(body['message'] ?? "Error actualizando país");
+  }
+
+  static Future<void> adminDeleteCountry(String countryId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/admin/countries/$countryId"),
+      headers: {if (_token != null) "Authorization": "Bearer $_token"},
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Error eliminando país");
+    }
+  }
+
+  // =====================================================
+  // NEW: Recipes & Culture by Country (for PathContentScreen)
+  // =====================================================
+
+  static Future<List<dynamic>> adminListRecipesByCountry(
+    String countryId,
+  ) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/countries/$countryId/recipes"),
+      headers: {if (_token != null) "Authorization": "Bearer $_token"},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    }
+
+    throw Exception("Error cargando recetas");
+  }
+
+  static Future<Map<String, dynamic>> adminGetRecipeDetails(
+    String recipeId,
+  ) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/recipes/$recipeId"),
+      headers: {if (_token != null) "Authorization": "Bearer $_token"},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception("Error cargando detalles de receta");
+  }
+
+  static Future<List<dynamic>> adminListCultureNodesByCountry(
+    String countryId,
+  ) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/countries/$countryId/culture-nodes"),
+      headers: {if (_token != null) "Authorization": "Bearer $_token"},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    }
+
+    throw Exception("Error cargando cultura");
   }
 }

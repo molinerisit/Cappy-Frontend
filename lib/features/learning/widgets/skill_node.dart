@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../theme/colors.dart';
+import '../../../theme/typography.dart';
+import '../../../widgets/app_badge.dart';
 
 enum NodeStatus { completed, active, locked }
 
-class SkillNode extends StatefulWidget {
+class LessonNode extends StatefulWidget {
   final String nodeId;
   final String title;
   final int xpReward;
@@ -12,7 +14,7 @@ class SkillNode extends StatefulWidget {
   final VoidCallback? onTap;
   final int index;
 
-  const SkillNode({
+  const LessonNode({
     super.key,
     required this.nodeId,
     required this.title,
@@ -24,14 +26,13 @@ class SkillNode extends StatefulWidget {
   });
 
   @override
-  State<SkillNode> createState() => _SkillNodeState();
+  State<LessonNode> createState() => _LessonNodeState();
 }
 
-class _SkillNodeState extends State<SkillNode>
+class _LessonNodeState extends State<LessonNode>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -43,19 +44,8 @@ class _SkillNodeState extends State<SkillNode>
 
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 0.92,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    // Animación de pulso para nodos activos
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.08,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    // Si es activo, iniciar pulso continuo
-    if (widget.status == NodeStatus.active) {
-      _controller.repeat(reverse: true);
-    }
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -66,7 +56,6 @@ class _SkillNodeState extends State<SkillNode>
 
   void _handleTapDown(TapDownDetails details) {
     if (widget.status != NodeStatus.locked && widget.onTap != null) {
-      _controller.stop();
       _controller.forward();
     }
   }
@@ -74,22 +63,12 @@ class _SkillNodeState extends State<SkillNode>
   void _handleTapUp(TapUpDetails details) {
     if (widget.status != NodeStatus.locked) {
       _controller.reverse();
-      if (widget.status == NodeStatus.active) {
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) _controller.repeat(reverse: true);
-        });
-      }
     }
   }
 
   void _handleTapCancel() {
     if (widget.status != NodeStatus.locked) {
       _controller.reverse();
-      if (widget.status == NodeStatus.active) {
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) _controller.repeat(reverse: true);
-        });
-      }
     }
   }
 
@@ -112,22 +91,22 @@ class _SkillNodeState extends State<SkillNode>
   Color _getNodeColor() {
     switch (widget.status) {
       case NodeStatus.completed:
-        return const Color(0xFF27AE60);
+        return AppColors.success;
       case NodeStatus.active:
-        return const Color(0xFFFF6B35);
+        return AppColors.primary;
       case NodeStatus.locked:
-        return const Color(0xFFD1D5DB);
+        return AppColors.textSecondary;
     }
   }
 
   Color _getBackgroundColor() {
     switch (widget.status) {
       case NodeStatus.completed:
-        return const Color(0xFFD1FAE5);
+        return AppColors.successSoft;
       case NodeStatus.active:
-        return const Color(0xFFFFF3E0);
+        return AppColors.surface;
       case NodeStatus.locked:
-        return const Color(0xFFF3F4F6);
+        return AppColors.lockedSurface;
     }
   }
 
@@ -142,42 +121,32 @@ class _SkillNodeState extends State<SkillNode>
         children: [
           // Nodo circular principal con efecto glow
           ScaleTransition(
-            scale: widget.status == NodeStatus.active
-                ? _pulseAnimation
-                : _scaleAnimation,
+            scale: _scaleAnimation,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Glow effect para nodos activos
-                if (widget.status == NodeStatus.active)
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF6B35).withOpacity(0.4),
-                          blurRadius: 24,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
                 // Nodo principal
                 Container(
-                  width: 90,
-                  height: 90,
+                  width: 76,
+                  height: 76,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _getBackgroundColor(),
-                    border: Border.all(color: _getNodeColor(), width: 4),
-                    boxShadow: widget.status != NodeStatus.locked
-                        ? [
+                    border: Border.all(color: _getNodeColor(), width: 2),
+                    boxShadow: widget.status == NodeStatus.active
+                        ? const [
                             BoxShadow(
-                              color: _getNodeColor().withOpacity(0.25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
+                              color: AppColors.primaryGlow,
+                              blurRadius: 14,
+                              offset: Offset(0, 6),
+                            ),
+                          ]
+                        : widget.status == NodeStatus.completed
+                        ? const [
+                            BoxShadow(
+                              color: AppColors.shadow,
+                              blurRadius: 10,
+                              offset: Offset(0, 5),
                             ),
                           ]
                         : [],
@@ -188,53 +157,40 @@ class _SkillNodeState extends State<SkillNode>
                       onTap: widget.status != NodeStatus.locked
                           ? widget.onTap
                           : null,
-                      borderRadius: BorderRadius.circular(45),
+                      borderRadius: BorderRadius.circular(38),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Icono principal
-                          Icon(
-                            _getCulinaryIcon(),
-                            size: 40,
-                            color: _getNodeColor(),
+                          Opacity(
+                            opacity: widget.status == NodeStatus.locked
+                                ? 0.45
+                                : 1,
+                            child: Icon(
+                              _getCulinaryIcon(),
+                              size: 30,
+                              color: _getNodeColor(),
+                            ),
                           ),
-
-                          // Overlay para completado o bloqueado
                           if (widget.status == NodeStatus.completed)
                             Positioned(
-                              bottom: 4,
-                              right: 4,
+                              bottom: 6,
+                              right: 6,
                               child: Container(
-                                width: 28,
-                                height: 28,
+                                width: 20,
+                                height: 20,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF27AE60),
+                                  color: AppColors.success,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: AppColors.surface,
                                     width: 2,
                                   ),
                                 ),
                                 child: const Icon(
                                   Icons.check_rounded,
-                                  color: Colors.white,
-                                  size: 16,
+                                  color: AppColors.surface,
+                                  size: 12,
                                 ),
-                              ),
-                            ),
-
-                          if (widget.status == NodeStatus.locked)
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withOpacity(0.3),
-                              ),
-                              child: const Icon(
-                                Icons.lock_rounded,
-                                color: Colors.white,
-                                size: 32,
                               ),
                             ),
                         ],
@@ -246,54 +202,33 @@ class _SkillNodeState extends State<SkillNode>
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Título del nodo
           SizedBox(
-            width: 120,
+            width: 110,
             child: Text(
               widget.title,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              style: AppTypography.badge.copyWith(
+                fontSize: 12,
                 color: widget.status == NodeStatus.locked
-                    ? const Color(0xFF9CA3AF)
-                    : const Color(0xFF1F2937),
-                height: 1.3,
+                    ? AppColors.textSecondary
+                    : AppColors.textStrong,
               ),
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           // Badge de XP
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getNodeColor().withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.stars_rounded, size: 14, color: _getNodeColor()),
-                const SizedBox(width: 4),
-                Text(
-                  '+${widget.xpReward} XP',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _getNodeColor(),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          AppBadge(text: '+${widget.xpReward} XP'),
         ],
       ),
     );
   }
 }
+
+typedef SkillNode = LessonNode;

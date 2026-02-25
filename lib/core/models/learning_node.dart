@@ -38,7 +38,7 @@ class NodeStep {
   });
 
   factory NodeStep.fromJson(Map<String, dynamic> json) {
-    String _firstNonEmpty(List<dynamic> values, String fallback) {
+    String firstNonEmpty(List<dynamic> values, String fallback) {
       for (final value in values) {
         if (value == null) {
           continue;
@@ -51,7 +51,7 @@ class NodeStep {
       return fallback;
     }
 
-    List<String>? _parseOptions() {
+    List<String>? parseOptions() {
       final rawOptions = json['options'] is List
           ? List<dynamic>.from(json['options'])
           : (json['answers'] is List
@@ -64,7 +64,7 @@ class NodeStep {
       return rawOptions
           .map((option) {
             if (option is Map) {
-              return _firstNonEmpty([
+              return firstNonEmpty([
                 option['text'],
                 option['label'],
                 option['value'],
@@ -82,23 +82,24 @@ class NodeStep {
         ? List<Map<String, dynamic>>.from(json['cards'])
         : null;
     final description = json['description']?.toString();
-    String instruction = _firstNonEmpty([
+    String instruction = firstNonEmpty([
       json['instruction'],
       json['content'],
       json['text'],
       description,
     ], '');
     String? question = json['question'] ?? json['prompt'] ?? json['statement'];
-    List<String>? options = _parseOptions();
+    List<String>? options = parseOptions();
     String? correctAnswer = json['correctAnswer']?.toString();
 
     if (cards != null && cards.isNotEmpty) {
       for (final card in cards) {
         final cardType = card['type']?.toString();
-        final content = card['content'] as Map? ?? {};
+        final content =
+            (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
 
         if (instruction.isEmpty) {
-          instruction = _firstNonEmpty([
+          instruction = firstNonEmpty([
             content['text'],
             content['description'],
             content['instruction'],
@@ -116,7 +117,7 @@ class NodeStep {
             options = (content['options'] as List)
                 .map((option) {
                   if (option is Map) {
-                    return _firstNonEmpty([
+                    return firstNonEmpty([
                       option['text'],
                       option['label'],
                       option['value'],
@@ -131,18 +132,30 @@ class NodeStep {
           }
         }
 
-        if ((correctAnswer == null || correctAnswer!.trim().isEmpty) &&
-            cardType == 'quiz' &&
-            content['options'] is List) {
-          for (final option in content['options'] as List) {
-            if (option is Map && option['correct'] == true) {
-              correctAnswer = _firstNonEmpty([
-                option['text'],
-                option['label'],
-                option['value'],
-                option['title'],
-              ], '');
-              break;
+        if ((correctAnswer == null || correctAnswer.trim().isEmpty) &&
+            cardType == 'quiz') {
+          if (content['options'] is List) {
+            for (final option in content['options'] as List) {
+              if (option is Map && option['correct'] == true) {
+                correctAnswer = firstNonEmpty([
+                  option['text'],
+                  option['label'],
+                  option['value'],
+                  option['title'],
+                ], '');
+                break;
+              }
+            }
+          }
+
+          // Support correctIndex when options are string list
+          if ((correctAnswer == null || correctAnswer.trim().isEmpty) &&
+              content['correctIndex'] != null &&
+              options != null &&
+              options.isNotEmpty) {
+            final idx = int.tryParse(content['correctIndex'].toString()) ?? -1;
+            if (idx >= 0 && idx < options.length) {
+              correctAnswer = options[idx];
             }
           }
         }
