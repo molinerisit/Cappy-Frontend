@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
 import 'lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
 import '../widgets/path_connector_painter.dart';
+import '../../../widgets/progress_card.dart';
 import '../../../widgets/user_xp_badge.dart';
+import '../../../theme/colors.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/typography.dart';
+import '../../../widgets/app_badge.dart';
+import '../../../widgets/app_button.dart';
+import '../../../widgets/app_header.dart';
+import '../../../widgets/app_scaffold.dart';
 
 class PathProgressionScreen extends StatefulWidget {
   final String pathId;
   final String pathTitle;
+  final bool showAppBar;
 
   const PathProgressionScreen({
     super.key,
     required this.pathId,
     required this.pathTitle,
+    this.showAppBar = true,
   });
 
   @override
@@ -23,7 +32,7 @@ class PathProgressionScreen extends StatefulWidget {
 
 class _PathProgressionScreenState extends State<PathProgressionScreen>
     with TickerProviderStateMixin {
-  late Future<Map<String, dynamic>> futurePathData;
+  late Future<dynamic> futurePathData;
   final List<Offset> nodePositions = [];
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -61,7 +70,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF27AE60)),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
 
@@ -96,7 +105,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al cargar la lección: $e'),
-          backgroundColor: Colors.red.shade400,
+          backgroundColor: AppColors.textStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -119,123 +128,258 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     }
   }
 
+  Map<String, dynamic> _normalizePathData(dynamic data) {
+    if (data is Map) {
+      return {
+        'nodes': data['nodes'] ?? <dynamic>[],
+        'groups': data['groups'] ?? <dynamic>[],
+      };
+    }
+
+    if (data is List) {
+      final match = data.firstWhere((item) {
+        if (item is! Map) return false;
+        final id = item['_id'] ?? item['id'];
+        return id?.toString() == widget.pathId;
+      }, orElse: () => null);
+
+      if (match is Map) {
+        return {
+          'nodes': match['nodes'] ?? <dynamic>[],
+          'groups': match['groups'] ?? <dynamic>[],
+        };
+      }
+    }
+
+    return {'nodes': <dynamic>[], 'groups': <dynamic>[]};
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: _buildAppBar(),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: futurePathData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF27AE60)),
-            );
-          } else if (snapshot.hasError) {
-            return _buildErrorState();
-          }
-
-          final pathData = snapshot.data!;
-          final nodes = pathData['nodes'] as List<dynamic>? ?? [];
-
-          if (nodes.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: _buildNodePath(nodes),
+    final content = FutureBuilder<dynamic>(
+      future: futurePathData,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
           );
-        },
-      ),
+        } else if (snapshot.hasError) {
+          return _buildErrorState();
+        }
+
+        final normalized = _normalizePathData(snapshot.data);
+        final nodes = normalized['nodes'] as List<dynamic>? ?? [];
+        final groups = normalized['groups'] as List<dynamic>? ?? [];
+
+        if (nodes.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: _buildNodePath(nodes, groups),
+        );
+      },
     );
+
+    if (!widget.showAppBar) {
+      return Container(color: AppColors.background, child: content);
+    }
+
+    return AppScaffold(appBar: _buildAppBar(), body: content);
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
+    return AppHeader(
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
         icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-        color: const Color(0xFF6B7280),
-        style: IconButton.styleFrom(
-          backgroundColor: const Color(0xFFF8FAFC),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+        color: AppColors.textSecondary,
       ),
-      title: Text(
-        widget.pathTitle,
-        style: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF1F2937),
-        ),
-      ),
-      centerTitle: true,
+      title: Text(widget.pathTitle, style: AppTypography.cardTitle),
       actions: const [
         Padding(
-          padding: EdgeInsets.only(right: 16.0),
+          padding: EdgeInsets.only(right: AppSpacing.lg),
           child: Center(child: UserXPBadge()),
         ),
       ],
     );
   }
 
-  Widget _buildNodePath(List<dynamic> nodes) {
+  Widget _buildNodePath(List<dynamic> nodes, List<dynamic> groups) {
+    final nodeList = nodes.whereType<Map<String, dynamic>>().toList();
+    final groupList = groups.whereType<Map<String, dynamic>>().toList();
+    final groupTitleById = {
+      for (final group in groupList)
+        (group['_id']?.toString() ?? ''): (group['title'] ?? '') as String,
+    };
+    const ungroupedKey = '__ungrouped__';
+
+    final groupedNodes = <String, List<Map<String, dynamic>>>{};
+    for (final node in nodeList) {
+      String? groupId;
+      final rawGroupId = node['groupId'];
+      if (rawGroupId is Map) {
+        groupId = rawGroupId['_id']?.toString() ?? rawGroupId['id']?.toString();
+      } else {
+        groupId = rawGroupId?.toString();
+      }
+      final normalizedGroupId = groupId == null || groupId.isEmpty
+          ? ungroupedKey
+          : groupId;
+      groupedNodes.putIfAbsent(normalizedGroupId, () => []).add(node);
+    }
+
+    groupList.sort(
+      (a, b) => ((a['order'] ?? 0) as num).compareTo((b['order'] ?? 0) as num),
+    );
+
+    final orderedGroupIds = groupList
+        .map((group) => group['_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final orderedGroupSet = orderedGroupIds.toSet();
+    for (final groupId in groupedNodes.keys) {
+      if (groupId == ungroupedKey) continue;
+      if (!orderedGroupSet.contains(groupId)) {
+        orderedGroupIds.add(groupId);
+        orderedGroupSet.add(groupId);
+      }
+    }
+    if (groupedNodes.containsKey(ungroupedKey)) {
+      orderedGroupIds.add(ungroupedKey);
+    }
+
+    final orderedNodes = <Map<String, dynamic>>[];
+    final groupStartIndex = <String, int>{};
+    for (final groupId in orderedGroupIds) {
+      final groupNodes = groupedNodes[groupId] ?? [];
+      groupNodes.sort((a, b) {
+        final levelA = (a['level'] ?? 1) as int;
+        final levelB = (b['level'] ?? 1) as int;
+        if (levelA != levelB) return levelA.compareTo(levelB);
+        final posA = (a['positionIndex'] ?? 1) as int;
+        final posB = (b['positionIndex'] ?? 1) as int;
+        if (posA != posB) return posA.compareTo(posB);
+        final orderA = (a['order'] ?? 0) as int;
+        final orderB = (b['order'] ?? 0) as int;
+        return orderA.compareTo(orderB);
+      });
+      if (groupNodes.isNotEmpty) {
+        groupStartIndex[groupId] = orderedNodes.length;
+        orderedNodes.addAll(groupNodes);
+      }
+    }
+
     // Calcular estadísticas
-    final completedCount = nodes
+    final completedCount = orderedNodes
         .where((n) => n['status'] == 'completed')
         .length;
-    final totalCount = nodes.length;
-    final progressPercent = totalCount > 0
-        ? (completedCount / totalCount * 100).toStringAsFixed(0)
-        : '0';
+    final totalCount = orderedNodes.length;
+    var currentLevel = completedCount + 1;
+    if (currentLevel < 1) currentLevel = 1;
+    if (currentLevel > totalCount && totalCount > 0) {
+      currentLevel = totalCount;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final leftX = width * 0.25;
         final rightX = width * 0.75;
-        final verticalSpacing = 180.0;
+        final verticalSpacing = 240.0; // Increased spacing
+        const headerOffset = 120.0;
+        const nodeRadius = 56.0;
 
         // Calcular posiciones de nodos
         nodePositions.clear();
-        for (int i = 0; i < nodes.length; i++) {
+        for (int i = 0; i < orderedNodes.length; i++) {
           final isLeft = i % 2 == 0;
           final x = isLeft ? leftX : rightX;
-          final y = 120.0 + (i * verticalSpacing);
+          final y = 20.0 + (i * verticalSpacing);
           nodePositions.add(Offset(x, y));
         }
 
-        return Stack(
+        // Usar las posiciones de nodos directamente para las líneas
+        final linePositions = nodePositions;
+
+        final groupHeaders = <Map<String, dynamic>>[];
+        final breakIndices = <int>{}; // Índices donde cortar las líneas
+
+        print('🎯 [PathProgressionScreen] Group separation:');
+        for (final groupId in orderedGroupIds) {
+          if (groupId == ungroupedKey) continue;
+          final index = groupStartIndex[groupId];
+          final title = groupTitleById[groupId] ?? '';
+          final groupNodeCount = (groupedNodes[groupId] ?? []).length;
+
+          // Solo mostrar título si grupo tiene nodos y título no está vacío
+          if (index == null || title.isEmpty || groupNodeCount < 1) continue;
+
+          print('  Group "$title" starts at index $index');
+
+          // Añadir índice de corte (excepto el primero)
+          if (index > 0) {
+            breakIndices.add(index);
+            print('    -> Added break at index $index');
+          }
+
+          // Posicionar el título ANTES del primer nodo del grupo
+          final nodeY = 20.0 + (index * 240.0);
+          final y = (nodeY - 80).clamp(0.0, double.infinity);
+          groupHeaders.add({'title': title, 'y': y});
+        }
+        print('  Total breakIndices: $breakIndices');
+
+        return Column(
           children: [
-            // Contenido scrolleable
-            SingleChildScrollView(
-              padding: const EdgeInsets.only(top: 120, bottom: 80),
-              child: SizedBox(
-                height: nodes.isNotEmpty ? 40.0 + (nodes.length * 180.0) : 0,
-                child: Stack(
-                  children: [
-                    // Dibujar conexiones primero (detrás de los nodos)
-                    if (nodePositions.length > 1)
+            // Bloque de progreso (Fixed at top)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: ProgressCard(
+                levelText: 'Nivel $currentLevel',
+                progress: totalCount > 0 ? completedCount / totalCount : 0,
+                subtitle:
+                    '$completedCount de $totalCount lecciones completadas',
+              ),
+            ),
+
+            // Contenido scrolleable (Expanded)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 32),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: orderedNodes.isNotEmpty
+                      ? 20 + (orderedNodes.length * 240.0) + 120
+                      : 100,
+                  child: Stack(
+                    children: [
+                      // Dibujar lineas de conexion
                       Positioned.fill(
                         child: CustomPaint(
                           painter: PathConnectorPainter(
-                            nodePositions: nodePositions,
-                            lineColor: const Color(0xFFE5E7EB),
-                            strokeWidth: 5,
+                            nodePositions: linePositions,
+                            lineColor: AppColors.border,
+                            strokeWidth: 2,
+                            breakIndices: breakIndices,
                           ),
                         ),
                       ),
 
-                    // Puntos decorativos en las conexiones
-                    if (nodePositions.length > 1)
-                      ...List.generate(nodePositions.length - 1, (index) {
-                        final start = nodePositions[index];
-                        final end = nodePositions[index + 1];
+                      // Dibujar conectores entre nodos
+                      ...List.generate(orderedNodes.length - 1, (index) {
+                        if (index + 1 >= linePositions.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        // Saltar conectores en puntos de corte de grupo
+                        if (breakIndices.contains(index + 1)) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final start = linePositions[index];
+                        final end = linePositions[index + 1];
                         final midX = (start.dx + end.dx) / 2;
                         final midY = (start.dy + end.dy) / 2;
 
@@ -252,15 +396,11 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                               return Transform.scale(
                                 scale: value,
                                 child: Container(
-                                  width: 12,
-                                  height: 12,
+                                  width: 8,
+                                  height: 8,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: const Color(0xFFE5E7EB),
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
+                                    color: AppColors.border,
                                   ),
                                 ),
                               );
@@ -269,196 +409,121 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                         );
                       }),
 
-                    // Dibujar nodos encima
-                    ...List.generate(nodes.length, (index) {
-                      if (index >= nodePositions.length) {
-                        return const SizedBox.shrink();
-                      }
-
-                      try {
-                        final node = nodes[index] as Map<String, dynamic>?;
-                        if (node == null) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final nodeId =
-                            (node['_id'] ?? node['id'] ?? '') as String;
-                        final title =
-                            (node['title'] ?? 'Nodo ${index + 1}') as String;
-                        final xpReward = (node['xpReward'] ?? 0) as int;
-                        final status = _getNodeStatus(
-                          (node['status'] ?? 'locked') as String,
-                        );
-                        final nodeType = (node['type'] ?? 'recipe') as String;
-
-                        final position = nodePositions[index];
+                      // Dibujar títulos de grupos
+                      ...List.generate(groupHeaders.length, (index) {
+                        final groupHeader = groupHeaders[index];
+                        final y = groupHeader['y'] as double;
+                        final title = groupHeader['title'] as String;
 
                         return Positioned(
-                          left: position.dx - 60, // Centrar el nodo (120/2)
-                          top: position.dy - 45, // Centrar verticalmente
+                          left: 0,
+                          top: y,
+                          right: 0,
                           child: TweenAnimationBuilder<double>(
-                            key: ValueKey(nodeId),
                             tween: Tween(begin: 0.0, end: 1.0),
-                            duration: Duration(
-                              milliseconds: 300 + (index * 100),
-                            ),
+                            duration: const Duration(milliseconds: 500),
                             curve: Curves.easeOut,
                             builder: (context, value, child) {
-                              return Transform.scale(
-                                scale: 0.8 + (value * 0.2),
-                                child: Opacity(
-                                  opacity: value.clamp(0.0, 1.0),
+                              return Opacity(
+                                opacity: value,
+                                child: Transform.translate(
+                                  offset: Offset(0, -10 * (1 - value)),
                                   child: child,
                                 ),
                               );
                             },
-                            child: SkillNode(
-                              nodeId: nodeId,
-                              title: title,
-                              xpReward: xpReward,
-                              status: status,
-                              nodeType: nodeType,
-                              index: index,
-                              onTap: status != NodeStatus.locked
-                                  ? () => _startLesson(nodeId, title, nodeType)
-                                  : null,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.border,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.body.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         );
-                      } catch (e) {
-                        debugPrint('Error renderizando nodo $index: $e');
-                        return const SizedBox.shrink();
-                      }
-                    }),
-                  ],
-                ),
-              ),
-            ),
+                      }),
 
-            // Header flotante con estadísticas
-            Positioned(
-              top: 0,
-              left: 20,
-              right: 20,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, -20 * (1 - value)),
-                    child: Opacity(opacity: value, child: child),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Icono de progreso
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF27AE60).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: CircularProgressIndicator(
-                                value: completedCount / totalCount,
-                                strokeWidth: 4,
-                                backgroundColor: const Color(0xFFE5E7EB),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  Color(0xFF27AE60),
-                                ),
+                      // Dibujar nodos encima
+                      ...List.generate(orderedNodes.length, (index) {
+                        if (index >= nodePositions.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        try {
+                          final node =
+                              orderedNodes[index] as Map<String, dynamic>?;
+                          if (node == null) {
+                            return const SizedBox.shrink();
+                          }
+
+                          final nodeId =
+                              (node['_id'] ?? node['id'] ?? '') as String;
+                          final title =
+                              (node['title'] ?? 'Nodo ${index + 1}') as String;
+                          final xpReward = (node['xpReward'] ?? 0) as int;
+                          final status = _getNodeStatus(
+                            (node['status'] ?? 'locked') as String,
+                          );
+                          final nodeType = (node['type'] ?? 'recipe') as String;
+
+                          final position = nodePositions[index];
+
+                          return Positioned(
+                            left: position.dx - 56,
+                            top: position.dy,
+                            child: TweenAnimationBuilder<double>(
+                              key: ValueKey(nodeId),
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              duration: Duration(
+                                milliseconds: 300 + (index * 100),
+                              ),
+                              curve: Curves.easeOut,
+                              builder: (context, value, child) {
+                                return Transform.scale(
+                                  scale: 0.8 + (value * 0.2),
+                                  child: Opacity(
+                                    opacity: value.clamp(0.0, 1.0),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: LessonNode(
+                                nodeId: nodeId,
+                                title: title,
+                                xpReward: xpReward,
+                                status: status,
+                                nodeType: nodeType,
+                                index: index,
+                                onTap: status != NodeStatus.locked
+                                    ? () =>
+                                          _startLesson(nodeId, title, nodeType)
+                                    : null,
                               ),
                             ),
-                            Text(
-                              '$progressPercent%',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF27AE60),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Información de progreso
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tu Progreso',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF6B7280),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$completedCount de $totalCount lecciones',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF1F2937),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Badge de motivación
-                      if (completedCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFFD93D), Color(0xFFFFA800)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.local_fire_department_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '¡Sigue así!',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                          );
+                        } catch (e) {
+                          debugPrint('Error renderizando nodo $index: $e');
+                          return const SizedBox.shrink();
+                        }
+                      }),
                     ],
                   ),
                 ),
@@ -481,36 +546,31 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
               ),
               child: const Icon(
                 Icons.error_outline_rounded,
                 size: 40,
-                color: Color(0xFFEF4444),
+                color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
             Text(
               "¡Oops! Algo salió mal",
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1F2937),
-              ),
+              style: AppTypography.cardTitle,
             ),
             const SizedBox(height: 8),
             Text(
               "No pudimos cargar el camino de aprendizaje",
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6B7280),
-              ),
+              style: AppTypography.body,
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            AppButton(
+              label: 'Reintentar',
               onPressed: () {
                 setState(() {
                   futurePathData = ApiService.getPath(widget.pathId);
@@ -518,24 +578,6 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                   _fadeController.forward();
                 });
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF27AE60),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                "Reintentar",
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
@@ -550,25 +592,22 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("🍳", style: TextStyle(fontSize: 80)),
+            const Icon(
+              Icons.restaurant_menu_rounded,
+              size: 64,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(height: 24),
             Text(
-              "Aún no hay lecciones",
+              'Aun no hay lecciones',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1F2937),
-              ),
+              style: AppTypography.cardTitle,
             ),
             const SizedBox(height: 8),
             Text(
               "Pronto habrán nuevas experiencias culinarias disponibles",
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6B7280),
-              ),
+              style: AppTypography.body,
             ),
           ],
         ),
@@ -610,21 +649,21 @@ class _NodeCard extends StatelessWidget {
   }
 
   Color _getNodeColor() {
-    if (isCompleted) return const Color(0xFF4CAF50);
-    if (isLocked) return Colors.grey;
-    return const Color(0xFFFF6B35);
+    if (isCompleted) return AppColors.success;
+    if (isLocked) return AppColors.textSecondary;
+    return AppColors.primary;
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       child: Card(
-        elevation: 4,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
+            color: AppColors.surface,
             border: Border(left: BorderSide(color: _getNodeColor(), width: 4)),
           ),
           padding: const EdgeInsets.all(16),
@@ -651,7 +690,9 @@ class _NodeCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isLocked ? Colors.grey : Colors.black87,
+                  color: isLocked
+                      ? AppColors.textSecondary
+                      : AppColors.textStrong,
                 ),
               ),
               if (description.isNotEmpty) ...[
@@ -662,7 +703,7 @@ class _NodeCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isLocked ? Colors.grey : Colors.grey[600],
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -738,7 +779,7 @@ class _LineConnectorPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFFF6B35)
+      ..color = AppColors.primary
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 

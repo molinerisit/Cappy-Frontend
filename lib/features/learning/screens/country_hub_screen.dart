@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_path.dart';
-import 'path_progression_screen.dart';
+import 'recipes_list_screen.dart';
+import 'culture_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
   final String countryId;
@@ -133,9 +134,11 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => PathProgressionScreen(
+                              builder: (context) => RecipesListScreen(
+                                countryId: widget.countryId,
                                 pathId: hub.recipes.id,
                                 pathTitle: hub.recipes.title,
+                                countryName: widget.countryName ?? 'País',
                               ),
                             ),
                           );
@@ -147,9 +150,11 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => PathProgressionScreen(
+                              builder: (context) => CultureListScreen(
+                                countryId: widget.countryId,
                                 pathId: hub.culture.id,
                                 pathTitle: hub.culture.title,
+                                countryName: widget.countryName ?? 'País',
                               ),
                             ),
                           );

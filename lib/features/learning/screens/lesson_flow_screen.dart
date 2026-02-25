@@ -17,6 +17,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
   bool _showChecklist = true;
   List<bool> _checklistItems = [];
   bool _isCompleting = false;
+  Map<String, dynamic>? _completionResult;
 
   @override
   void initState() {

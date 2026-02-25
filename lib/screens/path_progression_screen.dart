@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/api_service.dart';
+import '../core/lives_service.dart';
+import '../widgets/lives_widget.dart';
+import 'learning_node_viewer_screen.dart';
 
 class PathProgressionScreen extends StatefulWidget {
   final String pathId;
@@ -18,10 +21,124 @@ class PathProgressionScreen extends StatefulWidget {
 class _PathProgressionScreenState extends State<PathProgressionScreen> {
   late Future<Map<String, dynamic>> futurePathData;
 
+  // Lives system
+  late LivesService _livesService;
+  int _currentLives = 3;
+  int _maxLives = 3;
+  DateTime? _nextRefillAt;
+  bool _livesLoaded = false;
+
   @override
   void initState() {
     super.initState();
     futurePathData = ApiService.getPath(widget.pathId);
+    _initializeLives();
+  }
+
+  void _initializeLives() {
+    _livesService = LivesService(baseUrl: ApiService.baseUrl);
+    _loadLives();
+  }
+
+  Future<void> _loadLives() async {
+    try {
+      final token = ApiService.getToken();
+      if (token == null) {
+        print('DEBUG: No token available');
+        if (mounted) {
+          setState(() {
+            _currentLives = 3;
+            _maxLives = 3;
+            _nextRefillAt = null;
+            _livesLoaded = true;
+          });
+        }
+        return;
+      }
+
+      print('DEBUG: Token available, fetching lives status');
+      final status = await _livesService.getLivesStatus(token);
+      print('DEBUG: Lives status response: $status');
+
+      if (mounted) {
+        setState(() {
+          _currentLives = status['lives'] ?? 3;
+          _maxLives = 3;
+          _nextRefillAt = status['nextRefillAt'] != null
+              ? DateTime.parse(status['nextRefillAt'].toString())
+              : null;
+          _livesLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading lives: $e');
+      if (mounted) {
+        setState(() {
+          _currentLives = 3;
+          _maxLives = 3;
+          _nextRefillAt = null;
+          _livesLoaded = true;
+        });
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> _buildDisplayItems(
+    List<dynamic> nodes,
+    List<dynamic> groups,
+  ) {
+    final groupTitleById = <String, String>{};
+    for (final group in groups) {
+      final groupMap = group as Map<String, dynamic>;
+      final id = groupMap['_id']?.toString() ?? '';
+      final title = groupMap['title']?.toString().trim() ?? '';
+      if (id.isNotEmpty && title.isNotEmpty) {
+        groupTitleById[id] = title;
+      }
+    }
+
+    final sortedNodes = nodes
+        .map((n) => Map<String, dynamic>.from(n as Map))
+        .toList();
+    sortedNodes.sort((a, b) {
+      final aOrder = _parseOrder(a['order']);
+      final bOrder = _parseOrder(b['order']);
+      return aOrder.compareTo(bOrder);
+    });
+
+    final items = <Map<String, dynamic>>[];
+    String? lastGroupTitle;
+    var segmentIndex = 0;
+
+    for (final node in sortedNodes) {
+      final groupTitle = _resolveGroupTitle(node, groupTitleById);
+      if (groupTitle.isNotEmpty && groupTitle != lastGroupTitle) {
+        items.add({'type': 'separator', 'title': groupTitle});
+        segmentIndex = 0;
+        lastGroupTitle = groupTitle;
+      }
+
+      items.add({'type': 'node', 'node': node, 'segmentIndex': segmentIndex});
+      segmentIndex++;
+    }
+
+    return items;
+  }
+
+  int _parseOrder(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String _resolveGroupTitle(
+    Map<String, dynamic> node,
+    Map<String, String> groupTitleById,
+  ) {
+    final directTitle = node['groupTitle']?.toString().trim() ?? '';
+    if (directTitle.isNotEmpty) return directTitle;
+    final groupId = node['groupId']?.toString() ?? '';
+    return groupTitleById[groupId]?.trim() ?? '';
   }
 
   @override
@@ -31,6 +148,18 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
         title: Text(widget.pathTitle),
         backgroundColor: const Color(0xFFFF6B35),
         elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: LivesWidget(
+                lives: _currentLives,
+                maxLives: _maxLives,
+                nextRefillAt: _nextRefillAt,
+              ),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: futurePathData,
@@ -67,25 +196,39 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
 
           final pathData = snapshot.data!;
           final nodes = pathData['nodes'] as List<dynamic>? ?? [];
+          final groups = pathData['groups'] as List<dynamic>? ?? [];
 
           if (nodes.isEmpty) {
             return const Center(child: Text('No hay nodos en este camino'));
           }
 
+          final displayItems = _buildDisplayItems(nodes, groups);
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: nodes.length,
+            itemCount: displayItems.length,
             itemBuilder: (context, index) {
-              final node = nodes[index] as Map<String, dynamic>;
+              final item = displayItems[index];
+              if (item['type'] == 'separator') {
+                return _GroupSeparator(title: item['title'] ?? '');
+              }
+
+              final node = item['node'] as Map<String, dynamic>;
+              final segmentIndex = item['segmentIndex'] as int? ?? 0;
               final nodeId = node['_id'] ?? node['id'] ?? '';
-              final title = node['title'] ?? 'Nodo ${index + 1}';
+              final title = node['title'] ?? 'Nodo ${segmentIndex + 1}';
               final description = node['description'] ?? '';
               final xpReward = node['xpReward'] ?? 0;
               final isCompleted = node['status'] == 'completed';
               final isLocked = node['status'] == 'locked';
               final nodeType = node['type'] ?? 'recipe';
 
-              final isLeft = index % 2 == 0;
+              final isLeft = segmentIndex % 2 == 0;
+              final isFirst =
+                  index == 0 || displayItems[index - 1]['type'] == 'separator';
+              final isLast =
+                  index == displayItems.length - 1 ||
+                  displayItems[index + 1]['type'] == 'separator';
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24),
@@ -98,8 +241,8 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
                       width: MediaQuery.of(context).size.width * 0.45,
                       child: _LineConnector(
                         isLeft: isLeft,
-                        isFirst: index == 0,
-                        isLast: index == nodes.length - 1,
+                        isFirst: isFirst,
+                        isLast: isLast,
                         child: _NodeCard(
                           nodeId: nodeId,
                           title: title,
@@ -110,10 +253,14 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
                           nodeType: nodeType,
                           onTap: !isLocked
                               ? () {
-                                  // TODO: Navigate to lesson flow
-                                  // For now, show a simple message
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Starting: $title')),
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          LearningNodeViewerScreen(
+                                            nodeId: nodeId,
+                                            nodeTitle: title,
+                                          ),
+                                    ),
                                   );
                                 }
                               : null,
@@ -318,4 +465,41 @@ class _LineConnectorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LineConnectorPainter oldDelegate) => false;
+}
+
+class _GroupSeparator extends StatelessWidget {
+  final String title;
+
+  const _GroupSeparator({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    if (title.trim().isEmpty) {
+      return const SizedBox(height: 16);
+    }
+
+    final dividerColor = Colors.grey.shade300;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B6B6B),
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+        ],
+      ),
+    );
+  }
 }

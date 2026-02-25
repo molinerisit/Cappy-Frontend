@@ -27,6 +27,7 @@ class _ExploreCardState extends State<ExploreCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
 
   @override
   void initState() {
