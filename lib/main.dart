@@ -19,6 +19,8 @@ import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
 import 'theme/app_theme.dart';
+import 'core/app_initializer.dart';
+import 'core/services/loading_service.dart';
 
 void main() {
   runApp(const CappyApp());
@@ -34,12 +36,13 @@ class CappyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
+        ChangeNotifierProvider(create: (_) => LoadingService()),
       ],
       child: MaterialApp(
         title: 'Cappy - Cocina feliz',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const SplashScreen(),
+        home: const _BootstrapWidget(),
         onGenerateRoute: _onGenerateRoute,
       ),
     );
@@ -47,8 +50,90 @@ class CappyApp extends StatelessWidget {
 }
 
 /// ==============================
-/// SPLASH SCREEN
+/// BOOTSTRAP WIDGET
 /// ==============================
+/// Orquesta la inicialización centralizadamente
+/// usando AppInitializer
+class _BootstrapWidget extends StatefulWidget {
+  const _BootstrapWidget();
+
+  @override
+  State<_BootstrapWidget> createState() => _BootstrapWidgetState();
+}
+
+class _BootstrapWidgetState extends State<_BootstrapWidget> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      // Ejecutar AppInitializer
+      await AppInitializer.initialize(context);
+
+      // Marcar como completado en LoadingService
+      if (mounted) {
+        context.read<LoadingService>().completeAppInitialization();
+      }
+
+      // Navegar según estado de auth
+      if (mounted) {
+        _navigateAfterInitialization();
+      }
+    } catch (e) {
+      debugPrint('❌ Bootstrap failed: $e');
+      // En caso de error, seguir permitiendo login
+      if (mounted) {
+        context.read<LoadingService>().completeAppInitialization();
+        _navigateAfterInitialization();
+      }
+    }
+  }
+
+  void _navigateAfterInitialization() {
+    final authProvider = context.read<AuthProvider>();
+    final route = authProvider.isAuthenticated ? '/main' : '/welcome';
+    Navigator.of(context).pushReplacementNamed(route);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF3E6),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Logo
+            Image.asset('assets/logo_cappy.png', width: 150, height: 150),
+            const SizedBox(height: 20),
+            // Eslogan
+            const Text(
+              "Cocina feliz",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 40),
+            // Loading
+            const CircularProgressIndicator(color: Colors.orange),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ==============================
+/// LEGACY SPLASH SCREEN (deprecated)
+/// ==============================
+@deprecated('Use _BootstrapWidget instead')
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -56,6 +141,7 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
+@deprecated('Use _BootstrapWidget instead')
 class _SplashScreenState extends State<SplashScreen> {
   AuthProvider? _authProvider;
   bool _hasListener = false;
@@ -175,7 +261,21 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       }
 
       if (name == "/goals") {
-        return const FollowGoalsScreen();
+        return const FollowGoalsScreen(isModal: true);
+      }
+
+      // Router dinámico para mode selection
+      if (name == "/paths") {
+        final args = settings.arguments as Map?;
+        final type = args?['type'] as String?;
+
+        if (type == "country") {
+          return const CountrySelectionScreen();
+        } else if (type == "goal") {
+          return const FollowGoalsScreen(isModal: true);
+        }
+        // Fallback si no hay type válido
+        return const MainExperienceScreen();
       }
 
       if (name == "/pantry") return const PantryScreen();
