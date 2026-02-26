@@ -485,6 +485,16 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 160,
+                        width: double.infinity,
+                        color: const Color(0xFFF3F4F6),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                      ),
                     ),
                   ),
                 if (cardTitle.isNotEmpty) ...[
@@ -787,6 +797,17 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                             height: 240,
                             width: double.infinity,
                             fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 240,
+                              width: double.infinity,
+                              color: const Color(0xFFF3F4F6),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.broken_image_outlined,
+                                size: 32,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                            ),
                           ),
                         ),
                       ),

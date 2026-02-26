@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/app_network_image.dart';
 
 class PathCard extends StatefulWidget {
   final String id;
@@ -92,16 +93,15 @@ class _PathCardState extends State<PathCard> {
                           ),
                         ),
                         child: widget.imageUrl != null
-                            ? ClipRRect(
+                            ? AppNetworkImage(
+                                imageUrl: widget.imageUrl!,
+                                width: 60,
+                                height: 60,
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  widget.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: widget.accentColor,
-                                    size: 28,
-                                  ),
+                                errorWidget: Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: widget.accentColor,
+                                  size: 28,
                                 ),
                               )
                             : Icon(

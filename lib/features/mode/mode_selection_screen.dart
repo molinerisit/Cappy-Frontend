@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../learning/screens/main_experience_screen.dart';
 import 'widgets/game_header.dart';
 import 'widgets/continue_card.dart';
 import 'widgets/explore_card.dart';
@@ -52,12 +53,34 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
     super.dispose();
   }
 
-  void _openMode(BuildContext context, String type, String title) {
-    Navigator.pushNamed(
+  Future<void> _openMode(
+    BuildContext context,
+    String type,
+    String title,
+  ) async {
+    final result = await Navigator.pushNamed(
       context,
       "/paths",
       arguments: {"type": type, "title": title},
     );
+
+    if (!context.mounted) return;
+
+    if (result is Map && result['changed'] == true) {
+      final selectedPathId = (result['pathId'] ?? '').toString();
+      final selectedPathTitle = (result['pathTitle'] ?? 'Mi Camino').toString();
+
+      if (selectedPathId.isNotEmpty) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => MainExperienceScreen(
+              initialPathId: selectedPathId,
+              initialPathTitle: selectedPathTitle,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../providers/onboarding_selection_provider.dart';
+import '../../learning/screens/main_experience_screen.dart';
 
 /// Card destacada principal para continuar con la última experiencia
 class ContinueCard extends StatefulWidget {
@@ -36,25 +37,45 @@ class _ContinueCardState extends State<ContinueCard>
     super.dispose();
   }
 
-  void _handleContinue(BuildContext context) {
+  Future<void> _handleContinue(BuildContext context) async {
     final selectionProvider = context.read<OnboardingSelectionProvider>();
     final mode = selectionProvider.mode;
     final selectionId = selectionProvider.selectionId;
 
     if (mode != null && selectionId != null) {
       // Navegar según el modo guardado
+      Object? result;
       if (mode == 'goals') {
-        Navigator.pushNamed(
+        result = await Navigator.pushNamed(
           context,
           "/paths",
           arguments: {"type": "goal", "title": "Objetivos"},
         );
       } else if (mode == 'countries') {
-        Navigator.pushNamed(
+        result = await Navigator.pushNamed(
           context,
           "/paths",
           arguments: {"type": "country", "title": "Experiencia Culinaria"},
         );
+      }
+
+      if (!context.mounted) return;
+
+      if (result is Map && result['changed'] == true) {
+        final selectedPathId = (result['pathId'] ?? '').toString();
+        final selectedPathTitle = (result['pathTitle'] ?? 'Mi Camino')
+            .toString();
+
+        if (selectedPathId.isNotEmpty) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => MainExperienceScreen(
+                initialPathId: selectedPathId,
+                initialPathTitle: selectedPathTitle,
+              ),
+            ),
+          );
+        }
       }
     } else {
       // Si no hay selección previa, mostrar mensaje o seleccionar modo por defecto

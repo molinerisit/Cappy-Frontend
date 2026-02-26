@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../widgets/app_network_image.dart';
 
 /// Card de pregunta tipo Duolingo
 /// Muestra la pregunta de forma clara y atractiva
@@ -56,27 +57,11 @@ class _QuestionCardState extends State<QuestionCard>
         children: [
           // Imagen si existe
           if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) ...[
-            ClipRRect(
+            AppNetworkImage(
+              imageUrl: widget.imageUrl!,
+              width: double.infinity,
+              height: 200,
               borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                height: 200,
-                color: const Color(0xFFF3F4F6),
-                child: Image.network(
-                  widget.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: const Color(0xFFF3F4F6),
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Color(0xFFD1D5DB),
-                      ),
-                    );
-                  },
-                ),
-              ),
             ),
             const SizedBox(height: 24),
           ],
