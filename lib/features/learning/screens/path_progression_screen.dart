@@ -154,6 +154,32 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     return {'nodes': <dynamic>[], 'groups': <dynamic>[]};
   }
 
+  String? _extractEntityId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) {
+      final idCandidate = raw['_id'] ?? raw['id'] ?? raw['\$oid'];
+      if (idCandidate != null) {
+        final nested = _extractEntityId(idCandidate);
+        if (nested != null && nested.isNotEmpty) return nested;
+      }
+      return null;
+    }
+
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
+  }
+
+  String? _extractGroupTitle(dynamic raw) {
+    if (raw is String) {
+      final value = raw.trim();
+      return value.isEmpty ? null : value;
+    }
+    if (raw is! Map) return null;
+    final title =
+        raw['title']?.toString().trim() ?? raw['name']?.toString().trim() ?? '';
+    return title.isEmpty ? null : title;
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = FutureBuilder<dynamic>(
@@ -209,24 +235,38 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   Widget _buildNodePath(List<dynamic> nodes, List<dynamic> groups) {
     final nodeList = nodes.whereType<Map<String, dynamic>>().toList();
     final groupList = groups.whereType<Map<String, dynamic>>().toList();
-    final groupTitleById = {
-      for (final group in groupList)
-        (group['_id']?.toString() ?? ''): (group['title'] ?? '') as String,
-    };
+    final groupTitleById = <String, String>{};
+    for (final group in groupList) {
+      final id = _extractEntityId(group);
+      final title = _extractGroupTitle(group);
+      if (id != null && id.isNotEmpty && title != null && title.isNotEmpty) {
+        groupTitleById[id] = title;
+      }
+    }
     const ungroupedKey = '__ungrouped__';
 
     final groupedNodes = <String, List<Map<String, dynamic>>>{};
     for (final node in nodeList) {
-      String? groupId;
       final rawGroupId = node['groupId'];
-      if (rawGroupId is Map) {
-        groupId = rawGroupId['_id']?.toString() ?? rawGroupId['id']?.toString();
-      } else {
-        groupId = rawGroupId?.toString();
-      }
+      final groupId = _extractEntityId(rawGroupId);
       final normalizedGroupId = groupId == null || groupId.isEmpty
           ? ungroupedKey
           : groupId;
+
+      final nodeGroupTitle = _extractGroupTitle(rawGroupId);
+      if (normalizedGroupId != ungroupedKey &&
+          nodeGroupTitle != null &&
+          nodeGroupTitle.isNotEmpty) {
+        groupTitleById.putIfAbsent(normalizedGroupId, () => nodeGroupTitle);
+      }
+
+      final directGroupTitle = _extractGroupTitle(node['groupTitle']);
+      if (normalizedGroupId != ungroupedKey &&
+          directGroupTitle != null &&
+          directGroupTitle.isNotEmpty) {
+        groupTitleById.putIfAbsent(normalizedGroupId, () => directGroupTitle);
+      }
+
       groupedNodes.putIfAbsent(normalizedGroupId, () => []).add(node);
     }
 
@@ -313,10 +353,12 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
           final title = groupTitleById[groupId] ?? '';
           final groupNodeCount = (groupedNodes[groupId] ?? []).length;
 
-          // Solo mostrar título si grupo tiene nodos y título no está vacío
-          if (index == null || title.isEmpty || groupNodeCount < 1) continue;
+          // Mostrar separación de grupo solo si tiene nodos
+          if (index == null || groupNodeCount < 1) continue;
 
-          print('  Group "$title" starts at index $index');
+          final resolvedTitle = title.trim();
+
+          print('  Group "$resolvedTitle" starts at index $index');
 
           // Añadir índice de corte (excepto el primero)
           if (index > 0) {
@@ -327,7 +369,9 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
           // Posicionar el título ANTES del primer nodo del grupo
           final nodeY = 20.0 + (index * 240.0);
           final y = (nodeY - 80).clamp(0.0, double.infinity);
-          groupHeaders.add({'title': title, 'y': y});
+          if (resolvedTitle.isNotEmpty) {
+            groupHeaders.add({'title': resolvedTitle, 'y': y});
+          }
         }
         print('  Total breakIndices: $breakIndices');
 

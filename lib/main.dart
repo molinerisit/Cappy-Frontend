@@ -20,18 +20,26 @@ import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const CappyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Bootstrap: inicializar providers antes de runApp
+  final authProvider = AuthProvider();
+  await authProvider.initialize();
+
+  runApp(CappyApp(authProvider: authProvider));
 }
 
 class CappyApp extends StatelessWidget {
-  const CappyApp({super.key});
+  final AuthProvider authProvider;
+
+  const CappyApp({super.key, required this.authProvider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
       ],
@@ -39,95 +47,10 @@ class CappyApp extends StatelessWidget {
         title: 'Cappy - Cocina feliz',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const SplashScreen(),
+        home: authProvider.isAuthenticated
+            ? const MainExperienceScreen()
+            : const WelcomeScreen(),
         onGenerateRoute: _onGenerateRoute,
-      ),
-    );
-  }
-}
-
-/// ==============================
-/// SPLASH SCREEN
-/// ==============================
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  AuthProvider? _authProvider;
-  bool _hasListener = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Escucha los cambios del AuthProvider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = context.read<AuthProvider>();
-      _authProvider = authProvider;
-      if (!_hasListener) {
-        authProvider.addListener(_onAuthStatusChanged);
-        _hasListener = true;
-      }
-      // Si ya terminó de inicializar, navega inmediatamente
-      if (!authProvider.isInitializing) {
-        _navigate(authProvider);
-      }
-    });
-  }
-
-  void _onAuthStatusChanged() {
-    final authProvider = context.read<AuthProvider>();
-    if (!authProvider.isInitializing) {
-      _navigate(authProvider);
-    }
-  }
-
-  void _navigate(AuthProvider authProvider) {
-    if (!mounted) return;
-    if (authProvider.isAuthenticated) {
-      Navigator.of(context).pushReplacementNamed('/main');
-    } else {
-      Navigator.of(context).pushReplacementNamed('/welcome');
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_hasListener) {
-      _authProvider?.removeListener(_onAuthStatusChanged);
-      _hasListener = false;
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF3E6),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Logo
-            Image.asset('assets/logo_cappy.png', width: 150, height: 150),
-            const SizedBox(height: 20),
-            // Eslogan
-            const Text(
-              "Cocina feliz",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange,
-              ),
-            ),
-            const SizedBox(height: 40),
-            // Loading
-            const CircularProgressIndicator(color: Colors.orange),
-          ],
-        ),
       ),
     );
   }
@@ -141,12 +64,6 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     settings: settings,
     builder: (context) {
       final authProvider = context.watch<AuthProvider>();
-
-      // Si todavía inicializa, mostrar splash
-      if (authProvider.isInitializing) {
-        return const SplashScreen();
-      }
-
       final name = settings.name ?? "/";
 
       // Auth routes (accesibles sin autenticarse)
@@ -175,7 +92,21 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       }
 
       if (name == "/goals") {
-        return const FollowGoalsScreen();
+        return const FollowGoalsScreen(isModal: true);
+      }
+
+      // Router dinámico para mode selection
+      if (name == "/paths") {
+        final args = settings.arguments as Map?;
+        final type = args?['type'] as String?;
+
+        if (type == "country") {
+          return const CountrySelectionScreen();
+        } else if (type == "goal") {
+          return const FollowGoalsScreen(isModal: true);
+        }
+        // Fallback si no hay type válido
+        return const MainExperienceScreen();
       }
 
       if (name == "/pantry") return const PantryScreen();

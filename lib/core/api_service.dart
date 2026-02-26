@@ -1448,7 +1448,7 @@ class ApiService {
 
   static Future<List<dynamic>> adminGetGroupsByPath(String pathId) async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
+      Uri.parse("$baseUrl/admin/v2/paths/$pathId/groups"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1456,7 +1456,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+      if (decoded is Map<String, dynamic> && decoded['data'] is List) {
+        return decoded['data'] as List<dynamic>;
+      }
     }
 
     throw Exception("Error cargando grupos");
@@ -1467,7 +1471,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
+      Uri.parse("$baseUrl/admin/v2/paths/$pathId/groups"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1476,7 +1480,11 @@ class ApiService {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1488,7 +1496,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.put(
-      Uri.parse("$baseUrl/admin/groups/$groupId"),
+      Uri.parse("$baseUrl/admin/v2/groups/$groupId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1497,7 +1505,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1506,7 +1518,7 @@ class ApiService {
 
   static Future<void> adminDeleteGroup(String groupId) async {
     final response = await http.delete(
-      Uri.parse("$baseUrl/admin/groups/$groupId"),
+      Uri.parse("$baseUrl/admin/v2/groups/$groupId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1520,7 +1532,7 @@ class ApiService {
 
   static Future<List<dynamic>> adminGetContentNodesByPath(String pathId) async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/paths/$pathId/nodes"),
+      Uri.parse("$baseUrl/admin/v2/paths/$pathId/nodes"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1528,7 +1540,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+      if (decoded is Map<String, dynamic> && decoded['data'] is List) {
+        return decoded['data'] as List<dynamic>;
+      }
     }
 
     throw Exception("Error cargando nodos");
@@ -1537,17 +1553,28 @@ class ApiService {
   static Future<Map<String, dynamic>> adminCreateContentNode(
     Map<String, dynamic> data,
   ) async {
+    final pathId = data['pathId']?.toString();
+    if (pathId == null || pathId.isEmpty) {
+      throw Exception('pathId es requerido para crear nodo');
+    }
+
+    final payload = Map<String, dynamic>.from(data)..remove('pathId');
+
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/nodes"),
+      Uri.parse("$baseUrl/admin/v2/paths/$pathId/nodes"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
       },
-      body: jsonEncode(data),
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1559,7 +1586,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.put(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1568,7 +1595,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1577,7 +1608,7 @@ class ApiService {
 
   static Future<void> adminDeleteContentNode(String nodeId) async {
     final response = await http.delete(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1593,37 +1624,85 @@ class ApiService {
     String pathId,
     List<Map<String, dynamic>> updates,
   ) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/admin/paths/$pathId/nodes/reorder"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
-      body: jsonEncode({"updates": updates}),
-    );
+    final updatesByLevel = <int, List<Map<String, dynamic>>>{};
+    for (final update in updates) {
+      final levelRaw = update['level'];
+      final level = levelRaw is num ? levelRaw.toInt() : 1;
+      final nodeId = update['nodeId']?.toString();
+      final posRaw = update['positionIndex'];
+      final positionIndex = posRaw is num ? posRaw.toInt() : 1;
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      if (nodeId == null || nodeId.isEmpty) continue;
+
+      updatesByLevel.putIfAbsent(level, () => []).add({
+        'nodeId': nodeId,
+        'positionIndex': positionIndex,
+      });
     }
 
-    final body = jsonDecode(response.body);
-    throw Exception(body['message'] ?? "Error reordenando nodos");
+    for (final entry in updatesByLevel.entries) {
+      final response = await http.post(
+        Uri.parse("$baseUrl/admin/v2/paths/$pathId/nodes/reorder-by-level"),
+        headers: {
+          "Content-Type": "application/json",
+          if (_token != null) "Authorization": "Bearer $_token",
+        },
+        body: jsonEncode({'level': entry.key, 'nodeOrders': entry.value}),
+      );
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? "Error reordenando nodos");
+      }
+    }
+
+    return adminGetContentNodesByPath(pathId);
   }
 
   static Future<Map<String, dynamic>> adminImportNode(
     Map<String, dynamic> data,
   ) async {
+    final targetPathId = data['targetPathId']?.toString();
+    final sourceNodeId = (data['sourceNodeId'] ?? data['nodeId'])?.toString();
+    final mode = (data['mode'] ?? 'linked').toString();
+
+    if (targetPathId == null || targetPathId.isEmpty) {
+      throw Exception('targetPathId es requerido para importar nodo');
+    }
+    if (sourceNodeId == null || sourceNodeId.isEmpty) {
+      throw Exception('sourceNodeId/nodeId es requerido para importar nodo');
+    }
+
+    final isCopy = mode.toLowerCase() == 'copy';
+    final endpoint = isCopy
+        ? "$baseUrl/admin/v2/nodes/import/copy"
+        : "$baseUrl/admin/v2/nodes/import/linked";
+
+    final payload = <String, dynamic>{
+      'sourceNodeId': sourceNodeId,
+      'targetPathId': targetPathId,
+      if (data['title'] != null) 'title': data['title'],
+      if (data['groupId'] != null) 'groupId': data['groupId'],
+      if (data['level'] != null) 'level': data['level'],
+      if (data['positionIndex'] != null) 'positionIndex': data['positionIndex'],
+      if (data['status'] != null) 'status': data['status'],
+    };
+
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/nodes/import"),
+      Uri.parse(endpoint),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
       },
-      body: jsonEncode(data),
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1632,15 +1711,20 @@ class ApiService {
 
   static Future<Map<String, dynamic>> adminArchiveNode(String nodeId) async {
     final response = await http.put(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/archive"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
       },
+      body: jsonEncode({'status': 'archived'}),
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1651,17 +1735,54 @@ class ApiService {
     String nodeId, {
     String? targetPathId,
   }) async {
+    String? resolvedTargetPathId = targetPathId;
+
+    if (resolvedTargetPathId == null || resolvedTargetPathId.isEmpty) {
+      final nodeResponse = await http.get(
+        Uri.parse("$baseUrl/admin/v2/nodes/$nodeId"),
+        headers: {
+          "Content-Type": "application/json",
+          if (_token != null) "Authorization": "Bearer $_token",
+        },
+      );
+
+      if (nodeResponse.statusCode != 200) {
+        final body = jsonDecode(nodeResponse.body);
+        throw Exception(body['message'] ?? 'Error obteniendo nodo original');
+      }
+
+      final decodedNode = jsonDecode(nodeResponse.body);
+      final nodeData = decodedNode is Map<String, dynamic>
+          ? (decodedNode['data'] is Map ? decodedNode['data'] : decodedNode)
+          : <String, dynamic>{};
+      final rawPathId = nodeData['pathId'];
+      resolvedTargetPathId = rawPathId is Map
+          ? (rawPathId['_id']?.toString() ?? rawPathId['id']?.toString())
+          : rawPathId?.toString();
+    }
+
+    if (resolvedTargetPathId == null || resolvedTargetPathId.isEmpty) {
+      throw Exception('No se pudo determinar targetPathId para duplicar nodo');
+    }
+
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/duplicate"),
+      Uri.parse("$baseUrl/admin/v2/nodes/import/copy"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
       },
-      body: jsonEncode({"targetPathId": targetPathId}),
+      body: jsonEncode({
+        'sourceNodeId': nodeId,
+        'targetPathId': resolvedTargetPathId,
+      }),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1672,7 +1793,7 @@ class ApiService {
     String nodeId,
   ) async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/relations"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId/relations"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1680,7 +1801,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1694,15 +1819,21 @@ class ApiService {
     String? status,
     String? search,
   }) async {
-    final query = <String, String>{};
+    final query = <String, String>{'page': '1', 'limit': '200'};
     if (pathId != null) query['pathId'] = pathId;
     if (groupId != null) query['groupId'] = groupId;
     if (type != null) query['type'] = type;
     if (status != null) query['status'] = status;
-    if (search != null) query['search'] = search;
+    if (search != null && search.trim().isNotEmpty) {
+      query['q'] = search.trim();
+    }
+
+    final endpoint = query.containsKey('q')
+        ? "$baseUrl/admin/v2/library/search"
+        : "$baseUrl/admin/v2/library/nodes";
 
     final uri = Uri.parse(
-      "$baseUrl/admin/node-library",
+      endpoint,
     ).replace(queryParameters: query.isEmpty ? null : query);
 
     final response = await http.get(
@@ -1714,7 +1845,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+      if (decoded is Map<String, dynamic> && decoded['data'] is List) {
+        return decoded['data'] as List<dynamic>;
+      }
     }
 
     throw Exception("Error cargando biblioteca");
@@ -1725,7 +1860,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId/steps"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1734,7 +1869,11 @@ class ApiService {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1747,7 +1886,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.put(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId"),
+      Uri.parse("$baseUrl/admin/v2/steps/$stepId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1756,7 +1895,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1765,7 +1908,7 @@ class ApiService {
 
   static Future<void> adminDeleteNodeStep(String nodeId, String stepId) async {
     final response = await http.delete(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId"),
+      Uri.parse("$baseUrl/admin/v2/steps/$stepId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1779,7 +1922,7 @@ class ApiService {
 
   static Future<void> adminDeleteNode(String nodeId) async {
     final response = await http.delete(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId"),
+      Uri.parse("$baseUrl/admin/v2/nodes/$nodeId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1799,7 +1942,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards"),
+      Uri.parse("$baseUrl/admin/v2/steps/$stepId/cards"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1808,7 +1951,11 @@ class ApiService {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1822,7 +1969,7 @@ class ApiService {
     Map<String, dynamic> data,
   ) async {
     final response = await http.put(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards/$cardId"),
+      Uri.parse("$baseUrl/admin/v2/cards/$cardId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1831,7 +1978,11 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['data'] is Map) {
+        return Map<String, dynamic>.from(decoded['data']);
+      }
+      return Map<String, dynamic>.from(decoded);
     }
 
     final body = jsonDecode(response.body);
@@ -1844,7 +1995,7 @@ class ApiService {
     String cardId,
   ) async {
     final response = await http.delete(
-      Uri.parse("$baseUrl/admin/nodes/$nodeId/steps/$stepId/cards/$cardId"),
+      Uri.parse("$baseUrl/admin/v2/cards/$cardId"),
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",

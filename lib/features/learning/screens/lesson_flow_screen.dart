@@ -268,30 +268,23 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
         if (step.image != null || step.video != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: double.infinity,
-              height: 200,
-              color: Colors.grey[200],
-              child: Center(
-                child: step.image != null
-                    ? Image.network(
-                        step.image!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.image_not_supported,
-                            size: 64,
-                            color: Colors.grey[400],
-                          );
-                        },
-                      )
-                    : Icon(
-                        Icons.play_circle,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-              ),
-            ),
+            child: step.image != null
+                ? AppNetworkImage(
+                    imageUrl: step.image!,
+                    width: double.infinity,
+                    height: 200,
+                    borderRadius: BorderRadius.circular(12),
+                  )
+                : Container(
+                    width: double.infinity,
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.play_circle,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                  ),
           ),
 
         const SizedBox(height: 24),

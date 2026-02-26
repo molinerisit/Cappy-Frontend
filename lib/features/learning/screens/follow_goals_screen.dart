@@ -10,7 +10,14 @@ import '../../../widgets/app_header.dart';
 import '../../../widgets/app_scaffold.dart';
 
 class FollowGoalsScreen extends StatefulWidget {
-  const FollowGoalsScreen({super.key});
+  final bool isModal;
+  final Function(String pathId, String pathTitle)? onPathSelected;
+
+  const FollowGoalsScreen({
+    super.key,
+    this.isModal = false,
+    this.onPathSelected,
+  });
 
   @override
   State<FollowGoalsScreen> createState() => _FollowGoalsScreenState();
@@ -52,8 +59,16 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
     try {
       await ApiService.changeCurrentPath(pathId);
       if (!mounted) return;
-      // Navega de vuelta a main experience (el árbol del camino)
-      Navigator.of(context).pop(true);
+
+      if (widget.isModal) {
+        // Si se abrió como ruta modal, devolver datos del path seleccionado
+        Navigator.of(
+          context,
+        ).pop({'changed': true, 'pathId': pathId, 'pathTitle': pathTitle});
+      } else {
+        // Si se abrió como body, llamar callback con los datos
+        widget.onPathSelected?.call(pathId, pathTitle);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

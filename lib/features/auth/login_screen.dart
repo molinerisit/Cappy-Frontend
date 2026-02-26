@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/api_service.dart';
+import '../../features/learning/screens/main_experience_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
 
@@ -67,13 +69,53 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      await context.read<AuthProvider>().login(
+      final authProvider = context.read<AuthProvider>();
+
+      // Realizar login
+      await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, "/mode");
+      if (!mounted) return;
+
+      // Verificar si hay un path pendiente guardado
+      final pendingPath = await authProvider.getPendingPath();
+
+      if (pendingPath != null) {
+        // Hay un path pendiente, asignarlo al usuario
+        final pathId = pendingPath['pathId']!;
+        final pathTitle = pendingPath['pathTitle'] ?? 'Mi Camino';
+
+        try {
+          // Asignar el path al usuario
+          await ApiService.changeCurrentPath(pathId);
+
+          // Limpiar el pending path
+          await authProvider.clearPendingPath();
+
+          if (!mounted) return;
+
+          // Navegar al tree del camino seleccionado
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainExperienceScreen(
+                initialPathId: pathId,
+                initialPathTitle: pathTitle,
+              ),
+            ),
+          );
+        } catch (e) {
+          // Si falla asignar el path, ir a pantalla normal
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, "/mode");
+          }
+        }
+      } else {
+        // No hay path pendiente, ir a MainExperienceScreen
+        // Que mostrará FollowGoalsScreen si no tiene path aún
+        Navigator.pushReplacementNamed(context, "/main");
       }
     } catch (e) {
       setState(() {
@@ -289,17 +331,13 @@ class _LoginScreenState extends State<LoginScreen>
                             // Botón de Google
                             OutlinedButton.icon(
                               onPressed: _isLoading ? null : _handleGoogleLogin,
-                              icon: Image.asset(
-                                'assets/google_logo.png',
-                                height: 24,
-                                width: 24,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Fallback a emoji si no hay imagen
-                                  return const Text(
-                                    '🔍',
-                                    style: TextStyle(fontSize: 20),
-                                  );
-                                },
+                              icon: const Text(
+                                'G',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF4285F4),
+                                ),
                               ),
                               label: Text(
                                 'Continuar con Google',

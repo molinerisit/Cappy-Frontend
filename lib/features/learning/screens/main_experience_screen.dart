@@ -17,7 +17,14 @@ import '../../../widgets/app_scaffold.dart';
 import '../../../widgets/app_bottom_nav.dart';
 
 class MainExperienceScreen extends StatefulWidget {
-  const MainExperienceScreen({super.key});
+  final String? initialPathId;
+  final String? initialPathTitle;
+
+  const MainExperienceScreen({
+    super.key,
+    this.initialPathId,
+    this.initialPathTitle,
+  });
 
   @override
   State<MainExperienceScreen> createState() => _MainExperienceScreenState();
@@ -39,63 +46,74 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeLives();
-    _loadCurrentPath();
+    _livesService = LivesService(baseUrl: ApiService.baseUrl);
 
-    // Verificar si el usuario tiene currentPathId seleccionado
-    // Si no, mostrar la pantalla de objetivos
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final profile = await ApiService.getProfile();
-        final currentPathId = profile['currentPathId'];
+    // Si se pasó un pathId inicial, usarlo directamente
+    if (widget.initialPathId != null) {
+      _currentPathId = widget.initialPathId;
+      _currentPathName = widget.initialPathTitle ?? 'Mi Camino';
+      _loadLives(); // Solo cargar vidas
+      return;
+    }
 
-        if (!mounted) return;
-
-        // Si no tiene camino seleccionado, ir a pantalla de objetivos
-        if (currentPathId == null || currentPathId.isEmpty) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const FollowGoalsScreen()),
-          );
-          return;
-        }
-
-        // Si tiene, verificar si hay selección del onboarding
-        final selectionProvider = context.read<OnboardingSelectionProvider>();
-        await selectionProvider.loadSelection();
-
-        if (selectionProvider.hasSelection()) {
-          final mode = selectionProvider.mode;
-          final selectionId = selectionProvider.selectionId;
-          final selectionName = selectionProvider.selectionName;
-
-          // Limpiar la selección después de detectarla
-          await selectionProvider.clearSelection();
-
-          if (mode == 'goals' && selectionId != null && mounted) {
-            // Cambiar a la tab de Objetivos
-            _tabController.animateTo(1);
-          } else if (mode == 'countries' && selectionId != null && mounted) {
-            // Navegar a CountryHubScreen
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => CountryHubScreen(
-                  countryId: selectionId,
-                  countryName: selectionName,
-                  countryIcon: '🌍',
-                ),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        print('Error loading profile: $e');
-      }
-    });
+    // Cargar todo en paralelo
+    _initializeData();
   }
 
-  void _initializeLives() {
-    _livesService = LivesService(baseUrl: ApiService.baseUrl);
-    _loadLives();
+  /// Carga lives, profile y paths en paralelo con Future.wait
+  Future<void> _initializeData() async {
+    try {
+      final token = ApiService.getToken();
+      if (token == null) {
+        if (mounted) {
+          setState(() {
+            _currentLives = 3;
+          });
+        }
+        return;
+      }
+
+      // Ejecutar 3 requests en paralelo
+      final results = await Future.wait([
+        _livesService.getLivesStatus(token),
+        ApiService.getProfile(),
+        ApiService.getGoalPaths(),
+      ]);
+
+      if (!mounted) return;
+
+      final livesStatus = results[0] as Map<String, dynamic>;
+      final profile = results[1] as Map<String, dynamic>;
+      final paths = results[2] as List<dynamic>;
+
+      final pathId = profile['currentPathId'];
+      String? pathName;
+
+      // Buscar el nombre del path si existe
+      if (pathId != null && pathId.isNotEmpty) {
+        final currentPath = paths.firstWhere(
+          (p) => (p['_id'] ?? p['id']) == pathId,
+          orElse: () => null,
+        );
+        if (currentPath != null) {
+          pathName = currentPath['title'] ?? 'Mi Camino';
+        }
+      }
+
+      // Un solo setState con todos los datos
+      setState(() {
+        _currentLives = livesStatus['lives'] ?? 3;
+        _currentPathId = pathId;
+        _currentPathName = pathName;
+      });
+    } catch (e) {
+      print('Error initializing data: $e');
+      if (mounted) {
+        setState(() {
+          _currentLives = 3;
+        });
+      }
+    }
   }
 
   Future<void> _loadLives() async {
@@ -124,40 +142,6 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
           _currentLives = 3;
         });
       }
-    }
-  }
-
-  Future<void> _loadCurrentPath() async {
-    try {
-      final profile = await ApiService.getProfile();
-      final pathId = profile['currentPathId'];
-
-      if (mounted) {
-        setState(() {
-          _currentPathId = pathId;
-        });
-      }
-
-      // Cargar el nombre del camino si existe
-      if (pathId != null && pathId.isNotEmpty) {
-        try {
-          final paths = await ApiService.getGoalPaths();
-          final currentPath = paths.firstWhere(
-            (p) => (p['_id'] ?? p['id']) == pathId,
-            orElse: () => null,
-          );
-
-          if (currentPath != null && mounted) {
-            setState(() {
-              _currentPathName = currentPath['title'] ?? 'Mi Camino';
-            });
-          }
-        } catch (e) {
-          print('Error loading path name: $e');
-        }
-      }
-    } catch (e) {
-      print('Error loading current path: $e');
     }
   }
 
@@ -191,9 +175,27 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
               : VisualDensity.standard,
           tooltip: 'Cambiar camino',
           onPressed: () async {
-            final changed = await Navigator.of(context).pushNamed('/goals');
-            if (changed == true) {
-              await _loadCurrentPath();
+            final result = await Navigator.of(context).pushNamed('/goals');
+            if (!mounted) return;
+
+            if (result is Map && result['changed'] == true) {
+              final selectedPathId = (result['pathId'] ?? '').toString();
+              final selectedPathTitle = (result['pathTitle'] ?? 'Mi Camino')
+                  .toString();
+
+              if (selectedPathId.isNotEmpty) {
+                setState(() {
+                  _currentPathId = selectedPathId;
+                  _currentPathName = selectedPathTitle;
+                });
+              }
+
+              await _loadLives();
+              return;
+            }
+
+            if (result == true) {
+              await _initializeData();
             }
           },
         ),
@@ -265,11 +267,22 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
           SizedBox(width: isCompact ? AppSpacing.sm : AppSpacing.lg),
         ],
       ),
-      body: _currentPathId == null || _currentPathId!.isEmpty
-          ? const FollowGoalsScreen()
+      body:
+          (_currentPathId == null || _currentPathId!.isEmpty) &&
+              widget.initialPathId == null
+          ? FollowGoalsScreen(
+              isModal: false,
+              onPathSelected: (pathId, pathTitle) {
+                setState(() {
+                  _currentPathId = pathId;
+                  _currentPathName = pathTitle;
+                });
+              },
+            )
           : PathProgressionScreen(
-              pathId: _currentPathId!,
-              pathTitle: _currentPathName ?? 'Mi Camino',
+              pathId: _currentPathId ?? widget.initialPathId ?? '',
+              pathTitle:
+                  _currentPathName ?? widget.initialPathTitle ?? 'Mi Camino',
               showAppBar: false,
             ),
       bottomNavigationBar: AppBottomNav(
@@ -308,7 +321,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          _currentPathName ?? 'Mi Camino',
+          _currentPathName ?? widget.initialPathTitle ?? 'Mi Camino',
           style: AppTypography.cardTitle.copyWith(
             fontSize: isCompact ? 15 : 17,
           ),
