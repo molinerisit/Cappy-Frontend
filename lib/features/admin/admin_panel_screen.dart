@@ -150,10 +150,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 label: Text('Recetas'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.language),
-                label: Text('Cultura'),
-              ),
-              NavigationRailDestination(
                 icon: Icon(Icons.library_books),
                 label: Text('Biblioteca'),
               ),
@@ -177,10 +173,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       case 1:
         return const _RecipesContentPage();
       case 2:
-        return const _CultureContentPage();
-      case 3:
         return const _LibraryContentPage();
-      case 4:
+      case 3:
         return const _SettingsContentPage();
       default:
         return const _LearningPathsTab();
@@ -736,7 +730,7 @@ class PathContentScreen extends StatefulWidget {
   final String pathId;
   final String pathTitle;
   final String? countryId;
-  final String pathType; // 'country_recipe', 'country_culture', 'goal'
+  final String pathType; // 'country_recipe', 'goal'
 
   const PathContentScreen({
     super.key,
@@ -761,8 +755,6 @@ class _PathContentScreenState extends State<PathContentScreen>
     int tabCount = 1; // Siempre tiene 'Nodos'
     if (widget.pathType == 'country_recipe') {
       tabCount = 2; // Nodos + Recetas
-    } else if (widget.pathType == 'country_culture') {
-      tabCount = 2; // Nodos + Cultura
     } else if (widget.pathType.isEmpty || widget.pathType == 'goal') {
       tabCount = 1; // Solo Nodos para objetivos
     }
@@ -797,10 +789,6 @@ class _PathContentScreenState extends State<PathContentScreen>
       tabs.add(const Tab(text: 'Recetas'));
     }
 
-    if (widget.pathType == 'country_culture') {
-      tabs.add(const Tab(text: 'Cultura'));
-    }
-
     return tabs;
   }
 
@@ -812,12 +800,6 @@ class _PathContentScreenState extends State<PathContentScreen>
     if (widget.pathType == 'country_recipe') {
       children.add(
         _RecipesTabContent(countryId: widget.countryId, pathId: widget.pathId),
-      );
-    }
-
-    if (widget.pathType == 'country_culture') {
-      children.add(
-        _CultureTabContent(countryId: widget.countryId, pathId: widget.pathId),
       );
     }
 

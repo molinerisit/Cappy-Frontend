@@ -3,8 +3,11 @@ import 'dart:convert';
 
 class LeaderboardService {
   final String baseUrl;
+  late final String _apiBase;
 
-  LeaderboardService({required this.baseUrl});
+  LeaderboardService({required this.baseUrl}) {
+    _apiBase = baseUrl.endsWith('/api') ? baseUrl : '$baseUrl/api';
+  }
 
   /// Get global leaderboard (top 30 users)
   Future<List<Map<String, dynamic>>> getGlobalLeaderboard({
@@ -12,7 +15,7 @@ class LeaderboardService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/leaderboard?limit=$limit'),
+        Uri.parse('$_apiBase/leaderboard?limit=$limit'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -32,7 +35,7 @@ class LeaderboardService {
   Future<Map<String, dynamic>> getMyRank(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/leaderboard/my-rank'),
+        Uri.parse('$_apiBase/leaderboard/my-rank'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -57,7 +60,7 @@ class LeaderboardService {
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/leaderboard/around-me'),
+        Uri.parse('$_apiBase/leaderboard/around-me'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

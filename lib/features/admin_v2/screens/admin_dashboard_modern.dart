@@ -7,8 +7,13 @@ import '../../admin/dialogs/create_path_dialog.dart';
 
 class AdminDashboardScreenModern extends StatefulWidget {
   final VoidCallback? onLibraryTap;
+  final VoidCallback? onCountriesTap;
 
-  const AdminDashboardScreenModern({super.key, this.onLibraryTap});
+  const AdminDashboardScreenModern({
+    super.key,
+    this.onLibraryTap,
+    this.onCountriesTap,
+  });
 
   @override
   State<AdminDashboardScreenModern> createState() =>
@@ -20,7 +25,7 @@ class _AdminDashboardScreenModernState
   List<dynamic> paths = [];
   bool isLoading = true;
   String searchQuery = '';
-  String selectedFilter = 'all'; // all, goal, country_recipe, country_culture
+  String selectedFilter = 'all'; // all, goal, country_recipe
 
   @override
   void initState() {
@@ -54,7 +59,9 @@ class _AdminDashboardScreenModernState
   }
 
   List<dynamic> get filteredPaths {
-    var result = paths;
+    var result = paths
+        .where((path) => (path['type'] ?? '') != 'country_culture')
+        .toList();
 
     // Filter by type
     if (selectedFilter != 'all') {
@@ -237,13 +244,28 @@ class _AdminDashboardScreenModernState
                         const SizedBox(width: 12),
 
                         // Create button
-                        SizedBox(
-                          width: 140,
-                          height: 40,
-                          child: PrimaryButton(
-                            label: 'Nuevo Camino',
-                            onPressed: _handleCreatePath,
-                          ),
+                        Row(
+                          children: [
+                            if (widget.onCountriesTap != null) ...[
+                              SizedBox(
+                                width: 120,
+                                height: 40,
+                                child: SecondaryButton(
+                                  label: 'Paises',
+                                  onPressed: widget.onCountriesTap!,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            SizedBox(
+                              width: 140,
+                              height: 40,
+                              child: PrimaryButton(
+                                label: 'Nuevo Camino',
+                                onPressed: _handleCreatePath,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -393,8 +415,6 @@ class _AdminDashboardScreenModernState
         return 'Caminos de Objetivos';
       case 'country_recipe':
         return 'Recetas por País';
-      case 'country_culture':
-        return 'Cultura por País';
       default:
         return 'Todos los Caminos';
     }
@@ -445,7 +465,6 @@ class _AdminDashboardScreenModernState
       ('Todos', 'all'),
       ('Objetivos', 'goal'),
       ('Recetas', 'country_recipe'),
-      ('Cultura', 'country_culture'),
     ];
 
     return Container(
@@ -531,9 +550,6 @@ class _AdminDashboardScreenModernState
             switch (pathType) {
               case 'country_recipe':
                 typeLabel = 'Receta';
-                break;
-              case 'country_culture':
-                typeLabel = 'Cultura';
                 break;
               case 'goal':
                 typeLabel = 'Objetivo';
@@ -632,9 +648,6 @@ class _AdminDashboardScreenModernState
         switch (pathType) {
           case 'country_recipe':
             typeLabel = 'Receta';
-            break;
-          case 'country_culture':
-            typeLabel = 'Cultura';
             break;
           case 'goal':
             typeLabel = 'Objetivo';
@@ -812,8 +825,6 @@ class _AdminDashboardScreenModernState
     switch (type) {
       case 'country_recipe':
         return Colors.green.shade600;
-      case 'country_culture':
-        return Colors.purple.shade600;
       case 'goal':
         return Colors.orange.shade600;
       default:

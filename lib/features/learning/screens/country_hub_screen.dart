@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_path.dart';
 import 'recipes_list_screen.dart';
-import 'culture_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
   final String countryId;
   final String? countryName;
   final String? countryIcon;
+  final String? heroTag;
 
   const CountryHubScreen({
     super.key,
     required this.countryId,
     this.countryName,
     this.countryIcon,
+    this.heroTag,
   });
 
   @override
@@ -22,6 +23,10 @@ class CountryHubScreen extends StatefulWidget {
 
 class _CountryHubScreenState extends State<CountryHubScreen> {
   late Future<CountryHub> futureCountryHub;
+
+  static const Color _primaryBlue = Color(0xFF2563EB);
+  static const Color _accentGreen = Color(0xFF10B981);
+  static const Color _surface = Color(0xFFF8FAFC);
 
   @override
   void initState() {
@@ -37,11 +42,11 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _surface,
       appBar: AppBar(
-        title: Text(
-          '${widget.countryIcon ?? '🌍'} ${widget.countryName ?? 'País'}',
-        ),
-        backgroundColor: const Color(0xFFFF6B35),
+        title: Text('${widget.countryName ?? 'País'}'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F172A),
         elevation: 0,
       ),
       body: FutureBuilder<CountryHub>(
@@ -49,7 +54,7 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+              child: CircularProgressIndicator(color: _primaryBlue),
             );
           } else if (snapshot.hasError) {
             return Center(
@@ -59,12 +64,16 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                   const Icon(
                     Icons.error_outline,
                     size: 48,
-                    color: Color(0xFFFF6B35),
+                    color: _primaryBlue,
                   ),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}'),
                   const SizedBox(height: 16),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryBlue,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: () {
                       setState(() {
                         futureCountryHub = _loadCountryHub();
@@ -80,93 +89,215 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
           }
 
           final hub = snapshot.data!;
+          final summary =
+              hub.presentationSummary ??
+              hub.description ??
+              'Explora recetas guiadas, técnicas clave y una experiencia de cocina estructurada.';
+          final headline =
+              hub.presentationHeadline ??
+              'Bienvenido a la cocina de ${hub.name}';
 
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFFFF6B35).withOpacity(0.1),
-                        const Color(0xFFFFA500).withOpacity(0.1),
-                      ],
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              _CountryHeaderCard(
+                heroTag: widget.heroTag ?? 'country-flag-${widget.countryId}',
+                countryIcon: widget.countryIcon ?? hub.icon,
+                countryName: widget.countryName ?? hub.name,
+                headline: headline,
+                summary: summary,
+                heroImageUrl: hub.heroImageUrl,
+                iconicDishes: hub.iconicDishes,
+              ),
+              const SizedBox(height: 16),
+              _PathCard(
+                path: hub.recipes,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => RecipesListScreen(
+                        countryId: widget.countryId,
+                        pathId: hub.recipes.id,
+                        pathTitle: hub.recipes.title,
+                        countryName: widget.countryName ?? hub.name,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CountryHeaderCard extends StatelessWidget {
+  final String heroTag;
+  final String countryIcon;
+  final String countryName;
+  final String headline;
+  final String summary;
+  final String? heroImageUrl;
+  final List<String> iconicDishes;
+
+  const _CountryHeaderCard({
+    required this.heroTag,
+    required this.countryIcon,
+    required this.countryName,
+    required this.headline,
+    required this.summary,
+    required this.heroImageUrl,
+    required this.iconicDishes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (heroImageUrl != null && heroImageUrl!.trim().isNotEmpty)
+                    Image.network(
+                      heroImageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _gradientFallback(),
+                    )
+                  else
+                    _gradientFallback(),
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Color(0x880F172A), Color(0x000F172A)],
+                      ),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      Text(
-                        widget.countryIcon ?? '🌍',
-                        style: const TextStyle(fontSize: 80),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        widget.countryName ?? 'País',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
+                  Positioned(
+                    left: 16,
+                    bottom: 14,
+                    child: Row(
+                      children: [
+                        Hero(
+                          tag: heroTag,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Text(
+                              countryIcon,
+                              style: const TextStyle(fontSize: 34),
+                            ),
+                          ),
                         ),
-                      ),
-                      if (hub.description != null) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(width: 10),
                         Text(
-                          hub.description!,
-                          textAlign: TextAlign.center,
+                          countryName,
                           style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 20,
                           ),
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  headline,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _PathCard(
-                        path: hub.recipes,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => RecipesListScreen(
-                                countryId: widget.countryId,
-                                pathId: hub.recipes.id,
-                                pathTitle: hub.recipes.title,
-                                countryName: widget.countryName ?? 'País',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _PathCard(
-                        path: hub.culture,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => CultureListScreen(
-                                countryId: widget.countryId,
-                                pathId: hub.culture.id,
-                                pathTitle: hub.culture.title,
-                                countryName: widget.countryName ?? 'País',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                const SizedBox(height: 8),
+                Text(
+                  summary,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.35,
+                    color: Color(0xFF475569),
                   ),
                 ),
+                if (iconicDishes.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: iconicDishes
+                        .take(4)
+                        .map(
+                          (dish) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: const Color(0xFFBFDBFE),
+                              ),
+                            ),
+                            child: Text(
+                              dish,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF1D4ED8),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ],
             ),
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gradientFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2563EB), Color(0xFF10B981)],
+        ),
       ),
     );
   }
@@ -183,25 +314,13 @@ class _PathCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
         child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: path.isCountryRecipe
-                  ? [
-                      const Color(0xFFFF6B35).withOpacity(0.9),
-                      const Color(0xFFFFA500).withOpacity(0.9),
-                    ]
-                  : [
-                      const Color(0xFF4CAF50).withOpacity(0.9),
-                      const Color(0xFF45a049).withOpacity(0.9),
-                    ],
-            ),
-          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +328,7 @@ class _PathCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(path.icon, style: const TextStyle(fontSize: 48)),
+                  Text(path.icon, style: const TextStyle(fontSize: 40)),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -219,13 +338,13 @@ class _PathCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${path.nodes.length} pasos',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: Color(0xFF1D4ED8),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -239,9 +358,9 @@ class _PathCard extends StatelessWidget {
               Text(
                 path.title,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 21,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color(0xFF0F172A),
                 ),
               ),
               const SizedBox(height: 8),
@@ -249,7 +368,7 @@ class _PathCard extends StatelessWidget {
                 path.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: Colors.white70),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF475569)),
               ),
               const SizedBox(height: 16),
               Row(
@@ -260,7 +379,7 @@ class _PathCard extends StatelessWidget {
                     _DifficultyBadge(difficulty: path.metadata!['difficulty']),
                   const Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.white,
+                    color: Color(0xFF1D4ED8),
                     size: 18,
                   ),
                 ],
@@ -281,7 +400,7 @@ class _DifficultyBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = {
-      'fácil': const Color(0xFF4CAF50),
+      'fácil': const Color(0xFF10B981),
       'medio': const Color(0xFFFFC107),
       'difícil': const Color(0xFFF44336),
     };

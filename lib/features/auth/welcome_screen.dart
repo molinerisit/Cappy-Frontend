@@ -146,7 +146,7 @@ class WelcomeScreen extends StatelessWidget {
                       _buildBenefitRow(
                         '🌍',
                         'Cocina del mundo',
-                        'Descubre recetas de diferentes culturas',
+                        'Descubre recetas auténticas de distintos países',
                       ),
 
                       const SizedBox(height: 40),

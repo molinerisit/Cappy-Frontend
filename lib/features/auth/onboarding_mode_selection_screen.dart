@@ -87,7 +87,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                           emoji: '🌍',
                           title: 'Explorar Cocinas del Mundo',
                           subtitle:
-                              'Descubre recetas auténticas de diferentes culturas y países',
+                              'Descubre recetas auténticas de diferentes países',
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(

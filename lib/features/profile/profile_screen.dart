@@ -22,6 +22,23 @@ class _ProfileScreenState extends State<ProfileScreen>
   int _completedLessonsCount = 0;
   int _streak = 0;
   bool _isLoadingProfile = true;
+  String _nickname = 'Chef en Progreso';
+  String _avatarIcon = '👨‍🍳';
+
+  static const List<String> _avatarGallery = [
+    '👨‍🍳',
+    '👩‍🍳',
+    '🧑‍🍳',
+    '🍳',
+    '🥘',
+    '🍜',
+    '🍕',
+    '🥗',
+    '🌮',
+    '🧁',
+    '🍣',
+    '🥐',
+  ];
 
   @override
   void initState() {
@@ -41,11 +58,22 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadProfileStats() async {
     try {
       final profile = await ApiService.getProfile();
+      final authProvider = context.read<AuthProvider>();
+      final nickname = (profile['username'] ?? _nickname).toString();
+      final avatarIcon = (profile['avatarIcon'] ?? _avatarIcon).toString();
+
+      await authProvider.syncProfileIdentity(
+        username: nickname,
+        avatarIcon: avatarIcon,
+      );
+
       if (mounted) {
         setState(() {
           _completedLessonsCount =
               (profile['completedLessonsCount'] ?? 0) as int;
           _streak = (profile['streak'] ?? 0) as int;
+          _nickname = nickname;
+          _avatarIcon = avatarIcon;
           _isLoadingProfile = false;
         });
       }
@@ -93,6 +121,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final displayedNickname = authProvider.username;
+    final displayedAvatar = authProvider.avatarIcon;
 
     // Usar datos GLOBALES del usuario desde AuthProvider
     final level = authProvider.level;
@@ -117,6 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     xpForNextLevel,
                     progressPercent,
                     totalXP,
+                    displayedNickname,
+                    displayedAvatar,
                   ),
                 ),
 
@@ -210,6 +242,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     int xpForNextLevel,
     double progressPercent,
     int totalXP,
+    String displayedNickname,
+    String displayedAvatar,
   ) {
     return Container(
       decoration: BoxDecoration(
@@ -239,14 +273,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ],
               ),
               child: Center(
-                child: Text('👨‍🍳', style: const TextStyle(fontSize: 60)),
+                child: Text(
+                  displayedAvatar,
+                  style: const TextStyle(fontSize: 60),
+                ),
               ),
             ),
             const SizedBox(height: 24),
 
             // Name/Role
             Text(
-              'Chef en Progreso',
+              displayedNickname,
               style: GoogleFonts.poppins(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
@@ -463,6 +500,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Column(
       children: [
         _ActionTile(
+          icon: Icons.edit_rounded,
+          label: 'Personalizar perfil',
+          onTap: _openProfileCustomization,
+        ),
+        const SizedBox(height: 8),
+        _ActionTile(
           icon: Icons.explore_rounded,
           label: 'Explorar Recetas',
           onTap: () => Navigator.pushNamed(context, "/main"),
@@ -484,6 +527,170 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
       ],
     );
+  }
+
+  Future<void> _openProfileCustomization() async {
+    final nicknameController = TextEditingController(text: _nickname);
+    String selectedAvatar = _avatarIcon;
+    bool isSaving = false;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Personalizar perfil'),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: nicknameController,
+                        maxLength: 24,
+                        decoration: const InputDecoration(
+                          labelText: 'Nickname',
+                          hintText: 'Ingresa tu nombre visible',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Elige tu icono',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _avatarGallery.map((icon) {
+                          final isSelected = selectedAvatar == icon;
+                          return InkWell(
+                            onTap: () => setDialogState(() {
+                              selectedAvatar = icon;
+                            }),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary.withOpacity(0.15)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary.withOpacity(
+                                          0.25,
+                                        ),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Text(
+                                icon,
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final nickname = nicknameController.text.trim();
+                          if (nickname.length < 3 || nickname.length > 24) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'El nickname debe tener entre 3 y 24 caracteres',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+
+                          try {
+                            final updated = await ApiService.updateProfile(
+                              username: nickname,
+                              avatarIcon: selectedAvatar,
+                            );
+
+                            final updatedNickname =
+                                (updated['username'] ?? nickname).toString();
+                            final updatedAvatar =
+                                (updated['avatarIcon'] ?? selectedAvatar)
+                                    .toString();
+
+                            await context
+                                .read<AuthProvider>()
+                                .syncProfileIdentity(
+                                  username: updatedNickname,
+                                  avatarIcon: updatedAvatar,
+                                );
+
+                            if (mounted) {
+                              setState(() {
+                                _nickname = updatedNickname;
+                                _avatarIcon = updatedAvatar;
+                              });
+                            }
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext, true);
+                            }
+                          } catch (e) {
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                            setDialogState(() => isSaving = false);
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nicknameController.dispose();
+
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+    }
   }
 
   Widget _buildLogoutButton(BuildContext context) {

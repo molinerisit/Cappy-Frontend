@@ -12,18 +12,14 @@ class GlobalLeaderboardScreen extends StatefulWidget {
       _GlobalLeaderboardScreenState();
 }
 
-class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen>
-    with SingleTickerProviderStateMixin {
+class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
   late LeaderboardService _leaderboardService;
   late LivesService _livesService;
-  late TabController _tabController;
 
   List<Map<String, dynamic>> _globalLeaderboard = [];
-  List<Map<String, dynamic>> _aroundMeLeaderboard = [];
   Map<String, dynamic>? _myRank;
 
   bool _isLoadingGlobal = true;
-  bool _isLoadingAroundMe = false;
   String? _errorMessage;
 
   // Lives system
@@ -36,17 +32,10 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen>
     super.initState();
     _leaderboardService = LeaderboardService(baseUrl: ApiService.baseUrl);
     _livesService = LivesService(baseUrl: ApiService.baseUrl);
-    _tabController = TabController(length: 2, vsync: this);
 
     _loadGlobalLeaderboard();
     _loadMyRank();
     _loadLives();
-
-    _tabController.addListener(() {
-      if (_tabController.index == 1 && _aroundMeLeaderboard.isEmpty) {
-        _loadLeaderboardAroundMe();
-      }
-    });
   }
 
   Future<void> _loadLives() async {
@@ -109,37 +98,8 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen>
     }
   }
 
-  Future<void> _loadLeaderboardAroundMe() async {
-    setState(() => _isLoadingAroundMe = true);
-
-    try {
-      final token = ApiService.getToken();
-      if (token == null) {
-        setState(() => _isLoadingAroundMe = false);
-        return;
-      }
-
-      final leaderboard = await _leaderboardService.getLeaderboardAroundMe(
-        token,
-      );
-      if (mounted) {
-        setState(() {
-          _aroundMeLeaderboard = leaderboard;
-          _isLoadingAroundMe = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingAroundMe = false;
-        });
-      }
-    }
-  }
-
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -441,97 +401,45 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen>
             ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: 'Top 30'),
-            Tab(text: 'A tu alrededor'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Global Top 30
-          _isLoadingGlobal
-              ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
-                )
-              : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadGlobalLeaderboard,
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
+      body: _isLoadingGlobal
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+            )
+          : _errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.grey.shade400,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadGlobalLeaderboard,
-                  child: ListView(
-                    children: [
-                      if (_myRank != null) _buildMyRankCard(),
-                      const SizedBox(height: 8),
-                      ..._globalLeaderboard.map(_buildLeaderboardTile),
-                      const SizedBox(height: 24),
-                    ],
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
-                ),
-
-          // Around Me
-          _isLoadingAroundMe
-              ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
-                )
-              : _aroundMeLeaderboard.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 64,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Inicia sesión para ver tu ranking',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadGlobalLeaderboard,
+                    child: const Text('Reintentar'),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadLeaderboardAroundMe,
-                  child: ListView(
-                    children: [
-                      if (_myRank != null) _buildMyRankCard(),
-                      const SizedBox(height: 8),
-                      ..._aroundMeLeaderboard.map(_buildLeaderboardTile),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-        ],
-      ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadGlobalLeaderboard,
+              child: ListView(
+                children: [
+                  if (_myRank != null) _buildMyRankCard(),
+                  const SizedBox(height: 8),
+                  ..._globalLeaderboard.map(_buildLeaderboardTile),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
     );
   }
 }

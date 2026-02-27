@@ -35,7 +35,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     try {
       final fetchedPaths = await ApiService.adminGetAllLearningPaths();
       setState(() {
-        paths = fetchedPaths;
+        paths = fetchedPaths
+            .where((path) => (path['type'] ?? '') != 'country_culture')
+            .toList();
         isLoading = false;
       });
     } catch (e) {
@@ -132,8 +134,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   final pathType = path['type'] ?? 'unknown';
                                   final typeEmoji = pathType == 'country_recipe'
                                       ? '📖'
-                                      : pathType == 'country_culture'
-                                      ? '🎭'
                                       : '🎯';
 
                                   return Card(

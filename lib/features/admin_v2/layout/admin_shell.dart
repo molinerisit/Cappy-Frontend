@@ -22,7 +22,6 @@ class _AdminShellState extends State<AdminShell> {
         initialNodeId: widget.initialNodeId,
       ),
       const Placeholder(),
-      const Placeholder(),
       const NodeLibraryScreen(),
       const Placeholder(),
     ];
@@ -77,10 +76,6 @@ class _AdminShellState extends State<AdminShell> {
               NavigationRailDestination(
                 icon: Icon(Icons.account_tree_outlined),
                 label: Text('Paths'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.public_outlined),
-                label: Text('Culture'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.restaurant_outlined),
