@@ -45,6 +45,27 @@ class ApiService {
     }
   }
 
+  static Never _throwApiErrorWithDetails(
+    http.Response response,
+    String fallbackMessage,
+  ) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        throw Exception(
+          jsonEncode({
+            'message': body['message'] ?? fallbackMessage,
+            'code': body['code'],
+            'unlock': body['unlock'],
+            'statusCode': response.statusCode,
+          }),
+        );
+      }
+    } catch (_) {}
+
+    throw Exception(fallbackMessage);
+  }
+
   // CRUD Nodos
   static Future<Map<String, dynamic>> createNode(
     Map<String, dynamic> data,
@@ -195,6 +216,22 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getProfileAnalytics() async {
+    final response = await _get(
+      Uri.parse("$baseUrl/auth/profile/analytics"),
+      dedupe: true,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(
+      body['message'] ?? body['error'] ?? "Error cargando métricas",
+    );
+  }
+
   static Future<Map<String, dynamic>> updateProfile({
     String? username,
     String? avatarIcon,
@@ -257,7 +294,7 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando hub del país");
+    _throwApiErrorWithDetails(response, "Error cargando hub del país");
   }
 
   /// Get all Goal paths for Seguir Objetivos
@@ -609,7 +646,7 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando país");
+    _throwApiErrorWithDetails(response, "Error cargando país");
   }
 
   static Future<Map<String, dynamic>> getCountrySections(
@@ -627,7 +664,7 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando secciones del país");
+    _throwApiErrorWithDetails(response, "Error cargando secciones del país");
   }
 
   static Future<Map<String, dynamic>> getUserCountryProgress(

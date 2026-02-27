@@ -7,6 +7,7 @@ class AuthProvider extends ChangeNotifier {
   static const _roleKey = "cooklevel_role";
   static const _totalXPKey = "cooklevel_totalxp";
   static const _levelKey = "cooklevel_level";
+  static const _streakKey = "cooklevel_streak";
   static const _usernameKey = "cooklevel_username";
   static const _avatarIconKey = "cooklevel_avatar_icon";
 
@@ -16,6 +17,7 @@ class AuthProvider extends ChangeNotifier {
   String _role = "user";
   int _totalXP = 0;
   int _level = 1;
+  int _streak = 0;
   String _username = "Chef en Progreso";
   String _avatarIcon = "👨‍🍳";
   bool _isLoading = false;
@@ -25,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
   String get role => _role;
   int get totalXP => _totalXP;
   int get level => _level;
+  int get streak => _streak;
   String get username => _username;
   String get avatarIcon => _avatarIcon;
   bool get isAdmin => _role == "admin";
@@ -45,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
       _role = await _storage.read(key: _roleKey) ?? "user";
       final savedXP = await _storage.read(key: _totalXPKey);
       final savedLevel = await _storage.read(key: _levelKey);
+      final savedStreak = await _storage.read(key: _streakKey);
       final savedUsername = await _storage.read(key: _usernameKey);
       final savedAvatarIcon = await _storage.read(key: _avatarIconKey);
 
@@ -53,6 +57,9 @@ class AuthProvider extends ChangeNotifier {
       }
       if (savedLevel != null) {
         _level = int.tryParse(savedLevel) ?? 1;
+      }
+      if (savedStreak != null) {
+        _streak = int.tryParse(savedStreak) ?? 0;
       }
       if (savedUsername != null && savedUsername.trim().isNotEmpty) {
         _username = savedUsername;
@@ -110,16 +117,19 @@ class AuthProvider extends ChangeNotifier {
         final profile = await ApiService.getProfile();
         final userTotalXP = (profile['totalXP'] ?? 0) as int;
         final userLevel = (profile['level'] ?? 1) as int;
+        final userStreak = (profile['streak'] ?? 0) as int;
         final userName = (profile['username'] ?? _username).toString();
         final userAvatar = (profile['avatarIcon'] ?? _avatarIcon).toString();
 
         _totalXP = userTotalXP;
         _level = userLevel;
+        _streak = userStreak;
         _username = userName;
         _avatarIcon = userAvatar;
 
         await _storage.write(key: _totalXPKey, value: userTotalXP.toString());
         await _storage.write(key: _levelKey, value: userLevel.toString());
+        await _storage.write(key: _streakKey, value: userStreak.toString());
         await _storage.write(key: _usernameKey, value: userName);
         await _storage.write(key: _avatarIconKey, value: userAvatar);
       } catch (e) {
@@ -158,12 +168,25 @@ class AuthProvider extends ChangeNotifier {
   /// ==============================
   /// UPDATE USER XP AND LEVEL
   /// ==============================
-  Future<void> updateXPAndLevel(int xp, int level) async {
+  Future<void> updateXPAndLevel(int xp, int level, {int? streak}) async {
     _totalXP = xp;
     _level = level;
+    if (streak != null) {
+      _streak = streak;
+    }
 
     await _storage.write(key: _totalXPKey, value: xp.toString());
     await _storage.write(key: _levelKey, value: level.toString());
+    if (streak != null) {
+      await _storage.write(key: _streakKey, value: streak.toString());
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> updateStreak(int streak) async {
+    _streak = streak;
+    await _storage.write(key: _streakKey, value: streak.toString());
 
     notifyListeners();
   }
@@ -189,6 +212,7 @@ class AuthProvider extends ChangeNotifier {
     _role = "user";
     _totalXP = 0;
     _level = 1;
+    _streak = 0;
     _username = "Chef en Progreso";
     _avatarIcon = "👨‍🍳";
 
@@ -198,6 +222,7 @@ class AuthProvider extends ChangeNotifier {
     await _storage.delete(key: _roleKey);
     await _storage.delete(key: _totalXPKey);
     await _storage.delete(key: _levelKey);
+    await _storage.delete(key: _streakKey);
     await _storage.delete(key: _usernameKey);
     await _storage.delete(key: _avatarIconKey);
 

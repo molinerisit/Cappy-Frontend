@@ -321,8 +321,16 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       // Update user XP and level globally
       final totalXP = result['totalXP'] as int?;
       final level = result['level'] as int?;
+      final progress = result['progress'] as Map<String, dynamic>?;
+      final streak =
+          (progress?['streak'] as num?)?.toInt() ??
+          (result['streak'] as num?)?.toInt();
       if (totalXP != null && level != null) {
-        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+        context.read<AuthProvider>().updateXPAndLevel(
+          totalXP,
+          level,
+          streak: streak,
+        );
       }
 
       // Update progress in ProgressProvider
@@ -355,7 +363,10 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     final level = (result['level'] as num?)?.toInt() ?? 1;
     final isRepeat = result['isRepeat'] == true;
     final progress = result['progress'] as Map<String, dynamic>?;
-    final streak = (progress?['streak'] as num?)?.toInt() ?? 0;
+    final streak =
+        (progress?['streak'] as num?)?.toInt() ??
+        (result['streak'] as num?)?.toInt() ??
+        0;
 
     await showGeneralDialog<void>(
       context: context,

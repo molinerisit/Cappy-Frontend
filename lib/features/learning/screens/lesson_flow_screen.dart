@@ -59,6 +59,12 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
   }
 
   void _showCompletionDialog(Map<String, dynamic> result) {
+    final progress = result['progress'] as Map<String, dynamic>?;
+    final streak =
+        (progress?['streak'] as num?)?.toInt() ??
+        (result['streak'] as num?)?.toInt() ??
+        0;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -77,6 +83,8 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
             Text('XP Total: ${result['totalXp']}'),
             const SizedBox(height: 8),
             Text('Nivel: ${result['level']}'),
+            const SizedBox(height: 8),
+            Text('Racha: $streak día${streak == 1 ? '' : 's'}'),
             if (result['unlockedNodes'] != null &&
                 (result['unlockedNodes'] as List).isNotEmpty)
               Padding(

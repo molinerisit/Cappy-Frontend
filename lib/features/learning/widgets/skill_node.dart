@@ -226,25 +226,7 @@ class _LessonNodeState extends State<LessonNode>
               ),
             ),
 
-            const SizedBox(height: 4),
-
-            // Badge de XP
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border, width: 1.5),
-              ),
-              child: Text(
-                '+${widget.xpReward} XP',
-                style: AppTypography.badge.copyWith(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
+            // Eliminado: badge de XP
           ],
         ),
       ),

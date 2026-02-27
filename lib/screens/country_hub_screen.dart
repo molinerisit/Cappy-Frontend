@@ -3,6 +3,8 @@ import '../core/api_service.dart';
 import '../core/lives_service.dart';
 import '../core/models/learning_path.dart';
 import '../widgets/lives_widget.dart';
+import '../features/learning/widgets/country_locked_view.dart';
+import '../features/learning/widgets/learning_empty_view.dart';
 import '../features/learning/screens/recipes_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
@@ -118,31 +120,23 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
               child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Color(0xFFFF6B35),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        futureCountryHub = _loadCountryHub();
-                      });
-                    },
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
+            return CountryLockedView(
+              error: snapshot.error!,
+              onBack: () => Navigator.of(context).pop(),
+              onRetry: () {
+                setState(() {
+                  futureCountryHub = _loadCountryHub();
+                });
+              },
             );
           } else if (!snapshot.hasData) {
-            return const Center(child: Text('No hay datos disponibles'));
+            return LearningEmptyView(
+              emoji: '🌍',
+              title: 'No hay datos disponibles',
+              description:
+                  'No pudimos encontrar contenido para este país en este momento.',
+              onBack: () => Navigator.of(context).pop(),
+            );
           }
 
           final hub = snapshot.data!;
