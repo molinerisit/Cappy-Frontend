@@ -20,18 +20,26 @@ import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const CappyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final authProvider = AuthProvider();
+
+  await Future.wait([authProvider.initialize()]);
+
+  runApp(CappyApp(authProvider: authProvider));
 }
 
 class CappyApp extends StatelessWidget {
-  const CappyApp({super.key});
+  final AuthProvider authProvider;
+
+  const CappyApp({super.key, required this.authProvider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
       ],
@@ -39,7 +47,9 @@ class CappyApp extends StatelessWidget {
         title: 'Cappy - Cocina feliz',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const SplashScreen(),
+        home: authProvider.isAuthenticated
+            ? const MainExperienceScreen()
+            : const WelcomeScreen(),
         onGenerateRoute: _onGenerateRoute,
       ),
     );
@@ -148,6 +158,20 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       }
 
       final name = settings.name ?? "/";
+
+      const publicAuthRoutes = {
+        '/welcome',
+        '/login',
+        '/register',
+        '/onboarding/intro',
+        '/onboarding/mode',
+        '/onboarding/goals',
+        '/onboarding/countries',
+      };
+
+      if (authProvider.isAuthenticated && publicAuthRoutes.contains(name)) {
+        return const MainExperienceScreen();
+      }
 
       // Auth routes (accesibles sin autenticarse)
       if (name == "/welcome") return const WelcomeScreen();

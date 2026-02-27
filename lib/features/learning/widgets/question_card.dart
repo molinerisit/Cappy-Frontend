@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Card de pregunta tipo Duolingo
@@ -62,10 +63,17 @@ class _QuestionCardState extends State<QuestionCard>
                 width: double.infinity,
                 height: 200,
                 color: const Color(0xFFF3F4F6),
-                child: Image.network(
-                  widget.imageUrl!,
+                child: CachedNetworkImage(
+                  imageUrl: widget.imageUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
+                  placeholder: (context, url) => const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) {
                     return Container(
                       color: const Color(0xFFF3F4F6),
                       child: const Icon(

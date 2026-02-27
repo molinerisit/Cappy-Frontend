@@ -289,17 +289,10 @@ class _LoginScreenState extends State<LoginScreen>
                             // Botón de Google
                             OutlinedButton.icon(
                               onPressed: _isLoading ? null : _handleGoogleLogin,
-                              icon: Image.asset(
-                                'assets/google_logo.png',
-                                height: 24,
-                                width: 24,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Fallback a emoji si no hay imagen
-                                  return const Text(
-                                    '🔍',
-                                    style: TextStyle(fontSize: 20),
-                                  );
-                                },
+                              icon: const Icon(
+                                Icons.login,
+                                size: 22,
+                                color: Color(0xFF1F2937),
                               ),
                               label: Text(
                                 'Continuar con Google',

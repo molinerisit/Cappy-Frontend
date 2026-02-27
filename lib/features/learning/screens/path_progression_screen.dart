@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/api_service.dart';
+import '../../../core/lives_service.dart';
 import '../../../core/models/learning_node.dart';
 import 'lesson_game_screen.dart';
 import '../widgets/skill_node.dart';
@@ -18,12 +20,14 @@ class PathProgressionScreen extends StatefulWidget {
   final String pathId;
   final String pathTitle;
   final bool showAppBar;
+  final VoidCallback? onLessonExit;
 
   const PathProgressionScreen({
     super.key,
     required this.pathId,
     required this.pathTitle,
     this.showAppBar = true,
+    this.onLessonExit,
   });
 
   @override
@@ -32,15 +36,45 @@ class PathProgressionScreen extends StatefulWidget {
 
 class _PathProgressionScreenState extends State<PathProgressionScreen>
     with TickerProviderStateMixin {
-  late Future<dynamic> futurePathData;
   final List<Offset> nodePositions = [];
+  final ScrollController _scrollController = ScrollController();
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  final int _pageSize = 40;
+  bool _isLoading = true;
+  final ValueNotifier<bool> _isLoadingMoreNotifier = ValueNotifier(false);
+  bool _hasMore = false;
+  int _currentPage = 1;
+  String? _errorMessage;
+  DateTime? _lastLoadMoreAt;
+  static const Duration _loadMoreCooldown = Duration(milliseconds: 450);
+  double? _pendingRestoreOffset;
+  Map<String, dynamic> _pathData = const {
+    'nodes': <dynamic>[],
+    'groups': <dynamic>[],
+  };
+
+  void _restoreScrollPositionIfNeeded() {
+    final targetOffset = _pendingRestoreOffset;
+    if (targetOffset == null) return;
+    if (!_scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPositionIfNeeded();
+      });
+      return;
+    }
+
+    final max = _scrollController.position.maxScrollExtent;
+    final clamped = targetOffset.clamp(0.0, max);
+    _scrollController.jumpTo(clamped);
+    _pendingRestoreOffset = null;
+  }
 
   @override
   void initState() {
     super.initState();
-    futurePathData = ApiService.getPath(widget.pathId);
+    _scrollController.addListener(_onScroll);
+    _loadInitialPathData();
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -56,8 +90,136 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   }
 
   @override
+  void didUpdateWidget(covariant PathProgressionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pathId != widget.pathId) {
+      _pendingRestoreOffset = 0.0;
+      _pathData = const {'nodes': <dynamic>[], 'groups': <dynamic>[]};
+      _fadeController.reset();
+      _fadeController.forward();
+      _loadInitialPathData();
+    }
+  }
+
+  Future<void> _loadInitialPathData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _currentPage = 1;
+    });
+
+    await _fetchPathPage(page: 1, append: false);
+  }
+
+  Future<void> _loadMorePathData() async {
+    if (_isLoadingMoreNotifier.value || !_hasMore) return;
+    final now = DateTime.now();
+    if (_lastLoadMoreAt != null &&
+        now.difference(_lastLoadMoreAt!) < _loadMoreCooldown) {
+      return;
+    }
+    _lastLoadMoreAt = now;
+
+    _isLoadingMoreNotifier.value = true;
+    await _fetchPathPage(page: _currentPage + 1, append: true);
+    _isLoadingMoreNotifier.value = false;
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || !_hasMore) return;
+    if (_isLoading || _isLoadingMoreNotifier.value) return;
+
+    final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0) return;
+
+    final triggerOffset = position.maxScrollExtent * 0.8;
+    if (position.pixels >= triggerOffset) {
+      _loadMorePathData();
+    }
+  }
+
+  List<dynamic> _dedupeByEntityId(List<dynamic> source) {
+    final unique = <dynamic>[];
+    final seen = <String>{};
+
+    for (final item in source) {
+      final id = _extractEntityId(item);
+      final key = id ?? '__fallback_${item.hashCode}_${unique.length}';
+      if (seen.add(key)) {
+        unique.add(item);
+      }
+    }
+
+    return unique;
+  }
+
+  Future<void> _fetchPathPage({required int page, required bool append}) async {
+    final stopwatch = Stopwatch()..start();
+    int fetchedCount = 0;
+    bool hasMore = false;
+    String status = 'ok';
+
+    try {
+      final data = await ApiService.getPath(
+        widget.pathId,
+        page: page,
+        limit: _pageSize,
+      );
+
+      final normalized = _normalizePathData(data);
+      final nextNodes = List<dynamic>.from(normalized['nodes'] ?? <dynamic>[]);
+      final nextGroups = List<dynamic>.from(
+        normalized['groups'] ?? <dynamic>[],
+      );
+      fetchedCount = nextNodes.length;
+
+      final pagination = data['pagination'] as Map<String, dynamic>?;
+      hasMore = pagination?['hasMore'] == true;
+
+      setState(() {
+        _currentPage = page;
+        _hasMore = hasMore;
+        final previousNodes =
+            _pathData['nodes'] as List<dynamic>? ?? <dynamic>[];
+        final mergedNodes = append
+            ? <dynamic>[...previousNodes, ...nextNodes]
+            : <dynamic>[...nextNodes];
+
+        _pathData = {
+          'groups':
+              append &&
+                  _pathData['groups'] is List &&
+                  (_pathData['groups'] as List).isNotEmpty
+              ? _pathData['groups']
+              : nextGroups,
+          'nodes': _dedupeByEntityId(mergedNodes),
+        };
+      });
+    } catch (e) {
+      status = 'error';
+      if (!append) {
+        setState(() => _errorMessage = e.toString());
+      }
+    } finally {
+      stopwatch.stop();
+      if (kDebugMode) {
+        debugPrint(
+          '[Pagination][Path] pathId=${widget.pathId} page=$page append=$append fetched=$fetchedCount hasMore=$hasMore status=$status ms=${stopwatch.elapsedMilliseconds}',
+        );
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _fadeController.dispose();
+    _isLoadingMoreNotifier.dispose();
     super.dispose();
   }
 
@@ -66,6 +228,30 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     String title,
     String nodeType,
   ) async {
+    final token = ApiService.getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        final livesService = LivesService(baseUrl: ApiService.baseUrl);
+        final canStart = await livesService.canStartLesson(token);
+        if (!canStart) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'No tenés vidas disponibles. Esperá la recarga para continuar.',
+              ),
+              backgroundColor: AppColors.textStrong,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (_) {}
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -89,13 +275,21 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         ),
       );
 
+      widget.onLessonExit?.call();
+
       // Refresh path data if lesson was completed successfully
       if (result == true && mounted) {
-        setState(() {
-          futurePathData = ApiService.getPath(widget.pathId);
-          _fadeController.reset();
-          _fadeController.forward();
-        });
+        _pendingRestoreOffset = _scrollController.hasClients
+            ? _scrollController.offset
+            : 0.0;
+        _fadeController.reset();
+        _fadeController.forward();
+        await _loadInitialPathData();
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _restoreScrollPositionIfNeeded();
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -121,6 +315,8 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         return NodeStatus.completed;
       case 'locked':
         return NodeStatus.locked;
+      case 'available':
+      case 'unlocked':
       case 'active':
         return NodeStatus.active;
       default:
@@ -154,33 +350,105 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     return {'nodes': <dynamic>[], 'groups': <dynamic>[]};
   }
 
+  String? _extractEntityId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) {
+      final id = raw['_id'] ?? raw['id'] ?? raw['\$oid'];
+      if (id == null) return null;
+      return _extractEntityId(id);
+    }
+
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
+  }
+
+  String? _extractGroupTitle(dynamic raw) {
+    if (raw is String) {
+      final value = raw.trim();
+      return value.isEmpty ? null : value;
+    }
+    if (raw is! Map) return null;
+
+    final title =
+        raw['title']?.toString().trim() ?? raw['name']?.toString().trim() ?? '';
+    return title.isEmpty ? null : title;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final content = FutureBuilder<dynamic>(
-      future: futurePathData,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        } else if (snapshot.hasError) {
-          return _buildErrorState();
-        }
+    final nodes = _pathData['nodes'] as List<dynamic>? ?? [];
+    final groups = _pathData['groups'] as List<dynamic>? ?? [];
 
-        final normalized = _normalizePathData(snapshot.data);
-        final nodes = normalized['nodes'] as List<dynamic>? ?? [];
-        final groups = normalized['groups'] as List<dynamic>? ?? [];
-
-        if (nodes.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: _buildNodePath(nodes, groups),
-        );
-      },
-    );
+    Widget content;
+    if (_isLoading) {
+      content = const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    } else if (_errorMessage != null) {
+      content = _buildErrorState();
+    } else if (nodes.isEmpty) {
+      content = _buildEmptyState();
+    } else {
+      content = FadeTransition(
+        opacity: _fadeAnimation,
+        child: Stack(
+          children: [
+            _buildNodePath(nodes, groups),
+            if (_hasMore)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _isLoadingMoreNotifier,
+                  builder: (context, isLoadingMore, _) => FilledButton(
+                    onPressed: isLoadingMore ? null : _loadMorePathData,
+                    child: isLoadingMore
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Cargar más'),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: IgnorePointer(
+                ignoring: true,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _isLoadingMoreNotifier,
+                  builder: (context, isLoadingMore, _) => AnimatedOpacity(
+                    opacity: isLoadingMore ? 1 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (!widget.showAppBar) {
       return Container(color: AppColors.background, child: content);
@@ -196,7 +464,12 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
         color: AppColors.textSecondary,
       ),
-      title: Text(widget.pathTitle, style: AppTypography.cardTitle),
+      title: Text(
+        widget.pathTitle,
+        style: AppTypography.cardTitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       actions: const [
         Padding(
           padding: EdgeInsets.only(right: AppSpacing.lg),
@@ -209,24 +482,38 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   Widget _buildNodePath(List<dynamic> nodes, List<dynamic> groups) {
     final nodeList = nodes.whereType<Map<String, dynamic>>().toList();
     final groupList = groups.whereType<Map<String, dynamic>>().toList();
-    final groupTitleById = {
-      for (final group in groupList)
-        (group['_id']?.toString() ?? ''): (group['title'] ?? '') as String,
-    };
+    final groupTitleById = <String, String>{};
+    for (final group in groupList) {
+      final id = _extractEntityId(group);
+      final title = _extractGroupTitle(group);
+      if (id != null && title != null && title.isNotEmpty) {
+        groupTitleById[id] = title;
+      }
+    }
     const ungroupedKey = '__ungrouped__';
 
     final groupedNodes = <String, List<Map<String, dynamic>>>{};
     for (final node in nodeList) {
-      String? groupId;
       final rawGroupId = node['groupId'];
-      if (rawGroupId is Map) {
-        groupId = rawGroupId['_id']?.toString() ?? rawGroupId['id']?.toString();
-      } else {
-        groupId = rawGroupId?.toString();
-      }
+      final groupId = _extractEntityId(rawGroupId);
       final normalizedGroupId = groupId == null || groupId.isEmpty
           ? ungroupedKey
           : groupId;
+
+      final mappedTitle = _extractGroupTitle(rawGroupId);
+      if (normalizedGroupId != ungroupedKey &&
+          mappedTitle != null &&
+          mappedTitle.isNotEmpty) {
+        groupTitleById.putIfAbsent(normalizedGroupId, () => mappedTitle);
+      }
+
+      final directGroupTitle = _extractGroupTitle(node['groupTitle']);
+      if (normalizedGroupId != ungroupedKey &&
+          directGroupTitle != null &&
+          directGroupTitle.isNotEmpty) {
+        groupTitleById.putIfAbsent(normalizedGroupId, () => directGroupTitle);
+      }
+
       groupedNodes.putIfAbsent(normalizedGroupId, () => []).add(node);
     }
 
@@ -251,6 +538,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     }
 
     final orderedNodes = <Map<String, dynamic>>[];
+    final orderedNodeGroupIds = <String>[];
     final groupStartIndex = <String, int>{};
     for (final groupId in orderedGroupIds) {
       final groupNodes = groupedNodes[groupId] ?? [];
@@ -268,6 +556,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
       if (groupNodes.isNotEmpty) {
         groupStartIndex[groupId] = orderedNodes.length;
         orderedNodes.addAll(groupNodes);
+        orderedNodeGroupIds.addAll(List.filled(groupNodes.length, groupId));
       }
     }
 
@@ -285,28 +574,163 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final leftX = width * 0.25;
-        final rightX = width * 0.75;
-        final verticalSpacing = 240.0; // Increased spacing
-        const headerOffset = 120.0;
-        const nodeRadius = 56.0;
+        final minX = width * 0.2;
+        final maxX = width * 0.8;
+        const rowSpacing = 240.0;
+        const groupGap = 120.0;
+        const nodeCircleDiameter = 76.0;
+        const connectorStartYOffset = 136.0;
+        const connectorEndYOffset = 6.0;
+        const connectorHorizontalNudge = 14.0;
 
-        // Calcular posiciones de nodos
-        nodePositions.clear();
-        for (int i = 0; i < orderedNodes.length; i++) {
-          final isLeft = i % 2 == 0;
-          final x = isLeft ? leftX : rightX;
-          final y = 20.0 + (i * verticalSpacing);
-          nodePositions.add(Offset(x, y));
+        Offset connectorStartAnchor(Offset startRaw, Offset endRaw) {
+          final deltaX = endRaw.dx - startRaw.dx;
+          final direction = deltaX > 0
+              ? 1.0
+              : deltaX < 0
+              ? -1.0
+              : 0.0;
+          return Offset(
+            startRaw.dx + (direction * connectorHorizontalNudge),
+            startRaw.dy + connectorStartYOffset,
+          );
         }
 
-        // Usar las posiciones de nodos directamente para las líneas
-        final linePositions = nodePositions;
+        Offset connectorEndAnchor(Offset startRaw, Offset endRaw) {
+          final deltaX = endRaw.dx - startRaw.dx;
+          final direction = deltaX > 0
+              ? 1.0
+              : deltaX < 0
+              ? -1.0
+              : 0.0;
+          return Offset(
+            endRaw.dx - (direction * connectorHorizontalNudge),
+            endRaw.dy + connectorEndYOffset,
+          );
+        }
+
+        int parseInt(dynamic value, {int fallback = 0}) {
+          if (value is int) return value;
+          if (value is num) return value.toInt();
+          return int.tryParse(value?.toString() ?? '') ?? fallback;
+        }
+
+        nodePositions
+          ..clear()
+          ..addAll(List.filled(orderedNodes.length, Offset.zero));
+        final nodeTitleWidthByIndex = <int, double>{};
+
+        final connectionPairs = <List<int>>[];
+        final connectionPairKeys = <String>{};
+
+        void addConnectionPair(int from, int to) {
+          final key = '$from->$to';
+          if (connectionPairKeys.add(key)) {
+            connectionPairs.add([from, to]);
+          }
+        }
+
+        var currentY = 60.0;
+
+        for (final groupId in orderedGroupIds) {
+          final groupNodeIndices = <int>[];
+          for (int i = 0; i < orderedNodeGroupIds.length; i++) {
+            if (orderedNodeGroupIds[i] == groupId) {
+              groupNodeIndices.add(i);
+            }
+          }
+          if (groupNodeIndices.isEmpty) continue;
+
+          final levelBuckets = <int, List<int>>{};
+          final orderedLevels = <int>[];
+
+          for (final nodeIndex in groupNodeIndices) {
+            final node = orderedNodes[nodeIndex];
+            final level = parseInt(node['level'], fallback: 1);
+            if (!levelBuckets.containsKey(level)) {
+              levelBuckets[level] = <int>[];
+              orderedLevels.add(level);
+            }
+            levelBuckets[level]!.add(nodeIndex);
+          }
+
+          orderedLevels.sort();
+          List<int>? previousLevelNodeIndices;
+
+          for (final level in orderedLevels) {
+            final levelNodeIndices = levelBuckets[level]!
+              ..sort((a, b) {
+                final posA = parseInt(
+                  orderedNodes[a]['positionIndex'],
+                  fallback: 0,
+                );
+                final posB = parseInt(
+                  orderedNodes[b]['positionIndex'],
+                  fallback: 0,
+                );
+                if (posA != posB) return posA.compareTo(posB);
+                final orderA = parseInt(orderedNodes[a]['order'], fallback: 0);
+                final orderB = parseInt(orderedNodes[b]['order'], fallback: 0);
+                return orderA.compareTo(orderB);
+              });
+
+            final levelCount = levelNodeIndices.length;
+            final titleMaxWidth = levelCount <= 1
+                ? 124.0
+                : (((maxX - minX) / (levelCount - 1)) - 18).clamp(74.0, 124.0);
+            for (int j = 0; j < levelCount; j++) {
+              final x = levelCount == 1
+                  ? width * 0.5
+                  : minX + ((maxX - minX) * (j / (levelCount - 1)));
+              nodePositions[levelNodeIndices[j]] = Offset(x, currentY);
+              nodeTitleWidthByIndex[levelNodeIndices[j]] = titleMaxWidth;
+            }
+
+            if (previousLevelNodeIndices != null &&
+                previousLevelNodeIndices.isNotEmpty) {
+              final prevCount = previousLevelNodeIndices.length;
+              final currentCount = levelNodeIndices.length;
+
+              if (prevCount == currentCount) {
+                for (int j = 0; j < currentCount; j++) {
+                  addConnectionPair(
+                    previousLevelNodeIndices[j],
+                    levelNodeIndices[j],
+                  );
+                }
+              } else if (prevCount > currentCount) {
+                for (int j = 0; j < prevCount; j++) {
+                  final mappedIndex = currentCount == 1
+                      ? 0
+                      : ((j * (currentCount - 1)) / (prevCount - 1)).round();
+                  addConnectionPair(
+                    previousLevelNodeIndices[j],
+                    levelNodeIndices[mappedIndex],
+                  );
+                }
+              } else {
+                for (int j = 0; j < currentCount; j++) {
+                  final mappedIndex = prevCount == 1
+                      ? 0
+                      : ((j * (prevCount - 1)) / (currentCount - 1)).round();
+                  addConnectionPair(
+                    previousLevelNodeIndices[mappedIndex],
+                    levelNodeIndices[j],
+                  );
+                }
+              }
+            }
+
+            previousLevelNodeIndices = levelNodeIndices;
+            currentY += rowSpacing;
+          }
+
+          currentY += groupGap;
+        }
 
         final groupHeaders = <Map<String, dynamic>>[];
-        final breakIndices = <int>{}; // Índices donde cortar las líneas
+        final breakIndices = <int>{}; // Compatibilidad legacy para painter
 
-        print('🎯 [PathProgressionScreen] Group separation:');
         for (final groupId in orderedGroupIds) {
           if (groupId == ungroupedKey) continue;
           final index = groupStartIndex[groupId];
@@ -316,26 +740,35 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
           // Solo mostrar título si grupo tiene nodos y título no está vacío
           if (index == null || title.isEmpty || groupNodeCount < 1) continue;
 
-          print('  Group "$title" starts at index $index');
-
           // Añadir índice de corte (excepto el primero)
           if (index > 0) {
             breakIndices.add(index);
-            print('    -> Added break at index $index');
           }
 
           // Posicionar el título ANTES del primer nodo del grupo
-          final nodeY = 20.0 + (index * 240.0);
-          final y = (nodeY - 80).clamp(0.0, double.infinity);
+          final nodeY = (index < nodePositions.length
+              ? nodePositions[index].dy
+              : 20.0);
+          final y = (nodeY - 96).clamp(0.0, double.infinity);
           groupHeaders.add({'title': title, 'y': y});
         }
-        print('  Total breakIndices: $breakIndices');
+
+        final totalHeight = orderedNodes.isNotEmpty
+            ? ((nodePositions
+                      .map((offset) => offset.dy)
+                      .fold<double>(
+                        0,
+                        (maxValue, value) =>
+                            value > maxValue ? value : maxValue,
+                      )) +
+                  200)
+            : 100.0;
 
         return Column(
           children: [
             // Bloque de progreso (Fixed at top)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
               child: ProgressCard(
                 levelText: 'Nivel $currentLevel',
                 progress: totalCount > 0 ? completedCount / totalCount : 0,
@@ -347,45 +780,55 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
             // Contenido scrolleable (Expanded)
             Expanded(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.only(bottom: 32),
                 child: SizedBox(
                   width: double.infinity,
-                  height: orderedNodes.isNotEmpty
-                      ? 20 + (orderedNodes.length * 240.0) + 120
-                      : 100,
+                  height: totalHeight,
                   child: Stack(
                     children: [
                       // Dibujar lineas de conexion
                       Positioned.fill(
                         child: CustomPaint(
                           painter: PathConnectorPainter(
-                            nodePositions: linePositions,
+                            nodePositions: nodePositions,
                             lineColor: AppColors.border,
-                            strokeWidth: 2,
+                            strokeWidth: 3,
                             breakIndices: breakIndices,
+                            connectionPairs: connectionPairs,
+                            nodeCircleDiameter: nodeCircleDiameter,
+                            lineStartYOffset: connectorStartYOffset,
+                            lineEndYOffset: connectorEndYOffset,
+                            horizontalAnchorNudge: connectorHorizontalNudge,
+                            curveHorizontalFactor: 0.2,
                           ),
                         ),
                       ),
 
                       // Dibujar conectores entre nodos
-                      ...List.generate(orderedNodes.length - 1, (index) {
-                        if (index + 1 >= linePositions.length) {
+                      ...List.generate(connectionPairs.length, (index) {
+                        final pair = connectionPairs[index];
+                        if (pair.length < 2) {
                           return const SizedBox.shrink();
                         }
 
-                        // Saltar conectores en puntos de corte de grupo
-                        if (breakIndices.contains(index + 1)) {
+                        final from = pair[0];
+                        final to = pair[1];
+                        if (from >= nodePositions.length ||
+                            to >= nodePositions.length) {
                           return const SizedBox.shrink();
                         }
 
-                        final start = linePositions[index];
-                        final end = linePositions[index + 1];
+                        final startRaw = nodePositions[from];
+                        final endRaw = nodePositions[to];
+                        final start = connectorStartAnchor(startRaw, endRaw);
+                        final end = connectorEndAnchor(startRaw, endRaw);
                         final midX = (start.dx + end.dx) / 2;
                         final midY = (start.dy + end.dy) / 2;
 
                         return Positioned(
-                          left: midX - 6,
-                          top: midY - 6,
+                          left: midX - 4,
+                          top: midY - 4,
                           child: TweenAnimationBuilder<double>(
                             tween: Tween(begin: 0.0, end: 1.0),
                             duration: Duration(
@@ -485,9 +928,15 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                           final nodeType = (node['type'] ?? 'recipe') as String;
 
                           final position = nodePositions[index];
+                          final titleMaxWidth =
+                              nodeTitleWidthByIndex[index] ?? 110.0;
+                          final nodeWidgetWidth =
+                              titleMaxWidth < nodeCircleDiameter
+                              ? nodeCircleDiameter
+                              : titleMaxWidth;
 
                           return Positioned(
-                            left: position.dx - 56,
+                            left: position.dx - (nodeWidgetWidth / 2),
                             top: position.dy,
                             child: TweenAnimationBuilder<double>(
                               key: ValueKey(nodeId),
@@ -512,6 +961,8 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                                 status: status,
                                 nodeType: nodeType,
                                 index: index,
+                                titleMaxWidth: titleMaxWidth,
+                                nodeWidth: nodeWidgetWidth,
                                 onTap: status != NodeStatus.locked
                                     ? () =>
                                           _startLesson(nodeId, title, nodeType)
@@ -572,11 +1023,9 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
             AppButton(
               label: 'Reintentar',
               onPressed: () {
-                setState(() {
-                  futurePathData = ApiService.getPath(widget.pathId);
-                  _fadeController.reset();
-                  _fadeController.forward();
-                });
+                _fadeController.reset();
+                _fadeController.forward();
+                _loadInitialPathData();
               },
             ),
           ],

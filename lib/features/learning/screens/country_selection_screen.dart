@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
 import 'country_hub_screen.dart';
@@ -12,14 +13,24 @@ class CountrySelectionScreen extends StatefulWidget {
 
 class _CountrySelectionScreenState extends State<CountrySelectionScreen>
     with SingleTickerProviderStateMixin {
-  late Future<List<dynamic>> futureCountries;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  final ScrollController _scrollController = ScrollController();
+  final int _pageSize = 20;
+  final List<dynamic> _countries = [];
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = false;
+  int _currentPage = 1;
+  String? _errorMessage;
+  DateTime? _lastLoadMoreAt;
+  static const Duration _loadMoreCooldown = Duration(milliseconds: 450);
 
   @override
   void initState() {
     super.initState();
-    futureCountries = ApiService.getAllCountries();
+    _scrollController.addListener(_onScroll);
+    _loadInitialCountries();
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -34,8 +45,126 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
     _animationController.forward();
   }
 
+  Future<void> _loadInitialCountries() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _countries.clear();
+      _currentPage = 1;
+    });
+
+    await _fetchCountriesPage(page: 1, append: false);
+  }
+
+  Future<void> _loadMoreCountries() async {
+    if (_isLoadingMore || !_hasMore) return;
+    final now = DateTime.now();
+    if (_lastLoadMoreAt != null &&
+        now.difference(_lastLoadMoreAt!) < _loadMoreCooldown) {
+      return;
+    }
+    _lastLoadMoreAt = now;
+
+    setState(() => _isLoadingMore = true);
+    await _fetchCountriesPage(page: _currentPage + 1, append: true);
+    if (mounted) {
+      setState(() => _isLoadingMore = false);
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || !_hasMore) return;
+    if (_isLoading || _isLoadingMore) return;
+
+    final position = _scrollController.position;
+    if (position.maxScrollExtent <= 0) return;
+
+    final triggerOffset = position.maxScrollExtent * 0.8;
+    if (position.pixels >= triggerOffset) {
+      _loadMoreCountries();
+    }
+  }
+
+  String? _extractEntityId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) {
+      final id = raw['_id'] ?? raw['id'] ?? raw['\$oid'];
+      if (id == null) return null;
+      return _extractEntityId(id);
+    }
+
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
+  }
+
+  List<dynamic> _dedupeByEntityId(List<dynamic> source) {
+    final unique = <dynamic>[];
+    final seen = <String>{};
+
+    for (final item in source) {
+      final id = _extractEntityId(item);
+      final key = id ?? '__fallback_${item.hashCode}_${unique.length}';
+      if (seen.add(key)) {
+        unique.add(item);
+      }
+    }
+
+    return unique;
+  }
+
+  Future<void> _fetchCountriesPage({
+    required int page,
+    required bool append,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    int fetchedCount = 0;
+    bool hasMore = false;
+    String status = 'ok';
+
+    try {
+      final response = await ApiService.getCountriesPaginated(
+        page: page,
+        limit: _pageSize,
+      );
+
+      final items = response['data'] as List<dynamic>? ?? <dynamic>[];
+      final pagination = response['pagination'] as Map<String, dynamic>?;
+      hasMore = pagination?['hasMore'] == true;
+      fetchedCount = items.length;
+
+      setState(() {
+        _currentPage = page;
+        _hasMore = hasMore;
+        final merged = append
+            ? <dynamic>[..._countries, ...items]
+            : <dynamic>[...items];
+        _countries
+          ..clear()
+          ..addAll(_dedupeByEntityId(merged));
+      });
+    } catch (e) {
+      status = 'error';
+      if (!append) {
+        setState(() => _errorMessage = e.toString());
+      }
+    } finally {
+      stopwatch.stop();
+      if (kDebugMode) {
+        debugPrint(
+          '[Pagination][Countries] page=$page append=$append fetched=$fetchedCount hasMore=$hasMore status=$status ms=${stopwatch.elapsedMilliseconds}',
+        );
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -68,95 +197,145 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
         ),
         centerTitle: true,
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: futureCountries,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
-            );
-          } else if (snapshot.hasError) {
-            return _buildErrorState();
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState();
-          }
+      body: _buildBody(),
+    );
+  }
 
-          final countries = snapshot.data!;
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+      );
+    }
 
-          return FadeTransition(
-            opacity: _fadeAnimation,
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
+    if (_countries.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Column(
+        children: [
+          // Header section
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header section
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '¿Qué cocina quieres explorar?',
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Descubre recetas auténticas y cultura culinaria',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: const Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
+                Text(
+                  '¿Qué cocina quieres explorar?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1F2937),
                   ),
                 ),
-
-                // Countries grid
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(20),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.85,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                    itemCount: countries.length,
-                    itemBuilder: (context, index) {
-                      final country = countries[index];
-                      final countryId = country['_id'] ?? country['id'] ?? '';
-                      final countryName = country['name'] ?? 'País';
-                      final countryIcon = country['icon'] ?? '🌍';
-                      final countryColor = _getCountryColor(index);
-
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(milliseconds: 400 + (index * 80)),
-                        curve: Curves.easeOut,
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: Opacity(opacity: value, child: child),
-                          );
-                        },
-                        child: _CountryCard(
-                          countryId: countryId,
-                          countryName: countryName,
-                          countryIcon: countryIcon,
-                          accentColor: countryColor,
-                        ),
-                      );
-                    },
+                const SizedBox(height: 8),
+                Text(
+                  'Descubre recetas auténticas y cultura culinaria',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: const Color(0xFF6B7280),
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+
+          // Countries grid
+          Expanded(
+            child: Stack(
+              children: [
+                GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(20),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _countries.length,
+                  itemBuilder: (context, index) {
+                    final country = _countries[index];
+                    final countryId = country['_id'] ?? country['id'] ?? '';
+                    final countryName = country['name'] ?? 'País';
+                    final countryIcon = country['icon'] ?? '🌍';
+                    final countryColor = _getCountryColor(index);
+
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: Duration(milliseconds: 400 + (index * 80)),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Opacity(opacity: value, child: child),
+                        );
+                      },
+                      child: _CountryCard(
+                        countryId: countryId,
+                        countryName: countryName,
+                        countryIcon: countryIcon,
+                        accentColor: countryColor,
+                      ),
+                    );
+                  },
+                ),
+                if (_hasMore)
+                  Positioned(
+                    right: 20,
+                    bottom: 20,
+                    child: ElevatedButton(
+                      onPressed: _isLoadingMore ? null : _loadMoreCountries,
+                      child: _isLoadingMore
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Cargar más'),
+                    ),
+                  ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 20,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: AnimatedOpacity(
+                      opacity: _isLoadingMore ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                          ),
+                          child: const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -213,9 +392,7 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                setState(() {
-                  futureCountries = ApiService.getAllCountries();
-                });
+                _loadInitialCountries();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),
@@ -314,7 +491,7 @@ class _CountryCardState extends State<_CountryCard> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -328,7 +505,7 @@ class _CountryCardState extends State<_CountryCard> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: widget.accentColor.withOpacity(0.1),
+                  color: widget.accentColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -363,7 +540,7 @@ class _CountryCardState extends State<_CountryCard> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: widget.accentColor.withOpacity(0.1),
+                  color: widget.accentColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(

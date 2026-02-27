@@ -6,6 +6,44 @@ import '../models/lesson.dart';
 class ApiService {
   static const String baseUrl = "http://localhost:3000/api";
   static String? _token;
+  static final http.Client _httpClient = http.Client();
+  static const Duration _timeout = Duration(seconds: 15);
+  static final Map<String, Future<http.Response>> _inFlightGetRequests = {};
+
+  static Map<String, String> _headers({bool json = true}) {
+    return {
+      if (json) "Content-Type": "application/json",
+      if (_token != null) "Authorization": "Bearer $_token",
+    };
+  }
+
+  static Future<http.Response> _get(
+    Uri uri, {
+    bool dedupe = false,
+    Duration? timeout,
+  }) async {
+    final requestKey = "GET:${uri.toString()}|${_token ?? ''}";
+
+    if (dedupe) {
+      final inFlight = _inFlightGetRequests[requestKey];
+      if (inFlight != null) return inFlight;
+    }
+
+    final future = _httpClient
+        .get(uri, headers: _headers())
+        .timeout(timeout ?? _timeout);
+
+    if (!dedupe) {
+      return future;
+    }
+
+    _inFlightGetRequests[requestKey] = future;
+    try {
+      return await future;
+    } finally {
+      _inFlightGetRequests.remove(requestKey);
+    }
+  }
 
   // CRUD Nodos
   static Future<Map<String, dynamic>> createNode(
@@ -142,12 +180,9 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getProfile() async {
-    final response = await http.get(
+    final response = await _get(
       Uri.parse("$baseUrl/auth/profile"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+      dedupe: true,
     );
 
     if (response.statusCode == 200) {
@@ -186,12 +221,9 @@ class ApiService {
 
   /// Get Country Hub with Recipes + Culture paths
   static Future<Map<String, dynamic>> getCountryHub(String countryId) async {
-    final response = await http.get(
+    final response = await _get(
       Uri.parse("$baseUrl/countries/$countryId/hub"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+      dedupe: true,
     );
 
     if (response.statusCode == 200) {
@@ -203,16 +235,37 @@ class ApiService {
 
   /// Get all Goal paths for Seguir Objetivos
   static Future<List<dynamic>> getGoalPaths() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/goals"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+    final paged = await getGoalPathsPaginated(page: 1, limit: 12);
+    return paged['data'] as List<dynamic>? ?? <dynamic>[];
+  }
+
+  static Future<Map<String, dynamic>> getGoalPathsPaginated({
+    int page = 1,
+    int limit = 12,
+  }) async {
+    final uri = Uri.parse("$baseUrl/goals").replace(
+      queryParameters: {'page': page.toString(), 'limit': limit.toString()},
     );
 
+    final response = await _get(uri, dedupe: true);
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return {
+          'data': decoded,
+          'pagination': {
+            'page': 1,
+            'limit': decoded.length,
+            'total': decoded.length,
+            'totalPages': 1,
+            'hasMore': false,
+          },
+        };
+      }
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
     }
 
     throw Exception("Error cargando objetivos");
@@ -220,12 +273,9 @@ class ApiService {
 
   /// Get path with nodes (generic)
   static Future<Map<String, dynamic>> getPathWithNodes(String pathId) async {
-    final response = await http.get(
+    final response = await _get(
       Uri.parse("$baseUrl/paths/$pathId"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+      dedupe: true,
     );
 
     if (response.statusCode == 200) {
@@ -256,12 +306,9 @@ class ApiService {
 
   /// Get user progress for specific path
   static Future<Map<String, dynamic>> getPathProgress(String pathId) async {
-    final response = await http.get(
+    final response = await _get(
       Uri.parse("$baseUrl/paths/$pathId/progress"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+      dedupe: true,
     );
 
     if (response.statusCode == 200) {
@@ -486,16 +533,37 @@ class ApiService {
 
   // Country methods
   static Future<List<dynamic>> getAllCountries() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/countries"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
+    final paged = await getCountriesPaginated(page: 1, limit: 20);
+    return paged['data'] as List<dynamic>? ?? <dynamic>[];
+  }
+
+  static Future<Map<String, dynamic>> getCountriesPaginated({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final uri = Uri.parse("$baseUrl/countries").replace(
+      queryParameters: {'page': page.toString(), 'limit': limit.toString()},
     );
 
+    final response = await _get(uri, dedupe: true);
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return {
+          'data': decoded,
+          'pagination': {
+            'page': 1,
+            'limit': decoded.length,
+            'total': decoded.length,
+            'totalPages': 1,
+            'hasMore': false,
+          },
+        };
+      }
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
     }
 
     throw Exception("Error cargando países");
@@ -1102,14 +1170,21 @@ class ApiService {
   // REMOVED DUPLICATE: getCountryHub()
   // Use the version in UNIFIED API section instead
 
-  static Future<Map<String, dynamic>> getPath(String pathId) async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/learning-paths/$pathId"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
+  static Future<Map<String, dynamic>> getPath(
+    String pathId, {
+    int page = 1,
+    int limit = 24,
+    bool includeSteps = false,
+  }) async {
+    final uri = Uri.parse("$baseUrl/learning-paths/$pathId").replace(
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'includeSteps': includeSteps.toString(),
       },
     );
+
+    final response = await _get(uri, dedupe: true);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);

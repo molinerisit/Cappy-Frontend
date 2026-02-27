@@ -6,11 +6,23 @@ class LivesService {
 
   LivesService({required this.baseUrl});
 
+  Uri _buildUri(String endpointPath) {
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    final hasApiSuffix = normalizedBase.endsWith('/api');
+    final normalizedPath = endpointPath.startsWith('/')
+        ? endpointPath
+        : '/$endpointPath';
+    final resolvedPath = hasApiSuffix ? normalizedPath : '/api$normalizedPath';
+    return Uri.parse('$normalizedBase$resolvedPath');
+  }
+
   /// Get current lives status
   Future<Map<String, dynamic>> getLivesStatus(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/lives/status'),
+        _buildUri('/lives/status'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -32,7 +44,7 @@ class LivesService {
   Future<Map<String, dynamic>> loseLive(String token) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/lives/lose'),
+        _buildUri('/lives/lose'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -54,7 +66,7 @@ class LivesService {
   Future<bool> canStartLesson(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/lives/can-start-lesson'),
+        _buildUri('/lives/can-start-lesson'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -76,7 +88,7 @@ class LivesService {
   Future<int> getTimeUntilNextLife(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/lives/time-until-next'),
+        _buildUri('/lives/time-until-next'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -98,7 +110,7 @@ class LivesService {
   Future<Map<String, dynamic>> checkRefill(String token) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/api/lives/check-refill'),
+        _buildUri('/lives/check-refill'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

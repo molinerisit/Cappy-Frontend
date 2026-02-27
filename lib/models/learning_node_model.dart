@@ -14,7 +14,7 @@ class LearningNodeModel {
   final int? servings;
   final bool isPremium;
   final List<String> requiredNodes;
-  final String? status; // 'locked' | 'unlocked' | 'completed'
+  final String? status; // 'locked' | 'active' | 'unlocked' | 'completed'
 
   const LearningNodeModel({
     required this.id,
@@ -61,7 +61,7 @@ class LearningNodeModel {
   }
 
   bool get isLocked => status == 'locked';
-  bool get isUnlocked => status == 'unlocked';
+  bool get isUnlocked => status == 'active' || status == 'unlocked';
   bool get isCompleted => status == 'completed';
 
   Map<String, dynamic> toJson() {

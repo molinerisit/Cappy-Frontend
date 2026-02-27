@@ -104,76 +104,97 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundSecondary,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Hero Section
-            SliverToBoxAdapter(
-              child: _buildHeroSection(
-                authProvider,
-                level,
-                xpInLevel,
-                xpForNextLevel,
-                progressPercent,
-                totalXP,
-              ),
-            ),
-
-            // Main Statistics
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: _buildMainStats(authProvider),
-              ),
-            ),
-
-            // Achievements Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    Text(
-                      'Logros',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildAchievements(level),
-                  ],
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                // Hero Section
+                SliverToBoxAdapter(
+                  child: _buildHeroSection(
+                    authProvider,
+                    level,
+                    xpInLevel,
+                    xpForNextLevel,
+                    progressPercent,
+                    totalXP,
+                  ),
                 ),
-              ),
-            ),
 
-            // Actions Section
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Acciones',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildActions(context, authProvider),
-                  ],
+                // Main Statistics
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    child: _buildMainStats(authProvider),
+                  ),
                 ),
-              ),
-            ),
 
-            // Logout Button
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                child: _buildLogoutButton(context),
+                // Achievements Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Logros',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildAchievements(level),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Actions Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Acciones',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildActions(context, authProvider),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Logout Button
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                    child: _buildLogoutButton(context),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: 10,
+              left: 12,
+              child: Material(
+                color: Colors.white.withOpacity(0.9),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Volver',
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
+                    color: AppColors.textPrimary,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
           ],

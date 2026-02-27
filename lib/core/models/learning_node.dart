@@ -269,7 +269,7 @@ class LearningNode {
   final DateTime createdAt;
 
   // Status (determined by user progress)
-  String? status; // completed, available, locked
+  String? status; // completed, locked, available, active, unlocked
   String? position; // left, right (for alternating layout)
 
   LearningNode({
@@ -410,7 +410,9 @@ class LearningNode {
   }
 
   bool get isCompleted => status == 'completed';
-  bool get isAvailable => status == 'available';
+  bool get isAvailable =>
+      status == 'available' || status == 'active' || status == 'unlocked';
+  bool get isUnlocked => isAvailable;
   bool get isLocked => status == 'locked';
 
   int get totalDuration => steps.fold(0, (sum, step) => sum + step.duration);
