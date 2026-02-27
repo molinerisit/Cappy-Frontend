@@ -4,7 +4,6 @@ import '../core/lives_service.dart';
 import '../core/models/learning_path.dart';
 import '../widgets/lives_widget.dart';
 import '../features/learning/screens/recipes_list_screen.dart';
-import '../features/learning/screens/culture_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
   final String countryId;
@@ -205,22 +204,6 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                                 countryId: widget.countryId,
                                 pathId: hub.recipes.id,
                                 pathTitle: hub.recipes.title,
-                                countryName: widget.countryName ?? 'País',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _PathCard(
-                        path: hub.culture,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => CultureListScreen(
-                                countryId: widget.countryId,
-                                pathId: hub.culture.id,
-                                pathTitle: hub.culture.title,
                                 countryName: widget.countryName ?? 'País',
                               ),
                             ),

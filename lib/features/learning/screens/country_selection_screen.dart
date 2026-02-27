@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
 import 'country_hub_screen.dart';
+import '../widgets/country_selection_card.dart';
 
 class CountrySelectionScreen extends StatefulWidget {
   const CountrySelectionScreen({super.key});
@@ -220,73 +221,12 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
       opacity: _fadeAnimation,
       child: Column(
         children: [
-          // Header section
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '¿Qué cocina quieres explorar?',
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Descubre recetas auténticas y cultura culinaria',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildHeaderSection(),
 
-          // Countries grid
           Expanded(
             child: Stack(
               children: [
-                GridView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(20),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: _countries.length,
-                  itemBuilder: (context, index) {
-                    final country = _countries[index];
-                    final countryId = country['_id'] ?? country['id'] ?? '';
-                    final countryName = country['name'] ?? 'País';
-                    final countryIcon = country['icon'] ?? '🌍';
-                    final countryColor = _getCountryColor(index);
-
-                    return TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(milliseconds: 400 + (index * 80)),
-                      curve: Curves.easeOut,
-                      builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: Opacity(opacity: value, child: child),
-                        );
-                      },
-                      child: _CountryCard(
-                        countryId: countryId,
-                        countryName: countryName,
-                        countryIcon: countryIcon,
-                        accentColor: countryColor,
-                      ),
-                    );
-                  },
-                ),
+                _buildCountriesGrid(),
                 if (_hasMore)
                   Positioned(
                     right: 20,
@@ -336,6 +276,168 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 26),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu_rounded,
+                  color: Color(0xFFFF6B35),
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Tu viaje culinario',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '¿Qué cocina quieres explorar?',
+            style: GoogleFonts.poppins(
+              fontSize: 33,
+              height: 1.12,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Empieza con un país y descubre sabores auténticos paso a paso.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              height: 1.45,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountriesGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const horizontalPadding = 20.0;
+        const spacing = 16.0;
+        const minCardWidth = 140.0;
+
+        final usableWidth = constraints.maxWidth - (horizontalPadding * 2);
+        final computedCount = (usableWidth / minCardWidth).floor();
+        final crossAxisCount = computedCount.clamp(1, 4);
+        final cardWidth =
+            (usableWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+
+        final cardHeight = crossAxisCount == 1
+            ? cardWidth * 0.66
+            : cardWidth * 1.14;
+        final childAspectRatio = cardWidth / cardHeight;
+
+        return GridView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(horizontalPadding),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+          ),
+          itemCount: _countries.length,
+          itemBuilder: (context, index) {
+            final country = _CountryListItem.fromJson(
+              _countries[index],
+              fallbackColor: _getCountryColor(index),
+            );
+
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 260 + (index * 35)),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, (1 - value) * 18),
+                  child: Opacity(opacity: value, child: child),
+                );
+              },
+              child: CountrySelectionCard(
+                countryName: country.name,
+                countryIcon: country.icon,
+                accentColor: country.color,
+                heroTag: country.heroTag,
+                isLocked: country.isLocked,
+                lockLabel: country.lockLabel,
+                onTap: () => _openCountry(country),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openCountry(_CountryListItem country) async {
+    if (country.isLocked) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(country.lockReason)));
+      }
+      return;
+    }
+
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return CountryHubScreen(
+            countryId: country.id,
+            countryName: country.name,
+            countryIcon: country.icon,
+            heroTag: country.heroTag,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.02),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -449,124 +551,68 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
   }
 }
 
-class _CountryCard extends StatefulWidget {
-  final String countryId;
-  final String countryName;
-  final String countryIcon;
-  final Color accentColor;
+class _CountryListItem {
+  final String id;
+  final String name;
+  final String icon;
+  final Color color;
+  final bool isLocked;
+  final String lockLabel;
+  final String lockReason;
 
-  const _CountryCard({
-    required this.countryId,
-    required this.countryName,
-    required this.countryIcon,
-    required this.accentColor,
+  const _CountryListItem({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.isLocked,
+    required this.lockLabel,
+    required this.lockReason,
   });
 
-  @override
-  State<_CountryCard> createState() => _CountryCardState();
-}
+  String get heroTag => 'country-flag-$id';
 
-class _CountryCardState extends State<_CountryCard> {
-  bool _isPressed = false;
+  factory _CountryListItem.fromJson(
+    dynamic json, {
+    required Color fallbackColor,
+  }) {
+    final unlock = json['unlock'] as Map<String, dynamic>?;
+    final isUnlocked = unlock?['isUnlocked'] == true;
+    final isLocked = unlock != null ? !isUnlocked : false;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => CountryHubScreen(countryId: widget.countryId),
-          ),
-        );
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Icono circular con color de fondo
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: widget.accentColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    widget.countryIcon,
-                    style: const TextStyle(fontSize: 48),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Nombre del país
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  widget.countryName,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1F2937),
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Badge "Explorar"
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 14,
-                      color: widget.accentColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Explorar',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: widget.accentColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final unlockLevel = (unlock?['unlockLevel'] is num)
+        ? (unlock?['unlockLevel'] as num).toInt()
+        : 1;
+    final missingGroups = (unlock?['missingGroupIds'] as List?)?.length ?? 0;
+
+    String lockReason = 'País bloqueado por progresión';
+    if (unlock != null) {
+      final levelMet = unlock['levelMet'] == true;
+      final groupsMet = unlock['groupsMet'] == true;
+      if (!levelMet) {
+        lockReason =
+            'Necesitas llegar al nivel $unlockLevel para desbloquear este país';
+      } else if (!groupsMet) {
+        lockReason = missingGroups > 0
+            ? 'Completa $missingGroups grupo(s) de nodos para desbloquear este país'
+            : 'Completa los grupos requeridos para desbloquear este país';
+      }
+    }
+
+    final lockLabel = isLocked
+        ? (unlock != null && unlock['levelMet'] != true
+              ? 'Nivel $unlockLevel requerido'
+              : 'Completa grupos')
+        : 'Disponible';
+
+    return _CountryListItem(
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      name: (json['name'] ?? 'País').toString(),
+      icon: (json['icon'] ?? '🌍').toString(),
+      color: fallbackColor,
+      isLocked: isLocked,
+      lockLabel: lockLabel,
+      lockReason: lockReason,
     );
   }
 }

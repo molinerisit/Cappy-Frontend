@@ -91,6 +91,10 @@ class CountryHub {
   final String code;
   final String icon;
   final String? description;
+  final String? presentationHeadline;
+  final String? presentationSummary;
+  final String? heroImageUrl;
+  final List<String> iconicDishes;
   final LearningPath recipes;
   final LearningPath culture;
 
@@ -100,6 +104,10 @@ class CountryHub {
     required this.code,
     required this.icon,
     this.description,
+    this.presentationHeadline,
+    this.presentationSummary,
+    this.heroImageUrl,
+    this.iconicDishes = const [],
     required this.recipes,
     required this.culture,
   });
@@ -111,6 +119,12 @@ class CountryHub {
       code: json['country']['code'] ?? '',
       icon: json['country']['icon'] ?? '🌍',
       description: json['country']['description'],
+      presentationHeadline: json['country']['presentationHeadline']?.toString(),
+      presentationSummary: json['country']['presentationSummary']?.toString(),
+      heroImageUrl: json['country']['heroImageUrl']?.toString(),
+      iconicDishes: List<String>.from(
+        json['country']['iconicDishes'] ?? const [],
+      ),
       recipes: LearningPath.fromJson(json['recipes'] ?? {}),
       culture: LearningPath.fromJson(json['culture'] ?? {}),
     );
@@ -124,6 +138,10 @@ class CountryHub {
         'code': code,
         'icon': icon,
         'description': description,
+        'presentationHeadline': presentationHeadline,
+        'presentationSummary': presentationSummary,
+        'heroImageUrl': heroImageUrl,
+        'iconicDishes': iconicDishes,
       },
       'recipes': recipes.toJson(),
       'culture': culture.toJson(),

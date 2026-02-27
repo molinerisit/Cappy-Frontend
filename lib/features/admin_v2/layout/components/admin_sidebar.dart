@@ -19,9 +19,8 @@ class _AdminSidebarState extends State<AdminSidebar> {
 
   final List<SidebarItem> menuItems = [
     SidebarItem(label: 'Caminos', index: 0),
-    SidebarItem(label: 'Cultura', index: 1),
-    SidebarItem(label: 'Recetas', index: 2),
-    SidebarItem(label: 'Biblioteca', index: 3),
+    SidebarItem(label: 'Recetas', index: 1),
+    SidebarItem(label: 'Biblioteca', index: 2),
   ];
 
   @override
@@ -212,7 +211,7 @@ class _AdminSidebarState extends State<AdminSidebar> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () => widget.onNavigate(4), // Settings index
+                onTap: () => widget.onNavigate(3), // Settings index
                 borderRadius: BorderRadius.circular(8),
                 hoverColor: Colors.grey.shade50,
                 child: Container(

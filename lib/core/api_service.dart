@@ -195,6 +195,33 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> updateProfile({
+    String? username,
+    String? avatarIcon,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (username != null) payload['username'] = username;
+    if (avatarIcon != null) payload['avatarIcon'] = avatarIcon;
+
+    final response = await http.patch(
+      Uri.parse("$baseUrl/auth/profile"),
+      headers: {
+        "Content-Type": "application/json",
+        if (_token != null) "Authorization": "Bearer $_token",
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    final body = jsonDecode(response.body);
+    throw Exception(
+      body['message'] ?? body['error'] ?? "Error actualizando perfil",
+    );
+  }
+
   static Future<Map<String, dynamic>> changeCurrentPath(String pathId) async {
     final response = await http.post(
       Uri.parse("$baseUrl/auth/change-path"),
@@ -219,7 +246,7 @@ class ApiService {
   // UNIFIED API (v2.0 - Main Routes)
   // ========================================
 
-  /// Get Country Hub with Recipes + Culture paths
+  /// Get Country Hub with Recipes path
   static Future<Map<String, dynamic>> getCountryHub(String countryId) async {
     final response = await _get(
       Uri.parse("$baseUrl/countries/$countryId/hub"),
@@ -651,7 +678,12 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando artículos culturales");
+    if (response.statusCode == 410) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
+    }
+
+    throw Exception("Módulo de Cultura deshabilitado");
   }
 
   static Future<Map<String, dynamic>> getCulture(String cultureId) async {
@@ -667,7 +699,12 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando artículo cultural");
+    if (response.statusCode == 410) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
+    }
+
+    throw Exception("Módulo de Cultura deshabilitado");
   }
 
   static Future<Map<String, dynamic>> getRecipe(String recipeId) async {
@@ -2067,7 +2104,7 @@ class ApiService {
   }
 
   // ======================================
-  // CULTURE ADMIN METHODS
+  // CULTURE ADMIN METHODS (DISABLED)
   // ======================================
 
   static Future<List<dynamic>> adminGetAllCulture() async {
@@ -2080,7 +2117,12 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando contenido cultural");
+    if (response.statusCode == 410) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
+    }
+
+    throw Exception("Módulo de Cultura deshabilitado");
   }
 
   static Future<List<dynamic>> adminGetCultureByCountry(
@@ -2095,7 +2137,12 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando contenido cultural");
+    if (response.statusCode == 410) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
+    }
+
+    throw Exception("Módulo de Cultura deshabilitado");
   }
 
   static Future<Map<String, dynamic>> adminCreateCulture(
@@ -2115,7 +2162,7 @@ class ApiService {
     }
 
     final body = jsonDecode(response.body);
-    throw Exception(body['message'] ?? "Error creando contenido cultural");
+    throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
   }
 
   static Future<Map<String, dynamic>> adminUpdateCulture(
@@ -2136,7 +2183,7 @@ class ApiService {
     }
 
     final body = jsonDecode(response.body);
-    throw Exception(body['message'] ?? "Error actualizando contenido cultural");
+    throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
   }
 
   static Future<void> adminDeleteCulture(String cultureId) async {
@@ -2147,7 +2194,7 @@ class ApiService {
 
     if (response.statusCode != 200) {
       final body = jsonDecode(response.body);
-      throw Exception(body['message'] ?? "Error eliminando contenido cultural");
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
     }
   }
 
@@ -2246,6 +2293,52 @@ class ApiService {
     throw Exception(body['message'] ?? "Error creando país");
   }
 
+  static Future<Map<String, dynamic>> adminGetCountriesPaginated({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? premium,
+    String? status,
+    String? sortBy,
+    String? sortDir,
+  }) async {
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+
+    if (search != null && search.trim().isNotEmpty) {
+      queryParameters['search'] = search.trim();
+    }
+    if (premium != null && premium != 'all') {
+      queryParameters['premium'] = premium;
+    }
+    if (status != null && status != 'all') {
+      queryParameters['status'] = status;
+    }
+    if (sortBy != null && sortBy.trim().isNotEmpty) {
+      queryParameters['sortBy'] = sortBy.trim();
+    }
+    if (sortDir != null && (sortDir == 'asc' || sortDir == 'desc')) {
+      queryParameters['sortDir'] = sortDir;
+    }
+
+    final uri = Uri.parse(
+      "$baseUrl/admin/countries/paginated",
+    ).replace(queryParameters: queryParameters);
+
+    final response = await _get(uri, dedupe: true);
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    }
+
+    throw Exception("Error cargando países (admin)");
+  }
+
   static Future<Map<String, dynamic>> adminUpdateCountry(
     String countryId,
     Map<String, dynamic> data,
@@ -2267,6 +2360,32 @@ class ApiService {
     throw Exception(body['message'] ?? "Error actualizando país");
   }
 
+  static Future<List<dynamic>> adminGetCountryUnlockGroups({
+    String? countryId,
+    String pathType = 'country_recipe',
+  }) async {
+    final queryParameters = <String, String>{};
+    if (countryId != null && countryId.trim().isNotEmpty) {
+      queryParameters['countryId'] = countryId.trim();
+    }
+    if (pathType.trim().isNotEmpty) {
+      queryParameters['pathType'] = pathType.trim();
+    }
+
+    final uri = Uri.parse("$baseUrl/admin/countries/unlock-groups").replace(
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
+
+    final response = await _get(uri, dedupe: true);
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+    }
+
+    throw Exception("Error cargando grupos de desbloqueo");
+  }
+
   static Future<void> adminDeleteCountry(String countryId) async {
     final response = await http.delete(
       Uri.parse("$baseUrl/admin/countries/$countryId"),
@@ -2280,7 +2399,7 @@ class ApiService {
   }
 
   // =====================================================
-  // NEW: Recipes & Culture by Country (for PathContentScreen)
+  // NEW: Recipes by Country (for PathContentScreen)
   // =====================================================
 
   static Future<List<dynamic>> adminListRecipesByCountry(
@@ -2325,6 +2444,11 @@ class ApiService {
       return jsonDecode(response.body) as List<dynamic>;
     }
 
-    throw Exception("Error cargando cultura");
+    if (response.statusCode == 410) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? "Módulo de Cultura deshabilitado");
+    }
+
+    throw Exception("Módulo de Cultura deshabilitado");
   }
 }

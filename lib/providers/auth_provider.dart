@@ -7,6 +7,8 @@ class AuthProvider extends ChangeNotifier {
   static const _roleKey = "cooklevel_role";
   static const _totalXPKey = "cooklevel_totalxp";
   static const _levelKey = "cooklevel_level";
+  static const _usernameKey = "cooklevel_username";
+  static const _avatarIconKey = "cooklevel_avatar_icon";
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
@@ -14,6 +16,8 @@ class AuthProvider extends ChangeNotifier {
   String _role = "user";
   int _totalXP = 0;
   int _level = 1;
+  String _username = "Chef en Progreso";
+  String _avatarIcon = "👨‍🍳";
   bool _isLoading = false;
   bool _isInitializing = true;
 
@@ -21,6 +25,8 @@ class AuthProvider extends ChangeNotifier {
   String get role => _role;
   int get totalXP => _totalXP;
   int get level => _level;
+  String get username => _username;
+  String get avatarIcon => _avatarIcon;
   bool get isAdmin => _role == "admin";
   bool get isLoading => _isLoading;
   bool get isInitializing => _isInitializing;
@@ -39,12 +45,20 @@ class AuthProvider extends ChangeNotifier {
       _role = await _storage.read(key: _roleKey) ?? "user";
       final savedXP = await _storage.read(key: _totalXPKey);
       final savedLevel = await _storage.read(key: _levelKey);
+      final savedUsername = await _storage.read(key: _usernameKey);
+      final savedAvatarIcon = await _storage.read(key: _avatarIconKey);
 
       if (savedXP != null) {
         _totalXP = int.tryParse(savedXP) ?? 0;
       }
       if (savedLevel != null) {
         _level = int.tryParse(savedLevel) ?? 1;
+      }
+      if (savedUsername != null && savedUsername.trim().isNotEmpty) {
+        _username = savedUsername;
+      }
+      if (savedAvatarIcon != null && savedAvatarIcon.trim().isNotEmpty) {
+        _avatarIcon = savedAvatarIcon;
       }
 
       // If token exists, set it in API service for later requests
@@ -96,12 +110,18 @@ class AuthProvider extends ChangeNotifier {
         final profile = await ApiService.getProfile();
         final userTotalXP = (profile['totalXP'] ?? 0) as int;
         final userLevel = (profile['level'] ?? 1) as int;
+        final userName = (profile['username'] ?? _username).toString();
+        final userAvatar = (profile['avatarIcon'] ?? _avatarIcon).toString();
 
         _totalXP = userTotalXP;
         _level = userLevel;
+        _username = userName;
+        _avatarIcon = userAvatar;
 
         await _storage.write(key: _totalXPKey, value: userTotalXP.toString());
         await _storage.write(key: _levelKey, value: userLevel.toString());
+        await _storage.write(key: _usernameKey, value: userName);
+        await _storage.write(key: _avatarIconKey, value: userAvatar);
       } catch (e) {
         // Si falla obtener perfil, usar valores guardados localmente
         // (no es crítico, los datos se actualizarán en la siguiente acción)
@@ -148,6 +168,19 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> syncProfileIdentity({
+    required String username,
+    required String avatarIcon,
+  }) async {
+    _username = username;
+    _avatarIcon = avatarIcon;
+
+    await _storage.write(key: _usernameKey, value: username);
+    await _storage.write(key: _avatarIconKey, value: avatarIcon);
+
+    notifyListeners();
+  }
+
   /// ==============================
   /// CLEAR SESSION (interno)
   /// ==============================
@@ -156,6 +189,8 @@ class AuthProvider extends ChangeNotifier {
     _role = "user";
     _totalXP = 0;
     _level = 1;
+    _username = "Chef en Progreso";
+    _avatarIcon = "👨‍🍳";
 
     ApiService.logout();
 
@@ -163,6 +198,8 @@ class AuthProvider extends ChangeNotifier {
     await _storage.delete(key: _roleKey);
     await _storage.delete(key: _totalXPKey);
     await _storage.delete(key: _levelKey);
+    await _storage.delete(key: _usernameKey);
+    await _storage.delete(key: _avatarIconKey);
 
     notifyListeners();
   }
