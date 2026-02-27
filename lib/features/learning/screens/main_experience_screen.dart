@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/onboarding_selection_provider.dart';
 import '../../../core/lives_service.dart';
 import '../../../core/api_service.dart';
-import 'culinary_experience_screen.dart';
+import 'country_selection_screen.dart';
 import 'follow_goals_screen.dart';
 import 'country_hub_screen.dart';
 import 'path_progression_screen.dart';
@@ -40,57 +40,59 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initializeLives();
-    _loadCurrentPath();
+    _bootstrapMainExperience();
 
-    // Verificar si el usuario tiene currentPathId seleccionado
-    // Si no, mostrar la pantalla de objetivos
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final profile = await ApiService.getProfile();
-        final currentPathId = profile['currentPathId'];
+    final selectionProvider = context.read<OnboardingSelectionProvider>();
+    selectionProvider.loadSelection().then((_) {
+      if (!mounted || !selectionProvider.hasSelection()) return;
 
-        if (!mounted) return;
+      final mode = selectionProvider.mode;
+      final selectionId = selectionProvider.selectionId;
+      final selectionName = selectionProvider.selectionName;
 
-        // Si no tiene camino seleccionado, ir a pantalla de objetivos
-        if (currentPathId == null || currentPathId.isEmpty) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const FollowGoalsScreen()),
-          );
-          return;
-        }
+      selectionProvider.clearSelection();
 
-        // Si tiene, verificar si hay selección del onboarding
-        final selectionProvider = context.read<OnboardingSelectionProvider>();
-        await selectionProvider.loadSelection();
-
-        if (selectionProvider.hasSelection()) {
-          final mode = selectionProvider.mode;
-          final selectionId = selectionProvider.selectionId;
-          final selectionName = selectionProvider.selectionName;
-
-          // Limpiar la selección después de detectarla
-          await selectionProvider.clearSelection();
-
-          if (mode == 'goals' && selectionId != null && mounted) {
-            // Cambiar a la tab de Objetivos
-            _tabController.animateTo(1);
-          } else if (mode == 'countries' && selectionId != null && mounted) {
-            // Navegar a CountryHubScreen
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => CountryHubScreen(
-                  countryId: selectionId,
-                  countryName: selectionName,
-                  countryIcon: '🌍',
-                ),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        print('Error loading profile: $e');
+      if (mode == 'goals' && selectionId != null) {
+        _tabController.animateTo(1);
+      } else if (mode == 'countries' && selectionId != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => CountryHubScreen(
+              countryId: selectionId,
+              countryName: selectionName,
+              countryIcon: '🌍',
+            ),
+          ),
+        );
       }
     });
+  }
+
+  Future<void> _bootstrapMainExperience() async {
+    try {
+      final profile = await ApiService.getProfile();
+      if (!mounted) return;
+
+      final currentPathId = profile['currentPathId']?.toString();
+      final currentPathTitle = profile['currentPathTitle']?.toString();
+
+      if (currentPathId == null || currentPathId.isEmpty) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const FollowGoalsScreen()),
+        );
+        return;
+      }
+
+      setState(() {
+        _currentPathId = currentPathId;
+        _currentPathName =
+            (currentPathTitle != null && currentPathTitle.trim().isNotEmpty)
+            ? currentPathTitle
+            : 'Mi Camino';
+      });
+    } catch (e) {
+      debugPrint('Error bootstrapping main experience: $e');
+    }
   }
 
   void _initializeLives() {
@@ -118,7 +120,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
         });
       }
     } catch (e) {
-      print('Error loading lives: $e');
+      debugPrint('Error loading lives: $e');
       if (mounted) {
         setState(() {
           _currentLives = 3;
@@ -128,36 +130,13 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
   }
 
   Future<void> _loadCurrentPath() async {
-    try {
-      final profile = await ApiService.getProfile();
-      final pathId = profile['currentPathId'];
+    await _bootstrapMainExperience();
+  }
 
-      if (mounted) {
-        setState(() {
-          _currentPathId = pathId;
-        });
-      }
-
-      // Cargar el nombre del camino si existe
-      if (pathId != null && pathId.isNotEmpty) {
-        try {
-          final paths = await ApiService.getGoalPaths();
-          final currentPath = paths.firstWhere(
-            (p) => (p['_id'] ?? p['id']) == pathId,
-            orElse: () => null,
-          );
-
-          if (currentPath != null && mounted) {
-            setState(() {
-              _currentPathName = currentPath['title'] ?? 'Mi Camino';
-            });
-          }
-        } catch (e) {
-          print('Error loading path name: $e');
-        }
-      }
-    } catch (e) {
-      print('Error loading current path: $e');
+  Future<void> _openPathSelector() async {
+    final changed = await Navigator.of(context).pushNamed('/goals');
+    if (changed == true) {
+      await _loadCurrentPath();
     }
   }
 
@@ -175,28 +154,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
       appBar: AppHeader(
         height: isCompact ? 54 : 64,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.grid_view_rounded,
-            color: AppColors.textStrong,
-          ),
-          iconSize: isCompact ? 20 : 24,
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 8),
-          constraints: BoxConstraints(
-            minWidth: isCompact ? 36 : 48,
-            minHeight: isCompact ? 36 : 48,
-          ),
-          visualDensity: isCompact
-              ? VisualDensity.compact
-              : VisualDensity.standard,
-          tooltip: 'Cambiar camino',
-          onPressed: () async {
-            final changed = await Navigator.of(context).pushNamed('/goals');
-            if (changed == true) {
-              await _loadCurrentPath();
-            }
-          },
-        ),
+        leading: const SizedBox.shrink(),
         title: _buildHeaderTitle(isCompact),
         actions: [
           Padding(
@@ -213,56 +171,10 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(
-                  Icons.favorite_rounded,
-                  size: 16,
-                  color: AppColors.textStrong,
-                ),
+                const Icon(Icons.favorite_rounded, size: 16, color: Colors.red),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.leaderboard_rounded,
-              color: AppColors.textStrong,
-            ),
-            iconSize: isCompact ? 20 : 24,
-            padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 8),
-            constraints: BoxConstraints(
-              minWidth: isCompact ? 36 : 48,
-              minHeight: isCompact ? 36 : 48,
-            ),
-            visualDensity: isCompact
-                ? VisualDensity.compact
-                : VisualDensity.standard,
-            tooltip: 'Ranking Mundial',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const GlobalLeaderboardScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_rounded, color: AppColors.textStrong),
-            iconSize: isCompact ? 20 : 24,
-            padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 8),
-            constraints: BoxConstraints(
-              minWidth: isCompact ? 36 : 48,
-              minHeight: isCompact ? 36 : 48,
-            ),
-            visualDensity: isCompact
-                ? VisualDensity.compact
-                : VisualDensity.standard,
-            tooltip: 'Perfil',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
-          ),
-          SizedBox(width: isCompact ? AppSpacing.sm : AppSpacing.lg),
         ],
       ),
       body: _currentPathId == null || _currentPathId!.isEmpty
@@ -271,6 +183,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
               pathId: _currentPathId!,
               pathTitle: _currentPathName ?? 'Mi Camino',
               showAppBar: false,
+              onLessonExit: _loadLives,
             ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
@@ -279,7 +192,7 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
           if (index == 1) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const CulinaryExperienceScreen(),
+                builder: (context) => const CountrySelectionScreen(),
               ),
             );
             return;
@@ -303,27 +216,44 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
   }
 
   Widget _buildHeaderTitle(bool isCompact) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          _currentPathName ?? 'Mi Camino',
-          style: AppTypography.cardTitle.copyWith(
-            fontSize: isCompact ? 15 : 17,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: _openPathSelector,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 8 : 10,
+            vertical: isCompact ? 6 : 7,
           ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Nivel actual',
-          style: AppTypography.badge.copyWith(
-            fontSize: isCompact ? 11 : 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  _currentPathName ?? 'Mi Camino',
+                  style: AppTypography.cardTitle.copyWith(
+                    fontSize: isCompact ? 15 : 17,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.swap_horiz_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

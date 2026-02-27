@@ -45,6 +45,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
   final _nodeXpCtrl = TextEditingController(text: '0');
   String _nodeType = 'recipe';
   String _nodeStatus = 'active';
+  bool _nodeLockedByDefault = true;
   final ScrollController _treeScrollController = ScrollController();
 
   @override
@@ -186,6 +187,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       _nodeXpCtrl.text = (node['xpReward'] ?? 0).toString();
       _nodeType = node['type'] ?? 'recipe';
       _nodeStatus = node['status'] ?? 'active';
+      _nodeLockedByDefault = node['isLockedByDefault'] != false;
     });
     _loadRelations(node['_id'] ?? node['id']);
   }
@@ -376,6 +378,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     final xpCtrl = TextEditingController(text: '50');
     String typeValue = 'recipe';
     String statusValue = 'active';
+    bool lockedByDefaultValue = true;
     String? selectedGroupId = defaultGroupId;
 
     final confirmed = await showDialog<bool>(
@@ -493,6 +496,17 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                   onChanged: (val) =>
                       setDialogState(() => statusValue = val ?? 'active'),
                 ),
+                const SizedBox(height: 12),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Candado inicial activo'),
+                  subtitle: const Text(
+                    'Si está activo, el nodo inicia bloqueado para usuario.',
+                  ),
+                  value: lockedByDefaultValue,
+                  onChanged: (value) =>
+                      setDialogState(() => lockedByDefaultValue = value),
+                ),
               ],
             ),
           ),
@@ -523,6 +537,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
           'positionIndex': 1,
           'xpReward': int.tryParse(xpCtrl.text) ?? 50,
           'status': statusValue,
+          'isLockedByDefault': lockedByDefaultValue,
           if (selectedGroupId != null) 'groupId': selectedGroupId,
         });
         await _loadContent(pathId);
@@ -1092,6 +1107,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
           'level': int.tryParse(_nodeLevelCtrl.text) ?? 1,
           'positionIndex': int.tryParse(_nodePositionCtrl.text) ?? 1,
           'xpReward': int.tryParse(_nodeXpCtrl.text) ?? 0,
+          'isLockedByDefault': _nodeLockedByDefault,
         },
       );
       if (_selectedPathId != null) {
@@ -1105,6 +1121,37 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       }
     } finally {
       setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _toggleNodeDefaultLock(Map<String, dynamic> node) async {
+    final nodeId = (node['_id'] ?? node['id'])?.toString();
+    if (nodeId == null || nodeId.isEmpty) return;
+
+    final currentValue = node['isLockedByDefault'] != false;
+
+    try {
+      await ApiService.adminUpdateContentNode(nodeId, {
+        'isLockedByDefault': !currentValue,
+      });
+
+      if (_selectedPathId != null) {
+        await _loadContent(_selectedPathId!);
+      }
+
+      if (_selectedNode != null) {
+        final selectedId = (_selectedNode['_id'] ?? _selectedNode['id'])
+            ?.toString();
+        if (selectedId == nodeId) {
+          _selectNodeById(nodeId);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error actualizando candado: $e')),
+        );
+      }
     }
   }
 
@@ -2495,129 +2542,176 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                             >[];
                                                                                       return Column(
                                                                                         children: [
-                                                                                          ListTile(
-                                                                                            contentPadding: const EdgeInsets.symmetric(
-                                                                                              horizontal: 8,
-                                                                                              vertical: 4,
-                                                                                            ),
-                                                                                            dense: true,
-                                                                                            leading: Icon(
-                                                                                              Icons.drag_indicator,
-                                                                                              size: 16,
-                                                                                              color: Colors.grey.shade400,
-                                                                                            ),
-                                                                                            title: Text(
-                                                                                              node['title'] ??
-                                                                                                  'Sin titulo',
-                                                                                              style: const TextStyle(
-                                                                                                fontSize: 12,
-                                                                                              ),
-                                                                                            ),
-                                                                                            subtitle: Text(
-                                                                                              'Pos ${node['positionIndex'] ?? 1}',
-                                                                                              style: const TextStyle(
-                                                                                                fontSize: 10,
-                                                                                              ),
-                                                                                            ),
-                                                                                            onTap: () {
-                                                                                              if (isExpandedNode) {
-                                                                                                setState(
-                                                                                                  () {
-                                                                                                    _expandedNodeId = null;
-                                                                                                  },
-                                                                                                );
-                                                                                              } else {
-                                                                                                _selectNode(
-                                                                                                  node,
-                                                                                                );
-                                                                                                setState(
-                                                                                                  () {
-                                                                                                    _expandedNodeId = nodeId;
-                                                                                                  },
-                                                                                                );
-                                                                                              }
-                                                                                            },
-                                                                                            selected:
-                                                                                                _selectedItem ==
-                                                                                                node,
-                                                                                            trailing:
-                                                                                                PopupMenuButton<
-                                                                                                  String
-                                                                                                >(
-                                                                                                  onSelected:
-                                                                                                      (
-                                                                                                        value,
-                                                                                                      ) {
-                                                                                                        if (value ==
-                                                                                                            'addStep') {
-                                                                                                          _selectNode(
-                                                                                                            node,
-                                                                                                          );
-                                                                                                          setState(
-                                                                                                            () {
-                                                                                                              _expandedNodeId = nodeId;
-                                                                                                            },
-                                                                                                          );
-                                                                                                          _openStepDialog();
-                                                                                                        } else if (value ==
-                                                                                                            'delete') {
-                                                                                                          _deleteNode(
-                                                                                                            node,
-                                                                                                          );
-                                                                                                        }
-                                                                                                      },
-                                                                                                  itemBuilder:
-                                                                                                      (
-                                                                                                        context,
-                                                                                                      ) => const [
-                                                                                                        PopupMenuItem(
-                                                                                                          value: 'addStep',
-                                                                                                          child: Row(
-                                                                                                            children: [
-                                                                                                              Icon(
-                                                                                                                Icons.add,
-                                                                                                                size: 14,
-                                                                                                              ),
-                                                                                                              SizedBox(
-                                                                                                                width: 8,
-                                                                                                              ),
-                                                                                                              Text(
-                                                                                                                'Agregar paso',
-                                                                                                                style: TextStyle(
-                                                                                                                  fontSize: 11,
-                                                                                                                ),
-                                                                                                              ),
-                                                                                                            ],
+                                                                                          Builder(
+                                                                                            builder:
+                                                                                                (
+                                                                                                  context,
+                                                                                                ) {
+                                                                                                  final isLockedByDefault =
+                                                                                                      node['isLockedByDefault'] !=
+                                                                                                      false;
+                                                                                                  return ListTile(
+                                                                                                    contentPadding: const EdgeInsets.symmetric(
+                                                                                                      horizontal: 8,
+                                                                                                      vertical: 4,
+                                                                                                    ),
+                                                                                                    dense: true,
+                                                                                                    leading: Icon(
+                                                                                                      Icons.drag_indicator,
+                                                                                                      size: 16,
+                                                                                                      color: Colors.grey.shade400,
+                                                                                                    ),
+                                                                                                    title: Text(
+                                                                                                      node['title'] ??
+                                                                                                          'Sin titulo',
+                                                                                                      style: const TextStyle(
+                                                                                                        fontSize: 12,
+                                                                                                      ),
+                                                                                                    ),
+                                                                                                    subtitle: Row(
+                                                                                                      children: [
+                                                                                                        Text(
+                                                                                                          'Pos ${node['positionIndex'] ?? 1}',
+                                                                                                          style: const TextStyle(
+                                                                                                            fontSize: 10,
                                                                                                           ),
                                                                                                         ),
-                                                                                                        PopupMenuItem(
-                                                                                                          value: 'delete',
-                                                                                                          child: Row(
-                                                                                                            children: [
-                                                                                                              Icon(
-                                                                                                                Icons.delete,
-                                                                                                                size: 14,
-                                                                                                                color: Colors.red,
-                                                                                                              ),
-                                                                                                              SizedBox(
-                                                                                                                width: 8,
-                                                                                                              ),
-                                                                                                              Text(
-                                                                                                                'Eliminar',
-                                                                                                                style: TextStyle(
-                                                                                                                  color: Colors.red,
-                                                                                                                  fontSize: 11,
+                                                                                                        const SizedBox(
+                                                                                                          width: 8,
+                                                                                                        ),
+                                                                                                        Icon(
+                                                                                                          isLockedByDefault
+                                                                                                              ? Icons.lock
+                                                                                                              : Icons.lock_open,
+                                                                                                          size: 12,
+                                                                                                          color: isLockedByDefault
+                                                                                                              ? Colors.red.shade400
+                                                                                                              : Colors.green.shade600,
+                                                                                                        ),
+                                                                                                      ],
+                                                                                                    ),
+                                                                                                    onTap: () {
+                                                                                                      if (isExpandedNode) {
+                                                                                                        setState(
+                                                                                                          () {
+                                                                                                            _expandedNodeId = null;
+                                                                                                          },
+                                                                                                        );
+                                                                                                      } else {
+                                                                                                        _selectNode(
+                                                                                                          node,
+                                                                                                        );
+                                                                                                        setState(
+                                                                                                          () {
+                                                                                                            _expandedNodeId = nodeId;
+                                                                                                          },
+                                                                                                        );
+                                                                                                      }
+                                                                                                    },
+                                                                                                    selected:
+                                                                                                        _selectedItem ==
+                                                                                                        node,
+                                                                                                    trailing: Row(
+                                                                                                      mainAxisSize: MainAxisSize.min,
+                                                                                                      children: [
+                                                                                                        IconButton(
+                                                                                                          tooltip: isLockedByDefault
+                                                                                                              ? 'Desactivar candado inicial'
+                                                                                                              : 'Activar candado inicial',
+                                                                                                          icon: Icon(
+                                                                                                            isLockedByDefault
+                                                                                                                ? Icons.lock
+                                                                                                                : Icons.lock_open,
+                                                                                                            size: 16,
+                                                                                                            color: isLockedByDefault
+                                                                                                                ? Colors.red.shade400
+                                                                                                                : Colors.green.shade600,
+                                                                                                          ),
+                                                                                                          onPressed: () => _toggleNodeDefaultLock(
+                                                                                                            node,
+                                                                                                          ),
+                                                                                                        ),
+                                                                                                        PopupMenuButton<
+                                                                                                          String
+                                                                                                        >(
+                                                                                                          onSelected:
+                                                                                                              (
+                                                                                                                value,
+                                                                                                              ) {
+                                                                                                                if (value ==
+                                                                                                                    'addStep') {
+                                                                                                                  _selectNode(
+                                                                                                                    node,
+                                                                                                                  );
+                                                                                                                  setState(
+                                                                                                                    () {
+                                                                                                                      _expandedNodeId = nodeId;
+                                                                                                                    },
+                                                                                                                  );
+                                                                                                                  _openStepDialog();
+                                                                                                                } else if (value ==
+                                                                                                                    'delete') {
+                                                                                                                  _deleteNode(
+                                                                                                                    node,
+                                                                                                                  );
+                                                                                                                }
+                                                                                                              },
+                                                                                                          itemBuilder:
+                                                                                                              (
+                                                                                                                context,
+                                                                                                              ) => const [
+                                                                                                                PopupMenuItem(
+                                                                                                                  value: 'addStep',
+                                                                                                                  child: Row(
+                                                                                                                    children: [
+                                                                                                                      Icon(
+                                                                                                                        Icons.add,
+                                                                                                                        size: 14,
+                                                                                                                      ),
+                                                                                                                      SizedBox(
+                                                                                                                        width: 8,
+                                                                                                                      ),
+                                                                                                                      Text(
+                                                                                                                        'Agregar paso',
+                                                                                                                        style: TextStyle(
+                                                                                                                          fontSize: 11,
+                                                                                                                        ),
+                                                                                                                      ),
+                                                                                                                    ],
+                                                                                                                  ),
                                                                                                                 ),
-                                                                                                              ),
-                                                                                                            ],
+                                                                                                                PopupMenuItem(
+                                                                                                                  value: 'delete',
+                                                                                                                  child: Row(
+                                                                                                                    children: [
+                                                                                                                      Icon(
+                                                                                                                        Icons.delete,
+                                                                                                                        size: 14,
+                                                                                                                        color: Colors.red,
+                                                                                                                      ),
+                                                                                                                      SizedBox(
+                                                                                                                        width: 8,
+                                                                                                                      ),
+                                                                                                                      Text(
+                                                                                                                        'Eliminar',
+                                                                                                                        style: TextStyle(
+                                                                                                                          color: Colors.red,
+                                                                                                                          fontSize: 11,
+                                                                                                                        ),
+                                                                                                                      ),
+                                                                                                                    ],
+                                                                                                                  ),
+                                                                                                                ),
+                                                                                                              ],
+                                                                                                          child: const Icon(
+                                                                                                            Icons.more_vert,
+                                                                                                            size: 16,
                                                                                                           ),
                                                                                                         ),
                                                                                                       ],
-                                                                                                  child: const Icon(
-                                                                                                    Icons.more_vert,
-                                                                                                    size: 16,
-                                                                                                  ),
-                                                                                                ),
+                                                                                                    ),
+                                                                                                  );
+                                                                                                },
                                                                                           ),
                                                                                           if (isExpandedNode)
                                                                                             Padding(
@@ -3238,6 +3332,18 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                     labelText: 'XP Reward',
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                SwitchListTile.adaptive(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Candado inicial activo'),
+                                  subtitle: const Text(
+                                    'Cuando está activo, el nodo inicia bloqueado para usuario.',
+                                  ),
+                                  value: _nodeLockedByDefault,
+                                  onChanged: (value) => setState(
+                                    () => _nodeLockedByDefault = value,
+                                  ),
+                                ),
                                 const SizedBox(height: 16),
                                 ElevatedButton(
                                   onPressed: _isSaving ? null : _saveNode,
@@ -3317,6 +3423,10 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text('XP: ${_selectedNode['xpReward'] ?? 0}'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Candado inicial: ${(_selectedNode['isLockedByDefault'] != false) ? 'activo' : 'inactivo'}',
+                          ),
                           const SizedBox(height: 16),
                           // ======== PASOS SECTION ========
                           Container(

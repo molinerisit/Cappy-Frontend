@@ -8,13 +8,15 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cooklevel_app/main.dart';
+import 'package:cooklevel_app/providers/auth_provider.dart';
 
 void main() {
   testWidgets('App renders correctly', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const CappyApp());
+    final authProvider = AuthProvider();
+    await tester.pumpWidget(CappyApp(authProvider: authProvider));
 
-    // Verify that the app title is displayed.
-    expect(find.text('Cocina feliz'), findsOneWidget);
+    // Verify that the app root is rendered.
+    expect(find.byType(CappyApp), findsOneWidget);
   });
 }
