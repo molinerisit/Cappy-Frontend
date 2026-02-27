@@ -21,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   // Profile stats
   int _completedLessonsCount = 0;
   int _streak = 0;
+  Map<String, dynamic>? _analytics;
   bool _isLoadingProfile = true;
   String _nickname = 'Chef en Progreso';
   String _avatarIcon = '👨‍🍳';
@@ -58,6 +59,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadProfileStats() async {
     try {
       final profile = await ApiService.getProfile();
+      Map<String, dynamic>? analytics;
+      try {
+        analytics = await ApiService.getProfileAnalytics();
+      } catch (_) {
+        analytics = null;
+      }
       final authProvider = context.read<AuthProvider>();
       final nickname = (profile['username'] ?? _nickname).toString();
       final avatarIcon = (profile['avatarIcon'] ?? _avatarIcon).toString();
@@ -66,12 +73,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         username: nickname,
         avatarIcon: avatarIcon,
       );
+      await authProvider.updateStreak((profile['streak'] ?? 0) as int);
 
       if (mounted) {
         setState(() {
           _completedLessonsCount =
               (profile['completedLessonsCount'] ?? 0) as int;
           _streak = (profile['streak'] ?? 0) as int;
+          _analytics = analytics;
           _nickname = nickname;
           _avatarIcon = avatarIcon;
           _isLoadingProfile = false;
@@ -160,10 +169,37 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
 
-                // Achievements Section
+                // Learning Metrics
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Métricas de aprendizaje',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildLearningMetrics(
+                          authProvider: authProvider,
+                          totalXP: totalXP,
+                          level: level,
+                          xpInLevel: xpInLevel,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Achievements Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
                     child: Column(
                       children: [
                         Text(
@@ -387,6 +423,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildMainStats(AuthProvider authProvider) {
+    final currentStreak = authProvider.streak;
+
     return Row(
       children: [
         Expanded(
@@ -419,7 +457,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 scale: value,
                 child: _StatItem(
                   icon: '🔥',
-                  value: _isLoadingProfile ? '...' : _streak.toString(),
+                  value: _isLoadingProfile ? '...' : currentStreak.toString(),
                   label: 'Racha',
                 ),
               );
@@ -449,13 +487,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievements(int level) {
+    final currentStreak = context.watch<AuthProvider>().streak;
+
     final achievements = [
       _Achievement(
         emoji: '🌟',
         title: 'Primer Paso',
         unlocked: _completedLessonsCount > 0,
       ),
-      _Achievement(emoji: '🔥', title: 'Racha', unlocked: _streak >= 3),
+      _Achievement(emoji: '🔥', title: 'Racha', unlocked: currentStreak >= 3),
       _Achievement(
         emoji: '🎓',
         title: 'Aprendiz',
@@ -493,6 +533,108 @@ class _ProfileScreenState extends State<ProfileScreen>
             )
             .toList(),
       ),
+    );
+  }
+
+  Widget _buildLearningMetrics({
+    required AuthProvider authProvider,
+    required int totalXP,
+    required int level,
+    required int xpInLevel,
+  }) {
+    final currentStreak = authProvider.streak;
+    final analytics = _analytics;
+    final nextLevelXp =
+        ((analytics?['xpToNextLevel'] as num?)?.toInt() ?? (100 - xpInLevel))
+            .clamp(0, 100);
+    final weeklyGoalDays =
+        ((analytics?['weeklyGoalDays'] as num?)?.toInt() ?? 7).clamp(1, 30);
+    final weeklyGoalProgressDays =
+        ((analytics?['weeklyGoalProgressDays'] as num?)?.toInt() ??
+                currentStreak)
+            .clamp(0, weeklyGoalDays);
+    final weeklyConsistency =
+        (analytics?['weeklyConsistency'] as num?)?.toDouble() ??
+        (currentStreak / 7).clamp(0.0, 1.0);
+    final avgXpPerLesson =
+        (analytics?['avgXpPerLesson'] as num?)?.toInt() ??
+        (_completedLessonsCount > 0
+            ? (totalXP / _completedLessonsCount).round()
+            : 0);
+    final masteryScore =
+        ((analytics?['masteryScore'] as num?)?.toInt() ??
+                ((level * 8) + (currentStreak * 3)))
+            .clamp(0, 100);
+    final activityLast7Days =
+        (analytics?['activityLast7Days'] as List?)
+            ?.whereType<Map>()
+            .map((entry) => Map<String, dynamic>.from(entry))
+            .toList() ??
+        [];
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.track_changes_rounded,
+                title: 'Meta semanal',
+                value: '$weeklyGoalProgressDays/$weeklyGoalDays días',
+                subtitle: weeklyGoalProgressDays >= weeklyGoalDays
+                    ? 'Meta alcanzada'
+                    : 'Faltan ${weeklyGoalDays - weeklyGoalProgressDays} días',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.speed_rounded,
+                title: 'Promedio XP',
+                value: '$avgXpPerLesson XP',
+                subtitle: _completedLessonsCount > 0
+                    ? 'Por lección completada'
+                    : 'Completá tu primera lección',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _MetricProgressCard(
+          icon: Icons.bolt_rounded,
+          title: 'Progreso de nivel',
+          valueLabel: '$xpInLevel/100 XP',
+          helperLabel: nextLevelXp == 0
+              ? 'Listo para subir'
+              : 'Faltan $nextLevelXp XP para nivel ${level + 1}',
+          progress: (xpInLevel / 100).clamp(0.0, 1.0),
+          progressColor: AppColors.primary,
+        ),
+        const SizedBox(height: 12),
+        _MetricProgressCard(
+          icon: Icons.insights_rounded,
+          title: 'Consistencia semanal',
+          valueLabel: '${(weeklyConsistency * 100).round()}%',
+          helperLabel: activityLast7Days.isNotEmpty
+              ? 'Basado en actividad real (7 días)'
+              : 'Basado en tu racha actual',
+          progress: weeklyConsistency,
+          progressColor: AppColors.success,
+        ),
+        if (activityLast7Days.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _WeeklyActivityCard(days: activityLast7Days),
+        ],
+        const SizedBox(height: 12),
+        _MetricProgressCard(
+          icon: Icons.workspace_premium_rounded,
+          title: 'Índice de dominio',
+          valueLabel: '$masteryScore/100',
+          helperLabel: 'Nivel + racha + continuidad',
+          progress: (masteryScore / 100).clamp(0.0, 1.0),
+          progressColor: AppColors.warning,
+        ),
+      ],
     );
   }
 
@@ -778,6 +920,250 @@ class _StatItem extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final String subtitle;
+
+  const _MetricCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricProgressCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String valueLabel;
+  final String helperLabel;
+  final double progress;
+  final Color progressColor;
+
+  const _MetricProgressCard({
+    required this.icon,
+    required this.title,
+    required this.valueLabel,
+    required this.helperLabel,
+    required this.progress,
+    required this.progressColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                valueLabel,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 9,
+              value: progress,
+              backgroundColor: AppColors.textSecondary.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            helperLabel,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyActivityCard extends StatelessWidget {
+  final List<Map<String, dynamic>> days;
+
+  const _WeeklyActivityCard({required this.days});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxCompletions = days
+        .map((day) => (day['completions'] as num?)?.toInt() ?? 0)
+        .fold<int>(0, (max, value) => value > max ? value : max);
+
+    final scaleBase = maxCompletions > 0 ? maxCompletions : 1;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_view_week_rounded,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Actividad últimos 7 días',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: days.map((day) {
+              final completions = (day['completions'] as num?)?.toInt() ?? 0;
+              final active = day['active'] == true;
+              final label = (day['label'] ?? '-').toString();
+              final heightFactor = (completions / scaleBase).clamp(0.16, 1.0);
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        height: 52 * heightFactor,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppColors.success
+                              : AppColors.textSecondary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

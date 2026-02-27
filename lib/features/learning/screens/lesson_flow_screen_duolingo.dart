@@ -138,8 +138,16 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
       // Update user XP and level globally
       final totalXP = result['totalXP'] as int?;
       final level = result['level'] as int?;
+      final progress = result['progress'] as Map<String, dynamic>?;
+      final streak =
+          (progress?['streak'] as num?)?.toInt() ??
+          (result['streak'] as num?)?.toInt();
       if (totalXP != null && level != null) {
-        context.read<AuthProvider>().updateXPAndLevel(totalXP, level);
+        context.read<AuthProvider>().updateXPAndLevel(
+          totalXP,
+          level,
+          streak: streak,
+        );
       }
 
       // Update progress in ProgressProvider
@@ -165,6 +173,11 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
   void _showCompletionCelebration(Map<String, dynamic> result) {
     final isRepeat = result['isRepeat'] ?? false;
     final title = isRepeat ? '¡Bien hecho de nuevo!' : '¡Excelente!';
+    final progress = result['progress'] as Map<String, dynamic>?;
+    final streak =
+        (progress?['streak'] as num?)?.toInt() ??
+        (result['streak'] as num?)?.toInt() ??
+        0;
 
     showDialog(
       context: context,
@@ -236,6 +249,16 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 8),
+                  Text(
+                    'Racha actual: $streak día${streak == 1 ? '' : 's'}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF6B7280),
+                    ),
                   ),
 
                   const SizedBox(height: 20),

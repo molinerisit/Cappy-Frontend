@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
+import '../widgets/learning_empty_view.dart';
+import '../widgets/learning_error_view.dart';
 import 'recipe_detail_screen.dart';
 
 class RecipesListScreen extends StatefulWidget {
@@ -64,56 +66,26 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
               child: CircularProgressIndicator(color: Color(0xFF27AE60)),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Color(0xFFFF6B35),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        futureRecipes = _loadRecipes();
-                      });
-                    },
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
+            return LearningErrorView(
+              error: snapshot.error!,
+              onBack: () => Navigator.pop(context),
+              onRetry: () {
+                setState(() {
+                  futureRecipes = _loadRecipes();
+                });
+              },
             );
           }
 
           final recipes = snapshot.data ?? [];
 
           if (recipes.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('🍳', style: TextStyle(fontSize: 64)),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Aún no hay recetas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Pronto habrán nuevas experiencias culinarias disponibles',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            return LearningEmptyView(
+              emoji: '🍳',
+              title: 'Aún no hay recetas',
+              description:
+                  'Pronto habrán nuevas experiencias culinarias disponibles',
+              onBack: () => Navigator.pop(context),
             );
           }
 
@@ -208,99 +180,99 @@ class _RecipeCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getDifficultyColor(difficulty).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _getDifficultyLabel(difficulty),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: _getDifficultyColor(difficulty),
-                        ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getDifficultyColor(difficulty).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _getDifficultyLabel(difficulty),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: _getDifficultyColor(difficulty),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text('⭐', style: TextStyle(fontSize: 10)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$xpReward XP',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFD97706),
-                            ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('⭐', style: TextStyle(fontSize: 10)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$xpReward XP',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFD97706),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text('🍽️', style: TextStyle(fontSize: 40)),
+              const Spacer(),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
                 ),
-                const SizedBox(height: 12),
-                const Text('🍽️', style: TextStyle(fontSize: 40)),
-                const Spacer(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              if (description.isNotEmpty)
                 Text(
-                  title,
+                  description,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    fontSize: 12,
+                    color: Color(0xFF475569),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                if (description.isNotEmpty)
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF475569),
+              const SizedBox(height: 8),
+              if (prepTime > 0)
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule,
+                      size: 14,
+                      color: Color(0xFF64748B),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                const SizedBox(height: 8),
-                if (prepTime > 0)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 14,
-                        color: Color(0xFF64748B),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$prepTime min',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF475569),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$prepTime min',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF475569),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+                    ),
+                  ],
+                ),
+            ],
           ),
+        ),
       ),
     );
   }

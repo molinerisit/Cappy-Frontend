@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_path.dart';
+import '../widgets/country_locked_view.dart';
+import '../widgets/learning_empty_view.dart';
 import 'recipes_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
@@ -57,35 +59,23 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
               child: CircularProgressIndicator(color: _primaryBlue),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: _primaryBlue,
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryBlue,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        futureCountryHub = _loadCountryHub();
-                      });
-                    },
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
+            return CountryLockedView(
+              error: snapshot.error!,
+              onBack: () => Navigator.of(context).pop(),
+              onRetry: () {
+                setState(() {
+                  futureCountryHub = _loadCountryHub();
+                });
+              },
             );
           } else if (!snapshot.hasData) {
-            return const Center(child: Text('No hay datos disponibles'));
+            return LearningEmptyView(
+              emoji: '🌍',
+              title: 'No hay datos disponibles',
+              description:
+                  'No pudimos encontrar contenido para este país en este momento.',
+              onBack: () => Navigator.of(context).pop(),
+            );
           }
 
           final hub = snapshot.data!;

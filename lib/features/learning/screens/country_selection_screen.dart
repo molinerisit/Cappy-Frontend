@@ -576,31 +576,54 @@ class _CountryListItem {
     dynamic json, {
     required Color fallbackColor,
   }) {
-    final unlock = json['unlock'] as Map<String, dynamic>?;
-    final isUnlocked = unlock?['isUnlocked'] == true;
-    final isLocked = unlock != null ? !isUnlocked : false;
+    final unlockRaw = json['unlock'];
+    final Map<String, dynamic>? unlock = unlockRaw is Map<String, dynamic>
+        ? unlockRaw
+        : (unlockRaw is Map ? Map<String, dynamic>.from(unlockRaw) : null);
 
-    final unlockLevel = (unlock?['unlockLevel'] is num)
-        ? (unlock?['unlockLevel'] as num).toInt()
+    final isPremiumCountry = json['isPremium'] == true;
+    final topLevelUnlockLevel = (json['unlockLevel'] is num)
+        ? (json['unlockLevel'] as num).toInt()
         : 1;
-    final missingGroups = (unlock?['missingGroupIds'] as List?)?.length ?? 0;
+
+    final unlockLevel = (unlock != null && unlock['unlockLevel'] is num)
+        ? (unlock['unlockLevel'] as num).toInt()
+        : topLevelUnlockLevel;
+
+    final levelMet = unlock != null
+        ? (unlock['levelMet'] == true)
+        : unlockLevel <= 1;
+
+    final premiumMet = unlock != null
+        ? (unlock['premiumMet'] == true)
+        : !isPremiumCountry;
+
+    final groupsMet = unlock != null ? (unlock['groupsMet'] == true) : true;
+    final isUnlocked = unlock != null
+        ? (unlock['isUnlocked'] == true)
+        : (levelMet && groupsMet && premiumMet);
+    final isLocked = !isUnlocked;
+
+    final missingGroups = (unlock != null && unlock['missingGroupIds'] is List)
+        ? (unlock['missingGroupIds'] as List).length
+        : 0;
 
     String lockReason = 'País bloqueado por progresión';
-    if (unlock != null) {
-      final levelMet = unlock['levelMet'] == true;
-      final groupsMet = unlock['groupsMet'] == true;
-      if (!levelMet) {
-        lockReason =
-            'Necesitas llegar al nivel $unlockLevel para desbloquear este país';
-      } else if (!groupsMet) {
-        lockReason = missingGroups > 0
-            ? 'Completa $missingGroups grupo(s) de nodos para desbloquear este país'
-            : 'Completa los grupos requeridos para desbloquear este país';
-      }
+    if (!premiumMet) {
+      lockReason = 'Este país es exclusivo para usuarios premium';
+    } else if (!levelMet) {
+      lockReason =
+          'Necesitas llegar al nivel $unlockLevel para desbloquear este país';
+    } else if (!groupsMet) {
+      lockReason = missingGroups > 0
+          ? 'Completa $missingGroups grupo(s) de nodos para desbloquear este país'
+          : 'Completa los grupos requeridos para desbloquear este país';
     }
 
     final lockLabel = isLocked
-        ? (unlock != null && unlock['levelMet'] != true
+        ? (!premiumMet
+              ? 'Premium'
+              : unlock != null && unlock['levelMet'] != true
               ? 'Nivel $unlockLevel requerido'
               : 'Completa grupos')
         : 'Disponible';

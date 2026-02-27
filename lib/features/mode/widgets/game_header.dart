@@ -42,6 +42,8 @@ class _GameHeaderState extends State<GameHeader>
     final authProvider = context.watch<AuthProvider>();
     final totalXP = authProvider.totalXP;
     final level = authProvider.level;
+    final streak = authProvider.streak;
+    final avatarIcon = authProvider.avatarIcon;
 
     // Calcular progreso en el nivel actual
     // Formula: XP necesario para siguiente nivel = nivel * 100
@@ -75,7 +77,7 @@ class _GameHeaderState extends State<GameHeader>
               Row(
                 children: [
                   // Avatar con nivel
-                  _buildAvatar(level),
+                  _buildAvatar(avatarIcon),
 
                   const SizedBox(width: AppColors.spacing12),
 
@@ -93,6 +95,10 @@ class _GameHeaderState extends State<GameHeader>
                             height: 1.2,
                           ),
                         ),
+                        if (streak > 0) ...[
+                          const SizedBox(height: 6),
+                          _buildStreakBadge(streak),
+                        ],
                         const SizedBox(height: 2),
                         Text(
                           '$xpInCurrentLevel / $xpNeededForNextLevel XP',
@@ -137,7 +143,7 @@ class _GameHeaderState extends State<GameHeader>
     );
   }
 
-  Widget _buildAvatar(int level) {
+  Widget _buildAvatar(String avatarIcon) {
     return Container(
       width: 56,
       height: 56,
@@ -153,7 +159,40 @@ class _GameHeaderState extends State<GameHeader>
           ),
         ],
       ),
-      child: Center(child: Text('🧑‍🍳', style: const TextStyle(fontSize: 28))),
+      child: Center(
+        child: Text(avatarIcon, style: const TextStyle(fontSize: 28)),
+      ),
+    );
+  }
+
+  Widget _buildStreakBadge(int streak) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.local_fire_department_rounded,
+            size: 14,
+            color: Color(0xFFFFB020),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$streak días',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

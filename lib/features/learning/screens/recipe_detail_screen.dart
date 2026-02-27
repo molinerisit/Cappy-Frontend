@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../../../screens/cooking_mode_screen.dart';
+import '../widgets/learning_empty_view.dart';
+import '../widgets/learning_error_view.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final String recipeId;
@@ -113,19 +115,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               child: CircularProgressIndicator(color: Color(0xFF27AE60)),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Color(0xFFFF6B35),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                ],
-              ),
+            return LearningErrorView(
+              error: snapshot.error!,
+              onBack: () => Navigator.pop(context),
+              onRetry: () {
+                setState(() {
+                  futureRecipe = _loadRecipe();
+                });
+              },
             );
           }
 
@@ -144,22 +141,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           final xpReward = recipe['xpReward'] ?? 50;
 
           if (steps.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('📝', style: TextStyle(fontSize: 64)),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Esta receta aún no tiene pasos',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
+            return LearningEmptyView(
+              emoji: '📝',
+              title: 'Esta receta aún no tiene pasos',
+              description:
+                  'El contenido de esta receta se está preparando para publicarse.',
+              onBack: () => Navigator.pop(context),
             );
           }
 

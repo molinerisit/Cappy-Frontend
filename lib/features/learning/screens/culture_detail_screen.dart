@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
+import '../widgets/learning_empty_view.dart';
+import '../widgets/learning_error_view.dart';
 
 class CultureDetailScreen extends StatefulWidget {
   final String cultureId;
@@ -59,19 +61,14 @@ class _CultureDetailScreenState extends State<CultureDetailScreen> {
               child: CircularProgressIndicator(color: Color(0xFF27AE60)),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Color(0xFFFF6B35),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                ],
-              ),
+            return LearningErrorView(
+              error: snapshot.error!,
+              onBack: () => Navigator.pop(context),
+              onRetry: () {
+                setState(() {
+                  futureCulture = _loadCulture();
+                });
+              },
             );
           }
 
@@ -148,24 +145,12 @@ class _CultureDetailScreenState extends State<CultureDetailScreen> {
 
                 // Contenido
                 if (steps.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        children: const [
-                          Text('📝', style: TextStyle(fontSize: 64)),
-                          SizedBox(height: 16),
-                          Text(
-                            'Este artículo aún no tiene contenido',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E293B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  LearningEmptyView(
+                    emoji: '📝',
+                    title: 'Este artículo aún no tiene contenido',
+                    description:
+                        'Estamos preparando este material cultural para publicarlo pronto.',
+                    onBack: () => Navigator.pop(context),
                   )
                 else
                   Padding(
