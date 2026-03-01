@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
 /// Colores centralizados de la aplicación
-/// Estilo gamificado moderno tipo Duolingo
 class AppColors {
   AppColors._();
 
   // ========== Colores Principales ==========
 
-  /// Naranja primario - Energía y acción
-  static const Color primary = Color(0xFFFF6B35);
-  static const Color primaryLight = Color(0xFFFF8C5A);
-  static const Color primaryDark = Color(0xFFE65A2B);
+  /// Verde primario moderno
+  static const Color primary = Color(0xFF22C55E);
+  static const Color primaryLight = Color(0xFF4ADE80);
+  static const Color primaryDark = Color(0xFF16A34A);
 
   /// Verde - Éxito y progreso
-  static const Color success = Color(0xFF27AE60);
-  static const Color successLight = Color(0xFF58D68D);
+  static const Color success = Color(0xFF22C55E);
+  static const Color successLight = Color(0xFF4ADE80);
 
   /// Azul - Exploración y conocimiento
   static const Color info = Color(0xFF3B82F6);
@@ -26,22 +25,22 @@ class AppColors {
 
   // ========== Fondos ==========
 
-  /// Fondo principal - Blanco cálido
-  static const Color background = Color(0xFFFFFFFFF);
+  /// Fondo principal
+  static const Color background = Color(0xFFF8FAFC);
 
-  /// Fondo secundario - Crema suave
-  static const Color backgroundSecondary = Color(0xFFFAF7F2);
+  /// Fondo secundario
+  static const Color backgroundSecondary = Color(0xFFFFFFFF);
 
   /// Fondo terciario - Gris muy claro
   static const Color backgroundTertiary = Color(0xFFF8FAFC);
 
   // ========== Textos ==========
 
-  /// Texto principal - Casi negro
-  static const Color textPrimary = Color(0xFF1F2937);
+  /// Texto principal
+  static const Color textPrimary = Color(0xFF0F172A);
 
-  /// Texto secundario - Gris oscuro
-  static const Color textSecondary = Color(0xFF6B7280);
+  /// Texto secundario
+  static const Color textSecondary = Color(0xFF64748B);
 
   /// Texto terciario - Gris medio
   static const Color textTertiary = Color(0xFF9CA3AF);
@@ -52,10 +51,10 @@ class AppColors {
   // ========== Bordes y Divisores ==========
 
   /// Borde suave
-  static const Color border = Color(0xFFE5E7EB);
+  static const Color border = Color(0xFFE2E8F0);
 
   /// Borde activo
-  static const Color borderActive = Color(0xFFFF6B35);
+  static const Color borderActive = Color(0xFF22C55E);
 
   // ========== Superficies ==========
 
