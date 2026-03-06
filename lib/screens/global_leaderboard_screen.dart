@@ -389,18 +389,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: LivesWidget(
-                lives: _currentLives,
-                maxLives: _maxLives,
-                nextRefillAt: _nextRefillAt,
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: _isLoadingGlobal
           ? const Center(

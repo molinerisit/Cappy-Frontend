@@ -437,24 +437,28 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'recipe', child: Text('Recipe 🍽')),
+                    DropdownMenuItem(value: 'recipe', child: Text('🍽 Recipe')),
                     DropdownMenuItem(
                       value: 'explanation',
-                      child: Text('Explanation 📘'),
+                      child: Text('📖 Explanation'),
                     ),
-                    DropdownMenuItem(value: 'tips', child: Text('Tips 💡')),
-                    DropdownMenuItem(value: 'quiz', child: Text('Quiz ❓')),
+                    DropdownMenuItem(value: 'tips', child: Text('💡 Tips')),
+                    DropdownMenuItem(value: 'quiz', child: Text('❓ Quiz')),
                     DropdownMenuItem(
                       value: 'technique',
-                      child: Text('Technique 🔧'),
+                      child: Text('🔧 Technique'),
                     ),
                     DropdownMenuItem(
                       value: 'cultural',
-                      child: Text('Cultural 🌍'),
+                      child: Text('🌍 Cultural'),
                     ),
                     DropdownMenuItem(
                       value: 'challenge',
-                      child: Text('Challenge 🏆'),
+                      child: Text('🏆 Challenge'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'defense',
+                      child: Text('🛡️ Defense'),
                     ),
                   ],
                   onChanged: (val) =>
@@ -3237,45 +3241,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                DropdownButtonFormField<String>(
-                                  value: _nodeType,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Tipo',
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'recipe',
-                                      child: Text('Recipe'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'explanation',
-                                      child: Text('Explanation'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'tips',
-                                      child: Text('Tips'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'quiz',
-                                      child: Text('Quiz'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'technique',
-                                      child: Text('Technique'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'cultural',
-                                      child: Text('Cultural'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'challenge',
-                                      child: Text('Challenge'),
-                                    ),
-                                  ],
-                                  onChanged: (value) => setState(
-                                    () => _nodeType = value ?? 'recipe',
-                                  ),
-                                ),
+                                _buildNodeTypeSelector(),
                                 const SizedBox(height: 12),
                                 DropdownButtonFormField<String>(
                                   value: _nodeStatus,
@@ -3647,6 +3613,90 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       ),
     );
   }
+
+  Widget _buildNodeTypeSelector() {
+    final types = [
+      ('recipe', Icons.restaurant, Colors.orange),
+      ('explanation', Icons.auto_stories, Colors.blue),
+      ('tips', Icons.lightbulb, Colors.yellow.shade700),
+      ('quiz', Icons.quiz, Colors.red),
+      ('technique', Icons.construction, Colors.purple),
+      ('cultural', Icons.public, Colors.green),
+      ('challenge', Icons.sports_score, Colors.amber),
+      ('defense', Icons.security, Colors.cyan),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tipo de Nodo',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: types.map((type) {
+            final isSelected = _nodeType == type.$1;
+            return GestureDetector(
+              onTap: () => setState(() => _nodeType = type.$1),
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? type.$3.withOpacity(0.2)
+                      : Colors.grey.shade50,
+                  border: Border.all(
+                    color: isSelected ? type.$3 : Colors.grey.shade200,
+                    width: isSelected ? 3 : 2,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: type.$3.withOpacity(0.5),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 4,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      type.$2,
+                      size: 32,
+                      color: isSelected ? type.$3 : Colors.grey.shade600,
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: type.$3,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
 }
 
 // ==========================================
@@ -3868,14 +3918,53 @@ class _CardEditorDialog extends StatefulWidget {
 }
 
 class _CardEditorDialogState extends State<_CardEditorDialog> {
+  static const int _quizOptionCount = 4;
   late String _cardType;
   final Map<String, TextEditingController> _controllers = {};
   final _formKey = GlobalKey<FormState>();
+
+  // Estado específico para animaciones interactivas
+  String _animationType = 'click';
+  String _initialAssetType = 'image';
+  final List<Map<String, String>> _interactionAssets = [];
+
+  // Estado específico para add_remove_objects
+  String _objectAssetType = 'image';
+  bool _allowRemove = false;
+
+  // Estado para formato de texto
+  final Map<String, bool> _formatFlags = {};
 
   @override
   void initState() {
     super.initState();
     _cardType = widget.card?['type'] ?? 'text';
+
+    // Pre-cargar datos de animación si existen
+    if (_cardType == 'animation' && widget.card != null) {
+      final data = widget.card!['data'] as Map? ?? {};
+      _animationType = data['animationType'] ?? 'click';
+      _initialAssetType = (data['initialAsset'] as Map?)?['type'] ?? 'image';
+
+      final assets = data['interactionAssets'] as List? ?? [];
+      for (var asset in assets) {
+        _interactionAssets.add({
+          'type': (asset['asset'] as Map?)?['type'] ?? 'image',
+          'url': (asset['asset'] as Map?)?['url'] ?? '',
+        });
+      }
+
+      // Cargar datos específicos de add_remove_objects
+      if (_animationType == 'add_remove_objects') {
+        _objectAssetType = (data['objectAsset'] as Map?)?['type'] ?? 'image';
+        _allowRemove = data['allowRemove'] ?? false;
+      }
+    }
+
+    // Si es nueva animación o no tiene assets, agregar uno vacío
+    if (_cardType == 'animation' && _interactionAssets.isEmpty) {
+      _interactionAssets.add({'type': 'image', 'url': ''});
+    }
   }
 
   @override
@@ -3886,6 +3975,12 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
     super.dispose();
   }
 
+  bool _getCtrlBool(String key) => _formatFlags[key] ?? false;
+
+  void _setCtrlBool(String key, bool value) {
+    _formatFlags[key] = value;
+  }
+
   TextEditingController _getCtrl(String key) {
     if (!_controllers.containsKey(key)) {
       _controllers[key] = TextEditingController();
@@ -3893,9 +3988,56 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       // Pre-cargar datos si es edición
       if (widget.card != null) {
         final data = widget.card!['data'] as Map? ?? {};
+
+        if (key.startsWith('optionText_') || key.startsWith('optionImage_')) {
+          final keyParts = key.split('_');
+          final optionIndex = keyParts.length > 1
+              ? int.tryParse(keyParts.last) ?? -1
+              : -1;
+
+          final optionItems = data['optionItems'] is List
+              ? List<dynamic>.from(data['optionItems'] as List)
+              : const <dynamic>[];
+
+          Map<String, dynamic>? optionItem;
+          if (optionIndex >= 0 &&
+              optionIndex < optionItems.length &&
+              optionItems[optionIndex] is Map) {
+            optionItem = Map<String, dynamic>.from(optionItems[optionIndex]);
+          }
+
+          if (key.startsWith('optionText_')) {
+            final legacyOptions = data['options'] is List
+                ? List<dynamic>.from(data['options'] as List)
+                : const <dynamic>[];
+
+            final itemText = (optionItem?['text'] ?? '').toString();
+            final legacyText =
+                (optionIndex >= 0 && optionIndex < legacyOptions.length)
+                ? (legacyOptions[optionIndex] ?? '').toString()
+                : '';
+
+            _controllers[key]!.text = itemText.isNotEmpty
+                ? itemText
+                : legacyText;
+          } else {
+            _controllers[key]!.text =
+                (optionItem?['imageUrl'] ?? optionItem?['image'] ?? '')
+                    .toString();
+          }
+
+          return _controllers[key]!;
+        }
+
         switch (key) {
           case 'text':
             _controllers[key]!.text = (data['text'] ?? '').toString();
+            break;
+          case 'title':
+            _controllers[key]!.text = (data['title'] ?? '').toString();
+            break;
+          case 'imageUrl':
+            _controllers[key]!.text = (data['imageUrl'] ?? '').toString();
             break;
           case 'items':
             _controllers[key]!.text = (data['items'] is List)
@@ -3916,11 +4058,38 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           case 'correctIndex':
             _controllers[key]!.text = (data['correctIndex'] ?? '0').toString();
             break;
+          case 'explanation':
+            _controllers[key]!.text = (data['explanation'] ?? '').toString();
+            break;
+          case 'quizImageUrl':
+            _controllers[key]!.text = (data['quizImageUrl'] ?? '').toString();
+            break;
+          case 'isBold':
+            _formatFlags[key] = data['isBold'] ?? false;
+            break;
+          case 'isItalic':
+            _formatFlags[key] = data['isItalic'] ?? false;
+            break;
           case 'duration':
             _controllers[key]!.text = (data['duration'] ?? '').toString();
             break;
           case 'sound':
             _controllers[key]!.text = (data['sound'] ?? '').toString();
+            break;
+          case 'anim_instruction':
+            _controllers[key]!.text = (data['instruction'] ?? '').toString();
+            break;
+          case 'anim_initial_url':
+            _controllers[key]!.text =
+                ((data['initialAsset'] as Map?)?['url'] ?? '').toString();
+            break;
+          case 'anim_object_url':
+            _controllers[key]!.text =
+                ((data['objectAsset'] as Map?)?['url'] ?? '').toString();
+            break;
+          case 'anim_object_size':
+            _controllers[key]!.text = (data['objectSize']?.toString() ?? '40')
+                .toString();
             break;
         }
       }
@@ -3936,24 +4105,98 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
 
     if (_cardType == 'text') {
       data['text'] = _getCtrl('text').text.trim();
+      final title = _getCtrl('title').text.trim();
+      if (title.isNotEmpty) {
+        data['title'] = title;
+      }
+      final imageUrl = _getCtrl('imageUrl').text.trim();
+      if (imageUrl.isNotEmpty) {
+        data['imageUrl'] = imageUrl;
+      }
+      if (_getCtrlBool('isBold')) {
+        data['isBold'] = true;
+      }
+      if (_getCtrlBool('isItalic')) {
+        data['isItalic'] = true;
+      }
     } else if (_cardType == 'list') {
       data['items'] = _getCtrl('items').text
           .split('\n')
           .map((item) => item.trim())
           .where((item) => item.isNotEmpty)
           .toList();
-    } else if (_cardType == 'image' ||
-        _cardType == 'video' ||
-        _cardType == 'animation') {
+    } else if (_cardType == 'image' || _cardType == 'video') {
       data['url'] = _getCtrl('url').text.trim();
+    } else if (_cardType == 'animation') {
+      // Construcción del objeto de animación interactiva
+      data['animationType'] = _animationType;
+      data['instruction'] = _getCtrl('anim_instruction').text.trim();
+
+      if (_animationType == 'add_remove_objects') {
+        // Configuración específica para agregar/quitar objetos
+        data['initialAsset'] = {
+          'type': _initialAssetType,
+          'url': _getCtrl('anim_initial_url').text.trim(),
+        };
+        data['objectAsset'] = {
+          'type': _objectAssetType,
+          'url': _getCtrl('anim_object_url').text.trim(),
+        };
+        data['objectSize'] =
+            int.tryParse(_getCtrl('anim_object_size').text) ?? 40;
+        data['allowRemove'] = _allowRemove;
+        data['config'] = {
+          'maxObjects': 50, // Límite de objetos que se pueden agregar
+        };
+      } else {
+        // Configuración estándar para otros tipos de animación
+        data['initialAsset'] = {
+          'type': _initialAssetType,
+          'url': _getCtrl('anim_initial_url').text.trim(),
+        };
+        data['interactionAssets'] = _interactionAssets
+            .where((asset) => asset['url']?.isNotEmpty == true)
+            .map(
+              (asset) => {
+                'trigger': 'action',
+                'asset': {'type': asset['type'], 'url': asset['url']},
+              },
+            )
+            .toList();
+        data['config'] = {
+          'loop': true,
+          'autoReturn': false,
+          'allowMultipleInteractions': true,
+        };
+      }
     } else if (_cardType == 'quiz') {
       data['question'] = _getCtrl('question').text.trim();
-      data['options'] = _getCtrl('options').text
-          .split('\n')
-          .map((option) => option.trim())
-          .where((option) => option.isNotEmpty)
-          .toList();
+
+      final optionItems = List<Map<String, dynamic>>.generate(
+        _quizOptionCount,
+        (index) {
+          final text = _getCtrl('optionText_$index').text.trim();
+          final imageUrl = _getCtrl('optionImage_$index').text.trim();
+
+          final option = <String, dynamic>{'text': text};
+          if (imageUrl.isNotEmpty) {
+            option['imageUrl'] = imageUrl;
+          }
+          return option;
+        },
+      );
+
+      data['optionItems'] = optionItems;
+      data['options'] = optionItems.map((option) => option['text']).toList();
       data['correctIndex'] = int.tryParse(_getCtrl('correctIndex').text) ?? 0;
+      final explanation = _getCtrl('explanation').text.trim();
+      if (explanation.isNotEmpty) {
+        data['explanation'] = explanation;
+      }
+      final quizImageUrl = _getCtrl('quizImageUrl').text.trim();
+      if (quizImageUrl.isNotEmpty) {
+        data['quizImageUrl'] = quizImageUrl;
+      }
     } else if (_cardType == 'timer') {
       data['duration'] = int.tryParse(_getCtrl('duration').text) ?? 0;
       data['sound'] = _getCtrl('sound').text.trim();
@@ -4097,6 +4340,21 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
     switch (_cardType) {
       case 'text':
         return [
+          // Título opcional
+          TextFormField(
+            controller: _getCtrl('title'),
+            decoration: InputDecoration(
+              labelText: 'Título (opcional)',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.blue.shade50,
+              prefixIcon: const Icon(Icons.title),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Contenido principal
           TextFormField(
             controller: _getCtrl('text'),
             decoration: InputDecoration(
@@ -4110,6 +4368,70 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             ),
             maxLines: 4,
             validator: (v) => v?.isEmpty ?? true ? 'Requiere contenido' : null,
+          ),
+          const SizedBox(height: 12),
+          // URL de imagen opcional
+          TextFormField(
+            controller: _getCtrl('imageUrl'),
+            decoration: InputDecoration(
+              labelText: 'URL de Imagen (opcional)',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.green.shade50,
+              prefixIcon: const Icon(Icons.image),
+              hintText: 'https://ejemplo.com/imagen.jpg',
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Opciones de formato
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              border: Border.all(color: Colors.orange.shade200),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Opciones de Formato',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 16,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: _getCtrlBool('isBold'),
+                          onChanged: (v) => setState(
+                            () => _setCtrlBool('isBold', v ?? false),
+                          ),
+                        ),
+                        const Text('Negrita'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: _getCtrlBool('isItalic'),
+                          onChanged: (v) => setState(
+                            () => _setCtrlBool('isItalic', v ?? false),
+                          ),
+                        ),
+                        const Text('Itálica'),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ];
       case 'list':
@@ -4131,7 +4453,6 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         ];
       case 'image':
       case 'video':
-      case 'animation':
         return [
           TextFormField(
             controller: _getCtrl('url'),
@@ -4147,6 +4468,8 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
           ),
         ];
+      case 'animation':
+        return _buildInteractiveAnimationFields();
       case 'quiz':
         return [
           TextFormField(
@@ -4163,26 +4486,14 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             validator: (v) => v?.isEmpty ?? true ? 'Requiere pregunta' : null,
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _getCtrl('options'),
-            decoration: InputDecoration(
-              labelText: 'Opciones (una por línea) *',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              helperText: 'Una opción por línea',
-            ),
-            maxLines: 4,
-            validator: (v) => v?.isEmpty ?? true ? 'Requiere opciones' : null,
-          ),
+          ..._buildQuizOptionFields(),
           const SizedBox(height: 12),
           TextFormField(
             controller: _getCtrl('correctIndex'),
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: 'Índice respuesta correcta (0-3) *',
+              labelText:
+                  'Índice respuesta correcta (0-${_quizOptionCount - 1}) *',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -4192,9 +4503,41 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             validator: (v) {
               if (v?.isEmpty ?? true) return 'Requiere índice';
               final idx = int.tryParse(v!);
-              if (idx == null || idx < 0 || idx > 3) return 'Debe ser 0-3';
+              if (idx == null || idx < 0 || idx >= _quizOptionCount) {
+                return 'Debe ser 0-${_quizOptionCount - 1}';
+              }
               return null;
             },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _getCtrl('explanation'),
+            decoration: InputDecoration(
+              labelText: 'Feedback al responder correctamente',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.green.shade50,
+              helperText: 'Texto pequeño que se muestra cuando aciertan',
+              prefixIcon: Icon(Icons.lightbulb_outline, color: Colors.green),
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _getCtrl('quizImageUrl'),
+            decoration: InputDecoration(
+              labelText: 'Imagen para el Quiz (opcional)',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.purple.shade50,
+              prefixIcon: const Icon(Icons.image),
+              hintText: 'https://ejemplo.com/imagen.jpg',
+              helperText: 'Se mostrará al lado de la pregunta',
+            ),
           ),
         ];
       case 'timer':
@@ -4230,5 +4573,495 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       default:
         return [];
     }
+  }
+
+  List<Widget> _buildQuizOptionFields() {
+    return List<Widget>.generate(_quizOptionCount, (index) {
+      final optionLabel = String.fromCharCode(65 + index);
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Opción $optionLabel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _getCtrl('optionText_$index'),
+                  decoration: InputDecoration(
+                    labelText: 'Texto opción $optionLabel *',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (v) =>
+                      v?.trim().isEmpty ?? true ? 'Requiere texto' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _getCtrl('optionImage_$index'),
+                  decoration: InputDecoration(
+                    labelText: 'Imagen opción $optionLabel (opcional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(Icons.image_outlined),
+                    hintText: 'https://ejemplo.com/opcion-$optionLabel.jpg',
+                    helperText: 'Se mostrará debajo del texto de esta opción',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (index < _quizOptionCount - 1) const SizedBox(height: 12),
+        ],
+      );
+    });
+  }
+
+  List<Widget> _buildInteractiveAnimationFields() {
+    return [
+      // Tipo de interacción
+      DropdownButtonFormField<String>(
+        value: _animationType,
+        items: const [
+          DropdownMenuItem(value: 'click', child: Text('👆 Click / Tap')),
+          DropdownMenuItem(
+            value: 'swipe_left',
+            child: Text('👈 Deslizar Izquierda'),
+          ),
+          DropdownMenuItem(
+            value: 'swipe_right',
+            child: Text('👉 Deslizar Derecha'),
+          ),
+          DropdownMenuItem(
+            value: 'swipe_up',
+            child: Text('👆 Deslizar Arriba'),
+          ),
+          DropdownMenuItem(
+            value: 'swipe_down',
+            child: Text('👇 Deslizar Abajo'),
+          ),
+          DropdownMenuItem(
+            value: 'drag_horizontal',
+            child: Text('↔️ Arrastrar Horizontal'),
+          ),
+          DropdownMenuItem(
+            value: 'drag_vertical',
+            child: Text('↕️ Arrastrar Vertical'),
+          ),
+          DropdownMenuItem(value: 'hold', child: Text('✋ Mantener Presionado')),
+          DropdownMenuItem(
+            value: 'double_tap',
+            child: Text('👆👆 Doble Toque'),
+          ),
+          DropdownMenuItem(
+            value: 'pinch_zoom',
+            child: Text('🤏 Pellizcar / Zoom'),
+          ),
+          DropdownMenuItem(
+            value: 'add_remove_objects',
+            child: Text('🎨 Agregar/Quitar Objetos'),
+          ),
+        ],
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _animationType = value);
+          }
+        },
+        decoration: InputDecoration(
+          labelText: 'Tipo de Interacción *',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // Instrucciones para el usuario
+      TextFormField(
+        controller: _getCtrl('anim_instruction'),
+        decoration: InputDecoration(
+          labelText: 'Instrucción para el Usuario *',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          hintText: 'Ej: Toca la imagen para ver el resultado final',
+          helperText: 'Mensaje que verá el usuario para saber qué hacer',
+        ),
+        maxLines: 2,
+        validator: (v) => v?.isEmpty ?? true ? 'Requiere instrucción' : null,
+      ),
+      const SizedBox(height: 16),
+
+      // Asset inicial
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.blue.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.blue.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🎬 Contenido Inicial',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _initialAssetType,
+              items: const [
+                DropdownMenuItem(value: 'image', child: Text('🖼️ Imagen')),
+                DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _initialAssetType = value);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: 'Tipo',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _getCtrl('anim_initial_url'),
+              decoration: InputDecoration(
+                labelText: 'URL del Asset Inicial *',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                hintText: 'https://...',
+              ),
+              validator: (v) =>
+                  v?.isEmpty ?? true ? 'Requiere URL inicial' : null,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // Campos específicos según tipo de animación
+      if (_animationType == 'add_remove_objects')
+        ..._buildAddRemoveObjectsFields()
+      else
+        ..._buildStandardAnimationFields(),
+    ];
+  }
+
+  List<Widget> _buildAddRemoveObjectsFields() {
+    return [
+      // Configuración del objeto que se agregará
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.green.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.green.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🎨 Objeto a Agregar',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Configura el objeto/ícono que aparecerá donde el usuario haga click',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _objectAssetType,
+              items: const [
+                DropdownMenuItem(value: 'image', child: Text('🖼️ Imagen')),
+                DropdownMenuItem(value: 'icon', child: Text('🔷 Ícono')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _objectAssetType = value);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: 'Tipo de Objeto',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _getCtrl('anim_object_url'),
+              decoration: InputDecoration(
+                labelText: 'URL del Objeto *',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                hintText: 'https://... (imagen transparente PNG recomendado)',
+                helperText:
+                    'Usar imagen PNG con transparencia para mejor resultado',
+              ),
+              validator: (v) =>
+                  v?.isEmpty ?? true ? 'Requiere URL del objeto' : null,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _getCtrl('anim_object_size'),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Tamaño del Objeto (px)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                hintText: '40',
+                helperText: 'Tamaño en píxeles (recomendado: 30-60)',
+                suffixText: 'px',
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              value: _allowRemove,
+              onChanged: (value) {
+                setState(() => _allowRemove = value);
+              },
+              title: const Text(
+                'Permitir Remover',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Si está activo, tocar un objeto lo elimina',
+                style: TextStyle(fontSize: 12),
+              ),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'El usuario verá la imagen/video de fondo. Al hacer click en cualquier parte, aparecerá el objeto configurado en esa posición.',
+                style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildStandardAnimationFields() {
+    return [
+      // Assets de interacción
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.purple.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.purple.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '✨ Assets de Interacción',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _interactionAssets.add({'type': 'image', 'url': ''});
+                    });
+                  },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Agregar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade600,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Contenido que se muestra cuando el usuario realiza la interacción',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            ..._interactionAssets.asMap().entries.map((entry) {
+              final index = entry.key;
+              final asset = entry.value;
+              return _buildInteractionAssetItem(index, asset);
+            }).toList(),
+            if (_interactionAssets.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                alignment: Alignment.center,
+                child: const Text(
+                  'No hay assets. Agrega al menos uno.',
+                  style: TextStyle(color: Colors.black45, fontSize: 13),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'El usuario verá el contenido inicial. Cuando realice la interacción ($_animationType), se mostrará el primer asset de interacción.',
+                style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildInteractionAssetItem(int index, Map<String, String> asset) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Asset ${index + 1}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                onPressed: () {
+                  setState(() {
+                    _interactionAssets.removeAt(index);
+                  });
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: asset['type'],
+            items: const [
+              DropdownMenuItem(value: 'image', child: Text('🖼️ Imagen')),
+              DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _interactionAssets[index]['type'] = value;
+                });
+              }
+            },
+            decoration: InputDecoration(
+              labelText: 'Tipo',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: asset['url'],
+            onChanged: (value) {
+              _interactionAssets[index]['url'] = value;
+            },
+            decoration: InputDecoration(
+              labelText: 'URL',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              hintText: 'https://...',
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+            validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
+          ),
+        ],
+      ),
+    );
   }
 }
