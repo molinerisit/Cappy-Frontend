@@ -14,6 +14,7 @@ import '../../../core/lives_service.dart';
 import '../../../core/models/learning_node.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/progress_provider.dart';
+import '../../../widgets/interactive_animation_card.dart';
 import '../../../widgets/step_timer_widget.dart';
 
 /// Pantalla de leccion gamificada tipo Duolingo.
@@ -163,10 +164,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         Navigator.of(context).pop(false);
       }
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo actualizar vidas.')),
-      );
+      // Error handled silently - dialog already shown
     } finally {
       _isApplyingLifePenalty = false;
     }
@@ -284,11 +282,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     final isQuizStep = _sanitizeOptions(step.options).length >= 2;
     if (isQuizStep && _isAnswerCorrect != true) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Respuesta incorrecta. Intenta de nuevo.'),
-        ),
-      );
+      // User already sees visual feedback - no need for snackbar
       setState(() {
         _selectedAnswerIndex = null;
         _isAnswerCorrect = null;
@@ -350,9 +344,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       Navigator.of(context).pop(true); // Only pop one route
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      debugPrint('Error completing lesson: $e');
       setState(() => _currentState = 'answering');
     }
   }
@@ -507,6 +499,19 @@ class _LessonGameScreenState extends State<LessonGameScreen>
           continue;
         }
 
+        // Animation card: Interactive animations
+        if (cardType == 'animation') {
+          cards.add(
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              child: InteractiveAnimationCard(
+                data: Map<String, dynamic>.from(content),
+              ),
+            ),
+          );
+          continue;
+        }
+
         final listItems = content['items'] is List
             ? List<dynamic>.from(content['items'])
             : (card['items'] is List ? List<dynamic>.from(card['items']) : []);
@@ -530,6 +535,9 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             content['media']?.toString() ??
             card['image']?.toString() ??
             card['media']?.toString();
+
+        final isBold = content['isBold'] ?? card['isBold'] ?? false;
+        final isItalic = content['isItalic'] ?? card['isItalic'] ?? false;
 
         if (cardType == 'list' && listItems.isNotEmpty) {
           cards.add(
@@ -647,6 +655,8 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                       fontSize: 14,
                       color: const Color(0xFF4B5563),
                       height: 1.4,
+                      fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                      fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
                     ),
                   ),
                 ],

@@ -18,12 +18,14 @@ import '../../../theme/typography.dart';
 import '../../../widgets/app_button.dart';
 import '../../../widgets/app_header.dart';
 import '../../../widgets/app_scaffold.dart';
+import '../../../widgets/lives_widget.dart';
 
 class PathProgressionScreen extends StatefulWidget {
   final String pathId;
   final String pathTitle;
   final bool showAppBar;
   final VoidCallback? onLessonExit;
+  final VoidCallback? onChangeRoute;
 
   const PathProgressionScreen({
     super.key,
@@ -31,6 +33,7 @@ class PathProgressionScreen extends StatefulWidget {
     required this.pathTitle,
     this.showAppBar = true,
     this.onLessonExit,
+    this.onChangeRoute,
   });
 
   @override
@@ -50,6 +53,8 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   double _lastCanvasWidth = 0;
   bool _scrolledToCurrentLevel = false;
   int _currentLives = 3;
+  int _maxLives = 3;
+  DateTime? _nextRefillAt;
 
   @override
   void initState() {
@@ -277,7 +282,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     );
 
     if (!widget.showAppBar) {
-      return Container(color: AppColors.background, child: layeredContent);
+      return layeredContent;
     }
 
     return AppScaffold(appBar: _buildAppBar(), body: layeredContent);
@@ -296,8 +301,19 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      actions: const [
+      actions: [
         Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Center(
+            child: LivesWidget(
+              lives: _currentLives,
+              maxLives: _maxLives,
+              nextRefillAt: _nextRefillAt,
+              onLiveAnimationComplete: () => _loadLivesStatus(),
+            ),
+          ),
+        ),
+        const Padding(
           padding: EdgeInsets.only(right: 16),
           child: Center(child: UserXPBadge()),
         ),
@@ -322,11 +338,9 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
           completedCount: _pathController.completedCount,
           totalCount: _pathController.totalCount,
           streakDays: auth.streak,
-          livesCount: _currentLives,
           currentXp: currentLevelXp,
           nextLevelXp: xpForNextLevel - xpForCurrentLevel,
         ),
-        _buildRewardsStrip(),
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 4, 20, 10),
           child: Row(
@@ -390,50 +404,6 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
     );
   }
 
-  Widget _buildRewardsStrip() {
-    final earnedXp = _pathController.completedCount * 50;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '🏅 Has completado ${_pathController.completedCount} lecciones  •  +$earnedXp XP',
-              style: AppTypography.badge.copyWith(
-                color: AppColors.textStrong,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: const [
-                _RewardChip(label: '⭐ Medallas', icon: '⭐'),
-                _RewardChip(label: '🥇 Logros', icon: '🥇'),
-                _RewardChip(label: '🧂 Ítems', icon: '🧂'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _loadLivesStatus() async {
     try {
       final token = ApiService.getToken();
@@ -442,6 +412,10 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
       if (!mounted) return;
       setState(() {
         _currentLives = status['lives'] ?? _currentLives;
+        _maxLives = status['maxLives'] ?? 3;
+        if (status['nextRefillAt'] != null) {
+          _nextRefillAt = DateTime.parse(status['nextRefillAt']);
+        }
       });
     } catch (_) {}
   }
@@ -631,31 +605,6 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
               style: AppTypography.body,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RewardChip extends StatelessWidget {
-  final String label;
-  final String icon;
-
-  const _RewardChip({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$icon $label',
-        style: AppTypography.badge.copyWith(
-          color: AppColors.textStrong,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );

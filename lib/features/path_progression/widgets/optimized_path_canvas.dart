@@ -129,7 +129,37 @@ class _OptimizedPathCanvasState extends State<OptimizedPathCanvas> {
       }
 
       if (itemIndex == index) {
-        return _buildLevelWithConnections(levelIndex);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Label de nivel (solo para debug/visualización)
+            if (levelIndex > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Nivel ${widget.layout.levelGroups[levelIndex].level}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            _buildLevelWithConnections(levelIndex),
+          ],
+        );
       }
       itemIndex++;
     }
@@ -154,80 +184,32 @@ class _OptimizedPathCanvasState extends State<OptimizedPathCanvas> {
   Widget _buildLevelWithConnections(int levelIndex) {
     final levelGroup = widget.layout.levelGroups[levelIndex];
 
-    final relevantConnections = widget.layout.connections
-        .where((conn) => conn.fromLevelIndex == levelIndex)
-        .toList();
+    // Calcular altura dinámica basada en nodos por fila
+    final nodeCount = levelGroup.nodes.length;
 
-    final progressedConnections = relevantConnections.where((conn) {
-      final fromNode = levelGroup.nodes[conn.fromNodeIndex];
-      return fromNode.status == NodeStatus.completed ||
-          fromNode.status == NodeStatus.active;
-    }).toList();
+    // Altura base de un nodo: ~120px círculo + ~40px título = 160px
+    // Con padding y wrap spacing: +24px entre filas
+    final double nodeHeight = 160.0;
+    final double rowSpacing = 24.0;
 
-    final connectionsHeight = relevantConnections.isNotEmpty
-        ? (relevantConnections.first.endPoint.dy -
-              relevantConnections.first.startPoint.dy +
-              20)
-        : 0.0;
+    double calculatedHeight;
+    if (nodeCount == 1) {
+      // 1 nodo: altura single
+      calculatedHeight = nodeHeight + 32.0; // +padding
+    } else if (nodeCount == 2) {
+      // 2 nodos: 1 fila
+      calculatedHeight = nodeHeight + 24.0;
+    } else if (nodeCount <= 4) {
+      // 3-4 nodos: 2 filas
+      calculatedHeight = (nodeHeight * 2) + rowSpacing + 24.0;
+    } else {
+      // 5+ nodos: 3 filas
+      calculatedHeight = (nodeHeight * 3) + (rowSpacing * 2) + 24.0;
+    }
 
     return SizedBox(
-      height: levelGroup.height + connectionsHeight,
-      child: Stack(
-        children: [
-          if (relevantConnections.isNotEmpty)
-            Positioned.fill(
-              child: RepaintBoundary(
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      painter: RoadmapPainter(
-                        connections: relevantConnections,
-                        lineColor: AppColors.border,
-                        strokeWidth: 3,
-                      ),
-                    ),
-                    CustomPaint(
-                      painter: RoadmapPainter(
-                        connections: progressedConnections,
-                        lineColor: AppColors.primary,
-                        strokeWidth: 4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (levelIndex == widget.layout.levelGroups.length - 1 &&
-              levelGroup.nodes.any((node) => node.status == NodeStatus.locked))
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 14,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.lockedSurface,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Text(
-                    '🔒 Próximamente',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          LevelSection(levelGroup: levelGroup, onNodeTap: widget.onNodeTap),
-        ],
-      ),
+      height: calculatedHeight,
+      child: LevelSection(levelGroup: levelGroup, onNodeTap: widget.onNodeTap),
     );
   }
 }

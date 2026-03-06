@@ -439,7 +439,12 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
   }
 
   Widget _buildTextCard(Map<String, dynamic> data) {
+    final title = data['title']?.toString();
     final text = data['text'] ?? '';
+    final imageUrl = data['imageUrl']?.toString();
+    final isBold = data['isBold'] ?? false;
+    final isItalic = data['isItalic'] ?? false;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -453,13 +458,59 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
           ),
         ],
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 18,
-          height: 1.6,
-          color: Colors.black87,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Título si existe
+          if (title != null && title.isNotEmpty) ...[
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          // Imagen si existe
+          if (imageUrl != null && imageUrl.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                height: 200,
+                width: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          // Texto con formato
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+              height: 1.6,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -503,12 +554,53 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
 
   Widget _buildQuizCard(Map<String, dynamic> data) {
     final question = data['question'] ?? '';
-    final options = data['options'] as List? ?? [];
+    final optionItems = data['optionItems'] is List
+        ? (data['optionItems'] as List)
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
+        : <Map<String, dynamic>>[];
+    final legacyOptions = data['options'] is List
+        ? List<dynamic>.from(data['options'] as List)
+        : <dynamic>[];
+    final quizOptions = optionItems.isNotEmpty
+        ? optionItems
+        : legacyOptions
+              .map((option) => <String, dynamic>{'text': option.toString()})
+              .toList();
     final correctIndex = data['correctIndex'] ?? 0;
+    final explanation = data['explanation']?.toString();
+    final quizImageUrl = data['quizImageUrl']?.toString();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Imagen si existe
+        if (quizImageUrl != null && quizImageUrl.isNotEmpty) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              quizImageUrl,
+              fit: BoxFit.cover,
+              height: 180,
+              width: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 180,
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -533,19 +625,26 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        ...options.asMap().entries.map((entry) {
+        ...quizOptions.asMap().entries.map((entry) {
           final index = entry.key;
-          final option = entry.value.toString();
+          final optionData = entry.value;
+          final optionText = (optionData['text'] ?? '').toString();
+          final optionImageUrl =
+              (optionData['imageUrl'] ?? optionData['image'] ?? '').toString();
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: InkWell(
               onTap: () async {
                 if (index == correctIndex) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('¡Correcto! ✓'),
+                    SnackBar(
+                      content: Text(
+                        explanation != null && explanation.isNotEmpty
+                            ? '✓ $explanation'
+                            : '¡Correcto! ✓',
+                      ),
                       backgroundColor: Colors.green,
-                      duration: Duration(seconds: 1),
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 } else {
@@ -598,29 +697,62 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          String.fromCharCode(65 + index), // A, B, C, D
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade700,
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              String.fromCharCode(65 + index), // A, B, C, D
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            optionText,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (optionImageUrl.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          optionImageUrl,
+                          fit: BoxFit.cover,
+                          height: 140,
+                          width: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 140,
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Icon(
+                                  Icons.broken_image,
+                                  size: 36,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(option, style: const TextStyle(fontSize: 16)),
-                    ),
+                    ],
                   ],
                 ),
               ),
