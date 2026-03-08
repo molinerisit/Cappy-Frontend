@@ -413,6 +413,126 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         .toList();
   }
 
+  String _normalizeContentText(String? value) {
+    if (value == null) {
+      return '';
+    }
+    return value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  }
+
+  Map<String, dynamic> _normalizeImageDisplay(dynamic raw) {
+    if (raw is! Map) {
+      return {'fit': 'cover', 'zoom': 1.0, 'offsetX': 0.0, 'offsetY': 0.0};
+    }
+
+    final fit = raw['fit']?.toString() ?? 'cover';
+    final zoom = raw['zoom'] is num
+        ? (raw['zoom'] as num).toDouble().clamp(1.0, 2.5)
+        : double.tryParse('${raw['zoom']}')?.clamp(1.0, 2.5) ?? 1.0;
+    final offsetX = raw['offsetX'] is num
+        ? (raw['offsetX'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetX']}')?.clamp(-1.0, 1.0) ?? 0.0;
+    final offsetY = raw['offsetY'] is num
+        ? (raw['offsetY'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetY']}')?.clamp(-1.0, 1.0) ?? 0.0;
+
+    return {
+      'fit':
+          const [
+            'cover',
+            'contain',
+            'fill',
+            'fitWidth',
+            'fitHeight',
+          ].contains(fit)
+          ? fit
+          : 'cover',
+      'zoom': zoom,
+      'offsetX': offsetX,
+      'offsetY': offsetY,
+    };
+  }
+
+  BoxFit _boxFitFromDisplay(String fit) {
+    switch (fit) {
+      case 'contain':
+        return BoxFit.contain;
+      case 'fill':
+        return BoxFit.fill;
+      case 'fitWidth':
+        return BoxFit.fitWidth;
+      case 'fitHeight':
+        return BoxFit.fitHeight;
+      case 'cover':
+      default:
+        return BoxFit.cover;
+    }
+  }
+
+  Widget _buildDisplayAwareCachedImage({
+    required String imageUrl,
+    required double height,
+    required Map<String, dynamic> display,
+    BorderRadius borderRadius = const BorderRadius.all(Radius.circular(12)),
+  }) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Container(
+        height: height,
+        width: double.infinity,
+        color: const Color(0xFFF3F4F6),
+        child: Transform.scale(
+          scale: display['zoom'] as double,
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: _boxFitFromDisplay(display['fit'] as String),
+            alignment: Alignment(
+              display['offsetX'] as double,
+              display['offsetY'] as double,
+            ),
+            placeholder: (context, url) => SizedBox(
+              height: height,
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            errorWidget: (context, url, error) => SizedBox(
+              height: height,
+              child: const Center(child: Icon(Icons.broken_image_outlined)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _stepInstructionIsDuplicatedByCards(NodeStep step) {
+    final instructionNorm = _normalizeContentText(step.instruction);
+    if (instructionNorm.isEmpty || step.cards == null || step.cards!.isEmpty) {
+      return false;
+    }
+
+    for (final card in step.cards!) {
+      final content = (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+      final candidates = [
+        content['text']?.toString(),
+        content['description']?.toString(),
+        content['instruction']?.toString(),
+        card['text']?.toString(),
+        card['description']?.toString(),
+        card['instruction']?.toString(),
+      ];
+
+      for (final candidate in candidates) {
+        if (_normalizeContentText(candidate) == instructionNorm) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   Widget _buildTextCard({
     required String text,
     IconData icon = Icons.menu_book_rounded,
@@ -531,10 +651,14 @@ class _LessonGameScreenState extends State<LessonGameScreen>
           card['instruction']?.toString(),
         ], '');
         final cardImage =
+            content['url']?.toString() ??
             content['imageUrl']?.toString() ??
             content['media']?.toString() ??
             card['image']?.toString() ??
             card['media']?.toString();
+        final cardImageDisplay = _normalizeImageDisplay(
+          content['display'] ?? content['imageDisplay'],
+        );
 
         final isBold = content['isBold'] ?? card['isBold'] ?? false;
         final isItalic = content['isItalic'] ?? card['isItalic'] ?? false;
@@ -599,9 +723,14 @@ class _LessonGameScreenState extends State<LessonGameScreen>
           continue;
         }
 
-        if (cardBody.isEmpty && cardImage == null) {
+        final hasImage = cardImage != null && cardImage.isNotEmpty;
+        if (cardTitle.isEmpty && cardBody.isEmpty && !hasImage) {
           continue;
         }
+
+        final showCardBody =
+            cardBody.isNotEmpty &&
+            _normalizeContentText(cardBody) != _normalizeContentText(cardTitle);
 
         cards.add(
           Container(
@@ -615,29 +744,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (cardImage != null && cardImage.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: cardImage,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const SizedBox(
-                        height: 160,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => const SizedBox(
-                        height: 160,
-                        child: Center(child: Icon(Icons.broken_image_outlined)),
-                      ),
-                    ),
-                  ),
                 if (cardTitle.isNotEmpty) ...[
-                  if (cardImage != null && cardImage.isNotEmpty)
-                    const SizedBox(height: 12),
                   Text(
                     cardTitle,
                     style: GoogleFonts.poppins(
@@ -647,8 +754,8 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     ),
                   ),
                 ],
-                if (cardBody.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                if (showCardBody) ...[
+                  if (cardTitle.isNotEmpty) const SizedBox(height: 8),
                   Text(
                     cardBody,
                     style: GoogleFonts.poppins(
@@ -658,6 +765,16 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                       fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
                       fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
                     ),
+                  ),
+                ],
+                if (hasImage) ...[
+                  if (cardTitle.isNotEmpty || showCardBody)
+                    const SizedBox(height: 12),
+                  _buildDisplayAwareCachedImage(
+                    imageUrl: cardImage,
+                    height: 160,
+                    display: cardImageDisplay,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ],
               ],
@@ -872,11 +989,13 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     final options = _sanitizeOptions(step.options);
     final isQuizStep = options.length >= 2;
     final contentCards = _buildContentCards(step, excludeQuiz: isQuizStep);
+    final showStepInstruction =
+        step.instruction.isNotEmpty &&
+        !_stepInstructionIsDuplicatedByCards(step);
     final questionText = _firstNonEmpty([
       step.question,
       step.title,
       step.description,
-      step.instruction,
     ], 'Contenido de la leccion');
 
     return Scaffold(
@@ -976,7 +1095,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                         height: 1.4,
                       ),
                     ),
-                    if (step.instruction.isNotEmpty)
+                    if (showStepInstruction)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(

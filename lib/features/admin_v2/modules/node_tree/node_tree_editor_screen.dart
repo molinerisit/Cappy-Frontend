@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api_service.dart';
 import 'tree_layout.dart';
+import '../../../../widgets/image_upload_field.dart';
 
 class NodeTreeEditorScreen extends StatefulWidget {
   final String? initialPathId;
@@ -3926,7 +3927,8 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
   // Estado específico para animaciones interactivas
   String _animationType = 'click';
   String _initialAssetType = 'image';
-  final List<Map<String, String>> _interactionAssets = [];
+  bool _interactionLoop = true;
+  final List<Map<String, dynamic>> _interactionAssets = [];
 
   // Estado específico para add_remove_objects
   String _objectAssetType = 'image';
@@ -3935,22 +3937,119 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
   // Estado para formato de texto
   final Map<String, bool> _formatFlags = {};
 
+  // Ajustes de visualizacion de imagen por campo (fit/zoom/offset)
+  final Map<String, Map<String, dynamic>> _imageAdjustments = {};
+
+  Map<String, dynamic> _defaultImageAdjustment() => {
+    'fit': 'cover',
+    'zoom': 1.0,
+    'offsetX': 0.0,
+    'offsetY': 0.0,
+  };
+
+  Map<String, dynamic> _sanitizeImageAdjustment(dynamic raw) {
+    final defaults = _defaultImageAdjustment();
+    if (raw is! Map) return defaults;
+
+    final fit = raw['fit']?.toString() ?? defaults['fit'] as String;
+    final zoom = raw['zoom'] is num
+        ? (raw['zoom'] as num).toDouble().clamp(1.0, 2.5)
+        : double.tryParse('${raw['zoom']}')?.clamp(1.0, 2.5) ?? 1.0;
+    final offsetX = raw['offsetX'] is num
+        ? (raw['offsetX'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetX']}')?.clamp(-1.0, 1.0) ?? 0.0;
+    final offsetY = raw['offsetY'] is num
+        ? (raw['offsetY'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetY']}')?.clamp(-1.0, 1.0) ?? 0.0;
+
+    return {
+      'fit':
+          const [
+            'cover',
+            'contain',
+            'fill',
+            'fitWidth',
+            'fitHeight',
+          ].contains(fit)
+          ? fit
+          : defaults['fit'],
+      'zoom': zoom,
+      'offsetX': offsetX,
+      'offsetY': offsetY,
+    };
+  }
+
+  void _setImageAdjustment(String key, Map<String, dynamic> value) {
+    _imageAdjustments[key] = _sanitizeImageAdjustment(value);
+  }
+
+  bool _isDefaultImageAdjustment(Map<String, dynamic> value) {
+    final defaults = _defaultImageAdjustment();
+    return (value['fit'] ?? defaults['fit']) == defaults['fit'] &&
+        (value['zoom'] ?? defaults['zoom']) == defaults['zoom'] &&
+        (value['offsetX'] ?? defaults['offsetX']) == defaults['offsetX'] &&
+        (value['offsetY'] ?? defaults['offsetY']) == defaults['offsetY'];
+  }
+
   @override
   void initState() {
     super.initState();
     _cardType = widget.card?['type'] ?? 'text';
+
+    if (widget.card != null) {
+      final data = widget.card!['data'] as Map? ?? {};
+
+      _imageAdjustments['text.image'] = _sanitizeImageAdjustment(
+        data['imageDisplay'],
+      );
+      _imageAdjustments['media.main'] = _sanitizeImageAdjustment(
+        data['display'] ?? data['imageDisplay'],
+      );
+      _imageAdjustments['quiz.image'] = _sanitizeImageAdjustment(
+        data['quizImageDisplay'],
+      );
+
+      final optionItems = data['optionItems'] is List
+          ? List<dynamic>.from(data['optionItems'] as List)
+          : const <dynamic>[];
+      for (int i = 0; i < optionItems.length; i++) {
+        final option = optionItems[i] is Map
+            ? Map<String, dynamic>.from(optionItems[i] as Map)
+            : <String, dynamic>{};
+        _imageAdjustments['quiz.option.$i'] = _sanitizeImageAdjustment(
+          option['imageDisplay'],
+        );
+      }
+    }
 
     // Pre-cargar datos de animación si existen
     if (_cardType == 'animation' && widget.card != null) {
       final data = widget.card!['data'] as Map? ?? {};
       _animationType = data['animationType'] ?? 'click';
       _initialAssetType = (data['initialAsset'] as Map?)?['type'] ?? 'image';
+      final config = data['config'] as Map? ?? {};
+      _interactionLoop = config['loop'] is bool ? config['loop'] as bool : true;
 
       final assets = data['interactionAssets'] as List? ?? [];
       for (var asset in assets) {
+        final normalizedAsset = asset is Map && asset['asset'] is Map
+            ? Map<String, dynamic>.from(asset['asset'] as Map)
+            : (asset is Map
+                  ? Map<String, dynamic>.from(asset)
+                  : <String, dynamic>{});
+        final rawType = (normalizedAsset['type'] ?? 'image').toString();
+        final normalizedType = rawType.toLowerCase() == 'texto'
+            ? 'text'
+            : rawType.toLowerCase();
+        final rawUrl = (normalizedAsset['url'] ?? '').toString();
+        final rawText = (normalizedAsset['text'] ?? '').toString();
+
         _interactionAssets.add({
-          'type': (asset['asset'] as Map?)?['type'] ?? 'image',
-          'url': (asset['asset'] as Map?)?['url'] ?? '',
+          'type': normalizedType,
+          'url': rawUrl,
+          'text': normalizedType == 'text' && rawText.trim().isEmpty
+              ? rawUrl
+              : rawText,
         });
       }
 
@@ -3963,7 +4062,7 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
 
     // Si es nueva animación o no tiene assets, agregar uno vacío
     if (_cardType == 'animation' && _interactionAssets.isEmpty) {
-      _interactionAssets.add({'type': 'image', 'url': ''});
+      _interactionAssets.add({'type': 'image', 'url': '', 'text': ''});
     }
   }
 
@@ -4080,8 +4179,9 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             _controllers[key]!.text = (data['instruction'] ?? '').toString();
             break;
           case 'anim_initial_url':
+            final initialAsset = (data['initialAsset'] as Map?) ?? {};
             _controllers[key]!.text =
-                ((data['initialAsset'] as Map?)?['url'] ?? '').toString();
+                (initialAsset['url'] ?? initialAsset['text'] ?? '').toString();
             break;
           case 'anim_object_url':
             _controllers[key]!.text =
@@ -4112,6 +4212,10 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       final imageUrl = _getCtrl('imageUrl').text.trim();
       if (imageUrl.isNotEmpty) {
         data['imageUrl'] = imageUrl;
+        final display = _imageAdjustments['text.image'];
+        if (display != null && !_isDefaultImageAdjustment(display)) {
+          data['imageDisplay'] = display;
+        }
       }
       if (_getCtrlBool('isBold')) {
         data['isBold'] = true;
@@ -4127,16 +4231,23 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           .toList();
     } else if (_cardType == 'image' || _cardType == 'video') {
       data['url'] = _getCtrl('url').text.trim();
+      if (_cardType == 'image' && data['url'].toString().isNotEmpty) {
+        final display = _imageAdjustments['media.main'];
+        if (display != null && !_isDefaultImageAdjustment(display)) {
+          data['display'] = display;
+        }
+      }
     } else if (_cardType == 'animation') {
       // Construcción del objeto de animación interactiva
       data['animationType'] = _animationType;
       data['instruction'] = _getCtrl('anim_instruction').text.trim();
+      final initialAssetValue = _getCtrl('anim_initial_url').text.trim();
 
       if (_animationType == 'add_remove_objects') {
         // Configuración específica para agregar/quitar objetos
         data['initialAsset'] = {
           'type': _initialAssetType,
-          'url': _getCtrl('anim_initial_url').text.trim(),
+          'url': initialAssetValue,
         };
         data['objectAsset'] = {
           'type': _objectAssetType,
@@ -4150,21 +4261,35 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         };
       } else {
         // Configuración estándar para otros tipos de animación
-        data['initialAsset'] = {
-          'type': _initialAssetType,
-          'url': _getCtrl('anim_initial_url').text.trim(),
-        };
+        data['initialAsset'] = _initialAssetType == 'text'
+            ? {'type': 'text', 'text': initialAssetValue}
+            : {'type': _initialAssetType, 'url': initialAssetValue};
+
         data['interactionAssets'] = _interactionAssets
-            .where((asset) => asset['url']?.isNotEmpty == true)
+            .where((asset) {
+              final type = (asset['type'] ?? 'image').toString();
+              if (type == 'text') {
+                return (asset['text']?.toString().trim().isNotEmpty ?? false);
+              }
+              return (asset['url']?.toString().trim().isNotEmpty ?? false);
+            })
             .map(
               (asset) => {
                 'trigger': 'action',
-                'asset': {'type': asset['type'], 'url': asset['url']},
+                'asset': (asset['type'] ?? 'image').toString() == 'text'
+                    ? {
+                        'type': 'text',
+                        'text': (asset['text'] ?? '').toString().trim(),
+                      }
+                    : {
+                        'type': asset['type'],
+                        'url': (asset['url'] ?? '').toString().trim(),
+                      },
               },
             )
             .toList();
         data['config'] = {
-          'loop': true,
+          'loop': _interactionLoop,
           'autoReturn': false,
           'allowMultipleInteractions': true,
         };
@@ -4181,6 +4306,10 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           final option = <String, dynamic>{'text': text};
           if (imageUrl.isNotEmpty) {
             option['imageUrl'] = imageUrl;
+            final display = _imageAdjustments['quiz.option.$index'];
+            if (display != null && !_isDefaultImageAdjustment(display)) {
+              option['imageDisplay'] = display;
+            }
           }
           return option;
         },
@@ -4196,6 +4325,10 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       final quizImageUrl = _getCtrl('quizImageUrl').text.trim();
       if (quizImageUrl.isNotEmpty) {
         data['quizImageUrl'] = quizImageUrl;
+        final display = _imageAdjustments['quiz.image'];
+        if (display != null && !_isDefaultImageAdjustment(display)) {
+          data['quizImageDisplay'] = display;
+        }
       }
     } else if (_cardType == 'timer') {
       data['duration'] = int.tryParse(_getCtrl('duration').text) ?? 0;
@@ -4370,19 +4503,19 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             validator: (v) => v?.isEmpty ?? true ? 'Requiere contenido' : null,
           ),
           const SizedBox(height: 12),
-          // URL de imagen opcional
-          TextFormField(
-            controller: _getCtrl('imageUrl'),
-            decoration: InputDecoration(
-              labelText: 'URL de Imagen (opcional)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              filled: true,
-              fillColor: Colors.green.shade50,
-              prefixIcon: const Icon(Icons.image),
-              hintText: 'https://ejemplo.com/imagen.jpg',
-            ),
+          // Imagen opcional con upload profesional
+          ImageUploadField(
+            label: 'Imagen (opcional)',
+            initialUrl: _getCtrl('imageUrl').text,
+            initialAdjustments: _imageAdjustments['text.image'],
+            onImageChanged: (url) {
+              _getCtrl('imageUrl').text = url ?? '';
+            },
+            onAdjustmentsChanged: (value) {
+              _setImageAdjustment('text.image', value);
+            },
+            aspectRatio: 16 / 9,
+            helperText: 'Sube una imagen o pega una URL externa',
           ),
           const SizedBox(height: 12),
           // Opciones de formato
@@ -4453,20 +4586,38 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         ];
       case 'image':
       case 'video':
+        final isImage = _cardType == 'image';
         return [
-          TextFormField(
-            controller: _getCtrl('url'),
-            decoration: InputDecoration(
-              labelText: 'URL *',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (isImage)
+            ImageUploadField(
+              label: 'Imagen',
+              initialUrl: _getCtrl('url').text,
+              initialAdjustments: _imageAdjustments['media.main'],
+              onImageChanged: (url) {
+                _getCtrl('url').text = url ?? '';
+              },
+              onAdjustmentsChanged: (value) {
+                _setImageAdjustment('media.main', value);
+              },
+              aspectRatio: 16 / 9,
+              required: true,
+              helperText: 'Sube una imagen o pega una URL externa',
+            )
+          else
+            TextFormField(
+              controller: _getCtrl('url'),
+              decoration: InputDecoration(
+                labelText: 'URL del Video *',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                hintText: 'https://youtube.com/... o URL directa',
+                prefixIcon: const Icon(Icons.video_library),
               ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              hintText: 'https://...',
+              validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
             ),
-            validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
-          ),
         ];
       case 'animation':
         return _buildInteractiveAnimationFields();
@@ -4525,19 +4676,18 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             maxLines: 3,
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _getCtrl('quizImageUrl'),
-            decoration: InputDecoration(
-              labelText: 'Imagen para el Quiz (opcional)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              filled: true,
-              fillColor: Colors.purple.shade50,
-              prefixIcon: const Icon(Icons.image),
-              hintText: 'https://ejemplo.com/imagen.jpg',
-              helperText: 'Se mostrará al lado de la pregunta',
-            ),
+          ImageUploadField(
+            label: 'Imagen del Quiz (opcional)',
+            initialUrl: _getCtrl('quizImageUrl').text,
+            initialAdjustments: _imageAdjustments['quiz.image'],
+            onImageChanged: (url) {
+              _getCtrl('quizImageUrl').text = url ?? '';
+            },
+            onAdjustmentsChanged: (value) {
+              _setImageAdjustment('quiz.image', value);
+            },
+            aspectRatio: 1.0,
+            helperText: 'Se mostrará al lado de la pregunta',
           ),
         ];
       case 'timer':
@@ -4614,19 +4764,18 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
                       v?.trim().isEmpty ?? true ? 'Requiere texto' : null,
                 ),
                 const SizedBox(height: 10),
-                TextFormField(
-                  controller: _getCtrl('optionImage_$index'),
-                  decoration: InputDecoration(
-                    labelText: 'Imagen opción $optionLabel (opcional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.image_outlined),
-                    hintText: 'https://ejemplo.com/opcion-$optionLabel.jpg',
-                    helperText: 'Se mostrará debajo del texto de esta opción',
-                  ),
+                ImageUploadField(
+                  label: 'Imagen opción $optionLabel (opcional)',
+                  initialUrl: _getCtrl('optionImage_$index').text,
+                  initialAdjustments: _imageAdjustments['quiz.option.$index'],
+                  onImageChanged: (url) {
+                    _getCtrl('optionImage_$index').text = url ?? '';
+                  },
+                  onAdjustmentsChanged: (value) {
+                    _setImageAdjustment('quiz.option.$index', value);
+                  },
+                  aspectRatio: 1.0,
+                  helperText: 'Se mostrará debajo del texto de esta opción',
                 ),
               ],
             ),
@@ -4684,7 +4833,13 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         ],
         onChanged: (value) {
           if (value != null) {
-            setState(() => _animationType = value);
+            setState(() {
+              _animationType = value;
+              if (_animationType == 'add_remove_objects' &&
+                  _initialAssetType == 'text') {
+                _initialAssetType = 'image';
+              }
+            });
           }
         },
         decoration: InputDecoration(
@@ -4730,10 +4885,22 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _initialAssetType,
-              items: const [
-                DropdownMenuItem(value: 'image', child: Text('🖼️ Imagen')),
-                DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
-              ],
+              items: _animationType == 'add_remove_objects'
+                  ? const [
+                      DropdownMenuItem(
+                        value: 'image',
+                        child: Text('🖼️ Imagen'),
+                      ),
+                      DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
+                    ]
+                  : const [
+                      DropdownMenuItem(
+                        value: 'image',
+                        child: Text('🖼️ Imagen'),
+                      ),
+                      DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
+                      DropdownMenuItem(value: 'text', child: Text('📝 Texto')),
+                    ],
               onChanged: (value) {
                 if (value != null) {
                   setState(() => _initialAssetType = value);
@@ -4752,16 +4919,27 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             TextFormField(
               controller: _getCtrl('anim_initial_url'),
               decoration: InputDecoration(
-                labelText: 'URL del Asset Inicial *',
+                labelText: _initialAssetType == 'text'
+                    ? 'Texto Inicial *'
+                    : 'URL del Asset Inicial *',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                hintText: 'https://...',
+                hintText: _initialAssetType == 'text'
+                    ? 'Escribe el texto inicial...'
+                    : 'https://...',
               ),
-              validator: (v) =>
-                  v?.isEmpty ?? true ? 'Requiere URL inicial' : null,
+              maxLines: _initialAssetType == 'text' ? 3 : 1,
+              validator: (v) {
+                if (v?.trim().isEmpty ?? true) {
+                  return _initialAssetType == 'text'
+                      ? 'Requiere texto inicial'
+                      : 'Requiere URL inicial';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -4919,7 +5097,11 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
                 ElevatedButton.icon(
                   onPressed: () {
                     setState(() {
-                      _interactionAssets.add({'type': 'image', 'url': ''});
+                      _interactionAssets.add({
+                        'type': 'image',
+                        'url': '',
+                        'text': '',
+                      });
                     });
                   },
                   icon: const Icon(Icons.add, size: 16),
@@ -4954,6 +5136,25 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
                   style: TextStyle(color: Colors.black45, fontSize: 13),
                 ),
               ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              value: _interactionLoop,
+              onChanged: (value) {
+                setState(() => _interactionLoop = value);
+              },
+              title: const Text(
+                'Repetir secuencia (loop)',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                _interactionLoop
+                    ? 'Cuando llega al último asset vuelve al primero'
+                    : 'Cuando llega al último asset se mantiene ahí',
+                style: const TextStyle(fontSize: 12),
+              ),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
           ],
         ),
       ),
@@ -4971,7 +5172,7 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'El usuario verá el contenido inicial. Cuando realice la interacción ($_animationType), se mostrará el primer asset de interacción.',
+                'El usuario verá el contenido inicial. Cada interacción ($_animationType) avanza al siguiente asset en secuencia (1, 2, 3...). ${_interactionLoop ? 'Con loop: vuelve al primero.' : 'Sin loop: se queda en el último.'}',
                 style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
               ),
             ),
@@ -4981,7 +5182,10 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
     ];
   }
 
-  Widget _buildInteractionAssetItem(int index, Map<String, String> asset) {
+  Widget _buildInteractionAssetItem(int index, Map<String, dynamic> asset) {
+    final assetType = (asset['type'] ?? 'image').toString();
+    final isText = assetType == 'text';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -5014,15 +5218,21 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: asset['type'],
+            value: assetType,
             items: const [
               DropdownMenuItem(value: 'image', child: Text('🖼️ Imagen')),
               DropdownMenuItem(value: 'video', child: Text('🎥 Video')),
+              DropdownMenuItem(value: 'text', child: Text('📝 Texto')),
             ],
             onChanged: (value) {
               if (value != null) {
                 setState(() {
                   _interactionAssets[index]['type'] = value;
+                  if (value == 'text') {
+                    _interactionAssets[index]['url'] = '';
+                  } else {
+                    _interactionAssets[index]['text'] = '';
+                  }
                 });
               }
             },
@@ -5041,24 +5251,39 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           ),
           const SizedBox(height: 8),
           TextFormField(
-            initialValue: asset['url'],
+            key: ValueKey('interaction-$index-$assetType'),
+            initialValue: isText
+                ? (asset['text'] ?? '').toString()
+                : (asset['url'] ?? '').toString(),
             onChanged: (value) {
-              _interactionAssets[index]['url'] = value;
+              if (isText) {
+                _interactionAssets[index]['text'] = value;
+              } else {
+                _interactionAssets[index]['url'] = value;
+              }
             },
             decoration: InputDecoration(
-              labelText: 'URL',
+              labelText: isText ? 'Texto' : 'URL',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
-              hintText: 'https://...',
+              hintText: isText
+                  ? 'Texto que aparecerá en esta interacción'
+                  : 'https://...',
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 8,
               ),
             ),
-            validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
+            maxLines: isText ? 3 : 1,
+            validator: (v) {
+              if (v?.trim().isEmpty ?? true) {
+                return isText ? 'Requiere texto' : 'Requiere URL';
+              }
+              return null;
+            },
           ),
         ],
       ),

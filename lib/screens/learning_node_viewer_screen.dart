@@ -438,12 +438,103 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
     }
   }
 
+  Map<String, dynamic> _normalizeImageDisplay(dynamic raw) {
+    if (raw is! Map) {
+      return {'fit': 'cover', 'zoom': 1.0, 'offsetX': 0.0, 'offsetY': 0.0};
+    }
+
+    final fit = raw['fit']?.toString() ?? 'cover';
+    final zoom = raw['zoom'] is num
+        ? (raw['zoom'] as num).toDouble().clamp(1.0, 2.5)
+        : double.tryParse('${raw['zoom']}')?.clamp(1.0, 2.5) ?? 1.0;
+    final offsetX = raw['offsetX'] is num
+        ? (raw['offsetX'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetX']}')?.clamp(-1.0, 1.0) ?? 0.0;
+    final offsetY = raw['offsetY'] is num
+        ? (raw['offsetY'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetY']}')?.clamp(-1.0, 1.0) ?? 0.0;
+
+    return {
+      'fit':
+          const [
+            'cover',
+            'contain',
+            'fill',
+            'fitWidth',
+            'fitHeight',
+          ].contains(fit)
+          ? fit
+          : 'cover',
+      'zoom': zoom,
+      'offsetX': offsetX,
+      'offsetY': offsetY,
+    };
+  }
+
+  BoxFit _boxFitFromDisplay(String fit) {
+    switch (fit) {
+      case 'contain':
+        return BoxFit.contain;
+      case 'fill':
+        return BoxFit.fill;
+      case 'fitWidth':
+        return BoxFit.fitWidth;
+      case 'fitHeight':
+        return BoxFit.fitHeight;
+      case 'cover':
+      default:
+        return BoxFit.cover;
+    }
+  }
+
+  Widget _buildDisplayImage({
+    required String url,
+    required double height,
+    Map<String, dynamic>? display,
+    BorderRadius? borderRadius,
+  }) {
+    final config = _normalizeImageDisplay(display);
+    return ClipRRect(
+      borderRadius: borderRadius ?? BorderRadius.circular(8),
+      child: Container(
+        height: height,
+        width: double.infinity,
+        color: Colors.grey.shade100,
+        child: Transform.scale(
+          scale: config['zoom'] as double,
+          child: Image.network(
+            url,
+            fit: _boxFitFromDisplay(config['fit'] as String),
+            alignment: Alignment(
+              config['offsetX'] as double,
+              config['offsetY'] as double,
+            ),
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: height,
+                color: Colors.grey.shade200,
+                child: const Center(
+                  child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextCard(Map<String, dynamic> data) {
     final title = data['title']?.toString();
     final text = data['text'] ?? '';
     final imageUrl = data['imageUrl']?.toString();
     final isBold = data['isBold'] ?? false;
     final isItalic = data['isItalic'] ?? false;
+    final normalizedTitle = (title ?? '').trim().toLowerCase();
+    final normalizedText = text.toString().trim().toLowerCase();
+    final showText =
+        normalizedText.isNotEmpty && normalizedText != normalizedTitle;
+    final imageDisplay = _normalizeImageDisplay(data['imageDisplay']);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -473,69 +564,48 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          // Imagen si existe
-          if (imageUrl != null && imageUrl.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                height: 200,
-                width: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  );
-                },
+          // Texto con formato
+          if (showText)
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+                height: 1.6,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
-          ],
-          // Texto con formato
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
-              height: 1.6,
-              color: Colors.black87,
+          // Imagen si existe
+          if (imageUrl != null && imageUrl.isNotEmpty) ...[
+            if (showText || (title != null && title.isNotEmpty))
+              const SizedBox(height: 16),
+            _buildDisplayImage(
+              url: imageUrl,
+              height: 200,
+              display: imageDisplay,
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildImageCard(Map<String, dynamic> data) {
-    final imageUrl = data['imageUrl'] ?? '';
+    final imageUrl = (data['url'] ?? data['imageUrl'] ?? '').toString();
     final caption = data['caption'] ?? '';
+    final imageDisplay = _normalizeImageDisplay(
+      data['display'] ?? data['imageDisplay'],
+    );
 
     return Column(
       children: [
-        ClipRRect(
+        _buildDisplayImage(
+          url: imageUrl,
+          height: 220,
+          display: imageDisplay,
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 200,
-                color: Colors.grey.shade200,
-                child: const Center(
-                  child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
-                ),
-              );
-            },
-          ),
         ),
         if (caption.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -571,33 +641,18 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
     final correctIndex = data['correctIndex'] ?? 0;
     final explanation = data['explanation']?.toString();
     final quizImageUrl = data['quizImageUrl']?.toString();
+    final quizImageDisplay = _normalizeImageDisplay(data['quizImageDisplay']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Imagen si existe
         if (quizImageUrl != null && quizImageUrl.isNotEmpty) ...[
-          ClipRRect(
+          _buildDisplayImage(
+            url: quizImageUrl,
+            height: 180,
+            display: quizImageDisplay,
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              quizImageUrl,
-              fit: BoxFit.cover,
-              height: 180,
-              width: double.infinity,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 180,
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: Icon(
-                      Icons.broken_image,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -631,6 +686,9 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
           final optionText = (optionData['text'] ?? '').toString();
           final optionImageUrl =
               (optionData['imageUrl'] ?? optionData['image'] ?? '').toString();
+          final optionImageDisplay = _normalizeImageDisplay(
+            optionData['imageDisplay'],
+          );
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: InkWell(
@@ -730,27 +788,11 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                     ),
                     if (optionImageUrl.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      ClipRRect(
+                      _buildDisplayImage(
+                        url: optionImageUrl,
+                        height: 140,
+                        display: optionImageDisplay,
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          optionImageUrl,
-                          fit: BoxFit.cover,
-                          height: 140,
-                          width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 140,
-                              color: Colors.grey.shade200,
-                              child: const Center(
-                                child: Icon(
-                                  Icons.broken_image,
-                                  size: 36,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
                       ),
                     ],
                   ],

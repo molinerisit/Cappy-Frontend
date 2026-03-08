@@ -4,7 +4,8 @@ import '../models/path.dart';
 import '../models/lesson.dart';
 
 class ApiService {
-  static const String baseUrl = "http://localhost:3000/api";
+  // For physical device: use your local IP. For emulator: use localhost
+  static const String baseUrl = "http://192.168.100.4:3000/api";
   static String? _token;
   static final http.Client _httpClient = http.Client();
   static const Duration _timeout = Duration(seconds: 15);

@@ -520,27 +520,170 @@ class _CardStepState extends State<_CardStep> {
     );
   }
 
+  String _firstNonEmptyText(List<dynamic> values, {String fallback = ''}) {
+    for (final value in values) {
+      if (value == null) {
+        continue;
+      }
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return fallback;
+  }
+
+  String _normalizeText(String? value) {
+    if (value == null) {
+      return '';
+    }
+    return value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  }
+
+  Map<String, dynamic> _normalizeImageDisplay(dynamic raw) {
+    if (raw is! Map) {
+      return {'fit': 'cover', 'zoom': 1.0, 'offsetX': 0.0, 'offsetY': 0.0};
+    }
+
+    final fit = raw['fit']?.toString() ?? 'cover';
+    final zoom = raw['zoom'] is num
+        ? (raw['zoom'] as num).toDouble().clamp(1.0, 2.5)
+        : double.tryParse('${raw['zoom']}')?.clamp(1.0, 2.5) ?? 1.0;
+    final offsetX = raw['offsetX'] is num
+        ? (raw['offsetX'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetX']}')?.clamp(-1.0, 1.0) ?? 0.0;
+    final offsetY = raw['offsetY'] is num
+        ? (raw['offsetY'] as num).toDouble().clamp(-1.0, 1.0)
+        : double.tryParse('${raw['offsetY']}')?.clamp(-1.0, 1.0) ?? 0.0;
+
+    return {
+      'fit':
+          const [
+            'cover',
+            'contain',
+            'fill',
+            'fitWidth',
+            'fitHeight',
+          ].contains(fit)
+          ? fit
+          : 'cover',
+      'zoom': zoom,
+      'offsetX': offsetX,
+      'offsetY': offsetY,
+    };
+  }
+
+  BoxFit _boxFitFromDisplay(String fit) {
+    switch (fit) {
+      case 'contain':
+        return BoxFit.contain;
+      case 'fill':
+        return BoxFit.fill;
+      case 'fitWidth':
+        return BoxFit.fitWidth;
+      case 'fitHeight':
+        return BoxFit.fitHeight;
+      case 'cover':
+      default:
+        return BoxFit.cover;
+    }
+  }
+
+  Widget _buildDisplayImage({
+    required String imageUrl,
+    required Map<String, dynamic> display,
+    double height = 150,
+    BorderRadius borderRadius = const BorderRadius.all(Radius.circular(8)),
+  }) {
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Container(
+        height: height,
+        width: double.infinity,
+        color: Colors.grey.shade100,
+        child: Transform.scale(
+          scale: display['zoom'] as double,
+          child: Image.network(
+            imageUrl,
+            fit: _boxFitFromDisplay(display['fit'] as String),
+            alignment: Alignment(
+              display['offsetX'] as double,
+              display['offsetY'] as double,
+            ),
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: height,
+                color: Colors.grey.shade300,
+                child: const Center(child: Icon(Icons.broken_image)),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _extractCardContent(Map<dynamic, dynamic> card) {
+    final rawContent =
+        (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+    return Map<String, dynamic>.from(rawContent);
+  }
+
   Widget _buildCardWidget(
     Map<dynamic, dynamic> card,
     int index,
     VoidCallback onCompleted,
   ) {
-    final cardType = card['type'] ?? 'text';
-    final content = card['content'] as Map? ?? {};
+    final cardType = (card['type'] ?? 'text').toString();
+    final content = _extractCardContent(card);
     final isCompleted = _completedCards[index];
+
+    final title = _firstNonEmptyText([
+      content['title'],
+      card['title'],
+      card['name'],
+    ]);
+
+    final description = _firstNonEmptyText([
+      content['text'],
+      content['description'],
+      content['instruction'],
+      content['content'],
+      card['text'],
+      card['description'],
+      card['instruction'],
+      card['content'],
+    ]);
+
+    final imageUrl = _firstNonEmptyText([
+      content['url'],
+      content['imageUrl'],
+      content['image'],
+      content['media'],
+      card['imageUrl'],
+      card['image'],
+      card['media'],
+    ]);
+    final imageDisplay = _normalizeImageDisplay(
+      content['display'] ?? content['imageDisplay'],
+    );
 
     switch (cardType) {
       case 'text':
         return _buildTextCard(
-          content['title'] ?? 'Tarjeta de texto',
-          content['text'] ?? '',
+          title.isEmpty ? 'Tarjeta de texto' : title,
+          description,
+          imageUrl,
+          imageDisplay,
           isCompleted,
           onCompleted,
         );
       case 'image':
         return _buildImageCard(
-          content['title'] ?? 'Tarjeta de imagen',
-          content['imageUrl'] ?? '',
+          title.isEmpty ? 'Tarjeta de imagen' : title,
+          description,
+          imageUrl,
+          imageDisplay,
           isCompleted,
           onCompleted,
         );
@@ -580,9 +723,14 @@ class _CardStepState extends State<_CardStep> {
   Widget _buildTextCard(
     String title,
     String text,
+    String imageUrl,
+    Map<String, dynamic> imageDisplay,
     bool isCompleted,
     VoidCallback onCompleted,
   ) {
+    final showText =
+        text.trim().isNotEmpty && _normalizeText(text) != _normalizeText(title);
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -609,8 +757,18 @@ class _CardStepState extends State<_CardStep> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(text, style: const TextStyle(fontSize: 14, height: 1.6)),
+                if (showText) ...[
+                  const SizedBox(height: 16),
+                  Text(text, style: const TextStyle(fontSize: 14, height: 1.6)),
+                ],
+                if (imageUrl.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildDisplayImage(
+                    imageUrl: imageUrl,
+                    display: imageDisplay,
+                    height: 150,
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -633,10 +791,15 @@ class _CardStepState extends State<_CardStep> {
 
   Widget _buildImageCard(
     String title,
+    String text,
     String imageUrl,
+    Map<String, dynamic> imageDisplay,
     bool isCompleted,
     VoidCallback onCompleted,
   ) {
+    final showText =
+        text.trim().isNotEmpty && _normalizeText(text) != _normalizeText(title);
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -654,6 +817,7 @@ class _CardStepState extends State<_CardStep> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '🖼️ $title',
@@ -662,24 +826,18 @@ class _CardStepState extends State<_CardStep> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                if (imageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrl,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 150,
-                          color: Colors.grey.shade300,
-                          child: const Center(child: Icon(Icons.broken_image)),
-                        );
-                      },
-                    ),
+                if (showText) ...[
+                  const SizedBox(height: 16),
+                  Text(text, style: const TextStyle(fontSize: 14, height: 1.6)),
+                ],
+                if (imageUrl.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildDisplayImage(
+                    imageUrl: imageUrl,
+                    display: imageDisplay,
+                    height: 150,
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -1565,18 +1723,6 @@ class _TextStep extends StatelessWidget {
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          if (imageUrl != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl!,
-                width: double.infinity,
-                height: 250,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1592,6 +1738,18 @@ class _TextStep extends StatelessWidget {
               ),
             ),
           ),
+          if (imageUrl != null && imageUrl!.trim().isNotEmpty) ...[
+            const SizedBox(height: 24),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl!,
+                width: double.infinity,
+                height: 250,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: onCompleted,

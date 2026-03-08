@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../../../theme/colors.dart';
 import '../../../theme/typography.dart';
 
@@ -176,7 +177,6 @@ class _LessonNodeState extends State<LessonNode>
   @override
   Widget build(BuildContext context) {
     final enabled = widget.status != NodeStatus.locked && widget.onTap != null;
-    final nodeSize = _getNodeSize();
     final subtitle = widget.status == NodeStatus.locked
         ? 'Próximamente'
         : _getNodeSubtitle();
@@ -189,82 +189,100 @@ class _LessonNodeState extends State<LessonNode>
         scale: _scaleAnimation,
         child: SizedBox(
           width: widget.nodeWidth,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: nodeSize,
-                height: nodeSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _getBackgroundColor(),
-                  border: Border.all(color: _getBorderColor(), width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.status == NodeStatus.active
-                          ? AppColors.primaryGlow.withValues(alpha: 0.55)
-                          : AppColors.shadow,
-                      blurRadius: widget.status == NodeStatus.active ? 16 : 8,
-                      offset: const Offset(0, 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final defaultNodeSize = _getNodeSize();
+              final compactMode =
+                  constraints.maxHeight.isFinite &&
+                  constraints.maxHeight <= 168;
+              final nodeSize = compactMode
+                  ? math.min(defaultNodeSize, 76.0)
+                  : defaultNodeSize;
+
+              return Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Container(
+                    width: nodeSize,
+                    height: nodeSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _getBackgroundColor(),
+                      border: Border.all(color: _getBorderColor(), width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.status == NodeStatus.active
+                              ? AppColors.primaryGlow.withValues(alpha: 0.55)
+                              : AppColors.shadow,
+                          blurRadius: widget.status == NodeStatus.active
+                              ? 16
+                              : 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: enabled ? widget.onTap : null,
-                    borderRadius: BorderRadius.circular(nodeSize),
-                    child: Center(
-                      child: widget.status == NodeStatus.completed
-                          ? const Icon(
-                              Icons.star_rounded,
-                              size: 36,
-                              color: Color(0xFFF59E0B),
-                            )
-                          : widget.status == NodeStatus.locked
-                          ? Icon(
-                              Icons.lock_rounded,
-                              size: 30,
-                              color: AppColors.textSecondary.withValues(
-                                alpha: 0.85,
-                              ),
-                            )
-                          : Icon(
-                              _getCulinaryIcon(),
-                              size: 34,
-                              color: _getNodeColor(),
-                            ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: enabled ? widget.onTap : null,
+                        borderRadius: BorderRadius.circular(nodeSize),
+                        child: Center(
+                          child: widget.status == NodeStatus.completed
+                              ? const Icon(
+                                  Icons.star_rounded,
+                                  size: 36,
+                                  color: Color(0xFFF59E0B),
+                                )
+                              : widget.status == NodeStatus.locked
+                              ? Icon(
+                                  Icons.lock_rounded,
+                                  size: 30,
+                                  color: AppColors.textSecondary.withValues(
+                                    alpha: 0.85,
+                                  ),
+                                )
+                              : Icon(
+                                  _getCulinaryIcon(),
+                                  size: 34,
+                                  color: _getNodeColor(),
+                                ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                widget.title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.cardTitle.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: widget.status == NodeStatus.locked
-                      ? AppColors.textSecondary
-                      : AppColors.textStrong,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.badge.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+                  SizedBox(height: compactMode ? 6 : 10),
+                  Flexible(
+                    child: Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      maxLines: compactMode ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.cardTitle.copyWith(
+                        fontSize: compactMode ? 13 : 14,
+                        fontWeight: FontWeight.w700,
+                        color: widget.status == NodeStatus.locked
+                            ? AppColors.textSecondary
+                            : AppColors.textStrong,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: compactMode ? 2 : 4),
+                  Flexible(
+                    child: Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      maxLines: compactMode ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.badge.copyWith(
+                        fontSize: compactMode ? 10 : 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -53,6 +53,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
   }
 
   Future<void> _loadInitialGoals() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -64,7 +65,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
   }
 
   Future<void> _loadMoreGoals() async {
-    if (_isLoadingMoreNotifier.value || !_hasMore) return;
+    if (!mounted || _isLoadingMoreNotifier.value || !_hasMore) return;
     final now = DateTime.now();
     if (_lastLoadMoreAt != null &&
         now.difference(_lastLoadMoreAt!) < _loadMoreCooldown) {
@@ -74,7 +75,9 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
 
     _isLoadingMoreNotifier.value = true;
     await _fetchGoalsPage(page: _currentPage + 1, append: true);
-    _isLoadingMoreNotifier.value = false;
+    if (mounted) {
+      _isLoadingMoreNotifier.value = false;
+    }
   }
 
   void _onScroll() {
@@ -137,19 +140,21 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen>
       hasMore = pagination?['hasMore'] == true;
       fetchedCount = items.length;
 
-      setState(() {
-        _currentPage = page;
-        _hasMore = hasMore;
-        final merged = append
-            ? <dynamic>[..._goalPaths, ...items]
-            : <dynamic>[...items];
-        _goalPaths
-          ..clear()
-          ..addAll(_dedupeByEntityId(merged));
-      });
+      if (mounted) {
+        setState(() {
+          _currentPage = page;
+          _hasMore = hasMore;
+          final merged = append
+              ? <dynamic>[..._goalPaths, ...items]
+              : <dynamic>[...items];
+          _goalPaths
+            ..clear()
+            ..addAll(_dedupeByEntityId(merged));
+        });
+      }
     } catch (e) {
       status = 'error';
-      if (!append) {
+      if (!append && mounted) {
         setState(() => _errorMessage = e.toString());
       }
     } finally {

@@ -16,6 +16,7 @@ class InteractiveAnimationCard extends StatefulWidget {
 class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     with SingleTickerProviderStateMixin {
   bool _showingInteraction = false;
+  int _interactionSequenceIndex = -1;
   double _dragPosition = 0.0;
   Timer? _holdTimer;
   late AnimationController _pulseController;
@@ -39,38 +40,292 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     super.dispose();
   }
 
+  Map<String, dynamic> get _animationPayload {
+    final payload = Map<String, dynamic>.from(widget.data);
+    final nested =
+        payload['data'] ?? payload['content'] ?? payload['animation'];
+    if (nested is Map) {
+      payload.addAll(Map<String, dynamic>.from(nested));
+    }
+    return payload;
+  }
+
   String get _animationType =>
-      widget.data['animationType']?.toString() ?? 'click';
-  String get _instruction => widget.data['instruction']?.toString() ?? '';
-  Map<String, dynamic> get _initialAsset =>
-      _normalizeAsset(widget.data['initialAsset']);
-  Map<String, dynamic> get _objectAsset =>
-      _normalizeAsset(widget.data['objectAsset']);
-  List<dynamic> get _interactionAssets =>
-      widget.data['interactionAssets'] is List
-      ? List<dynamic>.from(widget.data['interactionAssets'])
-      : const [];
+      _animationPayload['animationType']?.toString() ?? 'click';
+  String get _instruction => _animationPayload['instruction']?.toString() ?? '';
+
+  Map<String, dynamic> get _initialAsset {
+    final payload = _animationPayload;
+    final fallback = {
+      'type': payload['initialAssetType'],
+      'url': payload['initialUrl'],
+      'text': payload['initialText'],
+    };
+    final raw =
+        payload['initialAsset'] ??
+        payload['initialContent'] ??
+        payload['initial'] ??
+        payload['asset'] ??
+        fallback;
+    return _normalizeAsset(raw);
+  }
+
+  Map<String, dynamic> get _objectAsset {
+    final payload = _animationPayload;
+    final raw =
+        payload['objectAsset'] ?? payload['objectContent'] ?? payload['object'];
+    return _normalizeAsset(raw);
+  }
+
+  List<dynamic> get _interactionAssets {
+    final payload = _animationPayload;
+    final raw =
+        payload['interactionAssets'] ??
+        payload['assets'] ??
+        payload['interactions'];
+    if (raw is List) {
+      return List<dynamic>.from(raw);
+    }
+    return const [];
+  }
+
+  bool get _interactionLoop {
+    final config = _animationPayload['config'] as Map?;
+    final loop = config?['loop'];
+    return loop is bool ? loop : true;
+  }
 
   Map<String, dynamic>? get _currentInteractionAsset {
     if (_interactionAssets.isEmpty) return null;
-    final first = _interactionAssets[0];
-    if (first is Map && first['asset'] != null) {
-      return _normalizeAsset(first['asset']);
+    final safeIndex = _interactionSequenceIndex < 0
+        ? 0
+        : _interactionSequenceIndex % _interactionAssets.length;
+    final current = _interactionAssets[safeIndex];
+    if (current is Map) {
+      final nested = current['asset'] ?? current['content'] ?? current['data'];
+      if (nested != null) {
+        return _normalizeAsset(nested);
+      }
     }
-    return _normalizeAsset(first);
+    return _normalizeAsset(current);
+  }
+
+  bool _isAssetEmpty(Map<String, dynamic>? asset) {
+    if (asset == null) return true;
+    final type = (asset['type']?.toString().toLowerCase() ?? 'image').trim();
+    final url = (asset['url']?.toString() ?? '').trim();
+    final text = (asset['text']?.toString() ?? '').trim();
+
+    if (type == 'text') {
+      return text.isEmpty;
+    }
+
+    return url.isEmpty;
+  }
+
+  String _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return '';
+  }
+
+  bool _looksLikeUrl(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized.startsWith('http://') ||
+        normalized.startsWith('https://') ||
+        normalized.startsWith('/uploads/') ||
+        normalized.startsWith('data:image/') ||
+        normalized.startsWith('file://');
+  }
+
+  String _normalizeAssetType(String rawType) {
+    final normalized = rawType.trim().toLowerCase();
+    if (normalized.isEmpty) return '';
+    if (normalized == 'texto' || normalized.contains('text')) {
+      return 'text';
+    }
+    if (normalized.contains('video')) {
+      return 'video';
+    }
+    if (normalized.contains('image') || normalized.contains('img')) {
+      return 'image';
+    }
+    return normalized;
   }
 
   Map<String, dynamic> _normalizeAsset(dynamic raw) {
     if (raw is Map) {
-      return {
-        'type': raw['type']?.toString() ?? 'image',
-        'url': raw['url']?.toString() ?? '',
-      };
+      final nestedAsset = raw['asset'] ?? raw['content'] ?? raw['data'];
+      if (nestedAsset is Map) {
+        final hasDirectFields =
+            raw['type'] != null ||
+            raw['url'] != null ||
+            raw['text'] != null ||
+            raw['imageUrl'] != null ||
+            raw['videoUrl'] != null;
+        if (!hasDirectFields) {
+          return _normalizeAsset(nestedAsset);
+        }
+      }
+
+      var normalizedType = _normalizeAssetType(
+        _firstNonEmpty([raw['type'], raw['assetType'], raw['kind']]),
+      );
+
+      var rawUrl = _firstNonEmpty([
+        raw['url'],
+        raw['imageUrl'],
+        raw['videoUrl'],
+        raw['src'],
+        raw['assetUrl'],
+        raw['animationUrl'],
+        raw['media'],
+        raw['image'],
+        raw['image_url'],
+      ]);
+      final rawText = _firstNonEmpty([
+        raw['text'],
+        raw['content'],
+        raw['value'],
+        raw['label'],
+        raw['title'],
+        raw['description'],
+        raw['instruction'],
+        raw['prompt'],
+        raw['message'],
+        raw['body'],
+      ]);
+
+      if (normalizedType.isEmpty) {
+        normalizedType = rawText.isNotEmpty && rawUrl.isEmpty
+            ? 'text'
+            : 'image';
+      }
+
+      if (normalizedType != 'text' &&
+          rawUrl.isEmpty &&
+          _looksLikeUrl(rawText)) {
+        rawUrl = rawText;
+      }
+
+      var normalizedText = rawText;
+      if (normalizedType == 'text' && normalizedText.isEmpty) {
+        normalizedText = rawUrl;
+      }
+
+      if (normalizedType != 'text' &&
+          rawUrl.isEmpty &&
+          normalizedText.isNotEmpty) {
+        normalizedType = 'text';
+      }
+
+      return {'type': normalizedType, 'url': rawUrl, 'text': normalizedText};
     }
+
     if (raw is String) {
-      return {'type': 'image', 'url': raw};
+      final value = raw.trim();
+      if (value.isEmpty) {
+        return {'type': 'image', 'url': '', 'text': ''};
+      }
+      if (_looksLikeUrl(value)) {
+        return {'type': 'image', 'url': value, 'text': ''};
+      }
+      return {'type': 'text', 'url': '', 'text': value};
     }
-    return {'type': 'image', 'url': ''};
+
+    return {'type': 'image', 'url': '', 'text': ''};
+  }
+
+  String _extractPayloadText(dynamic raw, {int depth = 0}) {
+    if (raw == null || depth > 5) return '';
+
+    if (raw is String) {
+      final value = raw.trim();
+      if (value.isEmpty || _looksLikeUrl(value)) return '';
+      return value;
+    }
+
+    if (raw is List) {
+      for (final item in raw) {
+        final text = _extractPayloadText(item, depth: depth + 1);
+        if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    if (raw is Map) {
+      const preferredKeys = [
+        'text',
+        'content',
+        'value',
+        'label',
+        'title',
+        'description',
+        'instruction',
+        'prompt',
+        'message',
+        'body',
+      ];
+      for (final key in preferredKeys) {
+        if (raw.containsKey(key)) {
+          final text = _extractPayloadText(raw[key], depth: depth + 1);
+          if (text.isNotEmpty) return text;
+        }
+      }
+
+      const ignoreKeys = {
+        'url',
+        'imageUrl',
+        'videoUrl',
+        'src',
+        'assetUrl',
+        'animationUrl',
+        'media',
+        'type',
+        'animationType',
+        'config',
+        'loop',
+        'trigger',
+        'allowRemove',
+        'maxObjects',
+        'objectSize',
+      };
+      for (final entry in raw.entries) {
+        if (ignoreKeys.contains(entry.key.toString())) continue;
+        final text = _extractPayloadText(entry.value, depth: depth + 1);
+        if (text.isNotEmpty) return text;
+      }
+    }
+
+    return '';
+  }
+
+  Map<String, dynamic> _fallbackTextAssetFromPayload() {
+    final text = _extractPayloadText(_animationPayload);
+    if (text.isEmpty) {
+      return {'type': 'image', 'url': '', 'text': ''};
+    }
+    return {'type': 'text', 'url': '', 'text': text};
+  }
+
+  Map<String, dynamic> _resolveDisplayAsset({
+    required Map<String, dynamic> initial,
+    Map<String, dynamic>? interaction,
+    required Map<String, dynamic> fallbackText,
+    required bool showingInteraction,
+  }) {
+    final safeInitial = _isAssetEmpty(initial) ? null : initial;
+    final safeInteraction = _isAssetEmpty(interaction) ? null : interaction;
+    final safeFallback = _isAssetEmpty(fallbackText) ? null : fallbackText;
+
+    if (showingInteraction) {
+      return safeInteraction ?? safeInitial ?? safeFallback ?? initial;
+    }
+
+    return safeInitial ?? safeInteraction ?? safeFallback ?? initial;
   }
 
   int _toInt(dynamic value, {int fallback = 0}) {
@@ -98,9 +353,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
   void _handleClick() {
     if (_animationType == 'click' || _animationType == 'double_tap') {
-      setState(() {
-        _showingInteraction = !_showingInteraction;
-      });
+      _showInteraction(autoHide: false, advanceSequence: true);
     }
   }
 
@@ -108,13 +361,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     final velocity = details.velocity.pixelsPerSecond;
 
     if (_animationType == 'swipe_left' && velocity.dx < -500) {
-      _showInteraction();
+      _showInteraction(advanceSequence: true);
     } else if (_animationType == 'swipe_right' && velocity.dx > 500) {
-      _showInteraction();
+      _showInteraction(advanceSequence: true);
     } else if (_animationType == 'swipe_up' && velocity.dy < -500) {
-      _showInteraction();
+      _showInteraction(advanceSequence: true);
     } else if (_animationType == 'swipe_down' && velocity.dy > 500) {
-      _showInteraction();
+      _showInteraction(advanceSequence: true);
     }
   }
 
@@ -135,9 +388,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   void _handleLongPressStart() {
     if (_animationType == 'hold') {
       _holdTimer = Timer(const Duration(milliseconds: 500), () {
-        setState(() {
-          _showingInteraction = true;
-        });
+        _showInteraction(autoHide: false, advanceSequence: true);
       });
     }
   }
@@ -151,10 +402,25 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     }
   }
 
-  void _showInteraction() {
+  void _showInteraction({bool autoHide = true, bool advanceSequence = false}) {
     setState(() {
+      if (advanceSequence && _interactionAssets.isNotEmpty) {
+        if (_interactionLoop) {
+          _interactionSequenceIndex =
+              (_interactionSequenceIndex + 1) % _interactionAssets.length;
+        } else {
+          final next = _interactionSequenceIndex + 1;
+          _interactionSequenceIndex = next >= _interactionAssets.length
+              ? _interactionAssets.length - 1
+              : next;
+        }
+      }
       _showingInteraction = true;
     });
+
+    if (!autoHide) {
+      return;
+    }
 
     // Auto-return después de 2 segundos
     Future.delayed(const Duration(seconds: 2), () {
@@ -167,9 +433,10 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   }
 
   void _handleAddRemoveObjectTap(TapDownDetails details) {
-    final allowRemove = _toBool(widget.data['allowRemove']);
+    final payload = _animationPayload;
+    final allowRemove = _toBool(payload['allowRemove']);
     final maxObjects = _toInt(
-      (widget.data['config'] as Map?)?['maxObjects'],
+      (payload['config'] as Map?)?['maxObjects'],
       fallback: 50,
     );
     final position = details.localPosition;
@@ -179,7 +446,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
       for (int i = _addedObjects.length - 1; i >= 0; i--) {
         final objPos = _addedObjects[i];
         final distance = (objPos - position).distance;
-        final objectSize = _toDouble(widget.data['objectSize'], fallback: 40);
+        final objectSize = _toDouble(payload['objectSize'], fallback: 40);
 
         if (distance < objectSize / 2) {
           // Remover objeto si está cerca
@@ -200,8 +467,45 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   }
 
   Widget _buildAsset(Map<String, dynamic> asset) {
-    final type = asset['type']?.toString() ?? 'image';
+    final type = asset['type']?.toString().toLowerCase() ?? 'image';
     final url = asset['url']?.toString() ?? '';
+    final text = asset['text']?.toString() ?? '';
+
+    if (type == 'text') {
+      if (text.trim().isEmpty) {
+        return Container(
+          height: 300,
+          color: Colors.grey.shade200,
+          alignment: Alignment.center,
+          child: const Text('Sin texto'),
+        );
+      }
+
+      return Container(
+        height: 300,
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.indigo.shade50, Colors.white],
+          ),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: Colors.indigo.shade900,
+              height: 1.25,
+            ),
+          ),
+        ),
+      );
+    }
 
     if (url.isEmpty) {
       return Container(
@@ -380,18 +684,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     }
 
     // Modo estándar para otros tipos de animación
+    final fallbackInteractionAsset = _currentInteractionAsset;
     final currentAsset = _showingInteraction
-        ? _currentInteractionAsset
-        : _initialAsset;
-
-    if (currentAsset == null) {
-      return Container(
-        height: 300,
-        color: Colors.grey.shade200,
-        alignment: Alignment.center,
-        child: const Text('Configuración incompleta'),
-      );
-    }
+        ? (_currentInteractionAsset ?? _initialAsset)
+        : (_isAssetEmpty(_initialAsset) &&
+                  !_isAssetEmpty(fallbackInteractionAsset)
+              ? fallbackInteractionAsset!
+              : _initialAsset);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -452,8 +751,9 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   Widget _buildAddRemoveMode() {
     final backgroundAsset = _initialAsset;
     final objectAsset = _objectAsset;
-    final objectSize = _toDouble(widget.data['objectSize'], fallback: 40);
-    final allowRemove = _toBool(widget.data['allowRemove']);
+    final payload = _animationPayload;
+    final objectSize = _toDouble(payload['objectSize'], fallback: 40);
+    final allowRemove = _toBool(payload['allowRemove']);
     final objectType = objectAsset['type']?.toString() ?? 'image';
     final objectUrl = objectAsset['url']?.toString() ?? '';
 
