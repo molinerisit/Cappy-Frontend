@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Desktop build artifacts and ephemeral files
+/linux/flutter/ephemeral/
+/linux/x64/
+/macos/Flutter/ephemeral/
+/macos/Pods/
+/macos/build/
+/windows/flutter/ephemeral/
+/windows/x64/
