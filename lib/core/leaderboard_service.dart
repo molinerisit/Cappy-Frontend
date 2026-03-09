@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class LeaderboardService {
   final String baseUrl;
@@ -26,7 +27,7 @@ class LeaderboardService {
         throw Exception('Failed to load leaderboard');
       }
     } catch (e) {
-      print('Error fetching leaderboard: $e');
+      debugPrint('Error fetching leaderboard: $e');
       rethrow;
     }
   }
@@ -49,7 +50,7 @@ class LeaderboardService {
         throw Exception('Failed to get user rank');
       }
     } catch (e) {
-      print('Error fetching user rank: $e');
+      debugPrint('Error fetching user rank: $e');
       rethrow;
     }
   }
@@ -74,7 +75,7 @@ class LeaderboardService {
         throw Exception('Failed to load leaderboard around user');
       }
     } catch (e) {
-      print('Error fetching leaderboard around user: $e');
+      debugPrint('Error fetching leaderboard around user: $e');
       rethrow;
     }
   }

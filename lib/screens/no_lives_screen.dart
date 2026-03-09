@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cooklevel_app/core/lives_service.dart';
-import 'package:cooklevel_app/widgets/lives_widget.dart';
 
 class NoLivesScreen extends StatefulWidget {
   final String token;
@@ -37,13 +36,20 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
   Future<void> _loadInitialData() async {
     try {
       final status = await _livesService.getLivesStatus(widget.token);
+      final parsedNextRefillAt = status['nextRefillAt'] != null
+          ? DateTime.parse(status['nextRefillAt'])
+          : null;
+      Duration? initialRemaining;
+      if (parsedNextRefillAt != null) {
+        final difference = parsedNextRefillAt.difference(DateTime.now());
+        initialRemaining = difference.isNegative ? Duration.zero : difference;
+      }
+
       if (mounted) {
         setState(() {
-          _nextRefillAt = status['nextRefillAt'] != null
-              ? DateTime.parse(status['nextRefillAt'])
-              : null;
+          _nextRefillAt = parsedNextRefillAt;
+          _timeRemaining = initialRemaining;
           _isLoading = false;
-          _updateTimeRemaining();
         });
       }
     } catch (e) {
@@ -55,10 +61,12 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
 
   void _startCheckTimer() {
     _checkTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (!mounted) return;
+
       _updateTimeRemaining();
 
       // Check if vidas were refilled
-      if (_timeRemaining != null && _timeRemaining!.isNegative) {
+      if (_timeRemaining != null && _timeRemaining! <= Duration.zero) {
         final canStart = await _livesService.canStartLesson(widget.token);
         if (canStart && mounted) {
           widget.onLivesRestored?.call();
@@ -69,6 +77,8 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
   }
 
   void _updateTimeRemaining() {
+    if (!mounted) return;
+
     if (_nextRefillAt != null) {
       final now = DateTime.now();
       final difference = _nextRefillAt!.difference(now);

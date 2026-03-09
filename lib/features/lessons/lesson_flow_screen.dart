@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/cached_image.dart';
+
 class LessonFlowScreen extends StatefulWidget {
   final String lessonId;
   final String lessonTitle;
@@ -89,28 +91,35 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        return await showDialog<bool>(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit =
+            await showDialog<bool>(
               context: context,
-              builder: (context) => AlertDialog(
+              builder: (dialogContext) => AlertDialog(
                 title: const Text('¿Dejar esta lección?'),
                 content: const Text(
                   'Tu progreso será guardado automáticamente.',
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context, false),
+                    onPressed: () => Navigator.pop(dialogContext, false),
                     child: const Text('Continuar'),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pop(context, true),
+                    onPressed: () => Navigator.pop(dialogContext, true),
                     child: const Text('Salir'),
                   ),
                 ],
               ),
             ) ??
             false;
+
+        if (shouldExit && context.mounted) {
+          Navigator.pop(context);
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -603,20 +612,18 @@ class _CardStepState extends State<_CardStep> {
         color: Colors.grey.shade100,
         child: Transform.scale(
           scale: display['zoom'] as double,
-          child: Image.network(
-            imageUrl,
+          child: CachedImage(
+            imageUrl: imageUrl,
             fit: _boxFitFromDisplay(display['fit'] as String),
             alignment: Alignment(
               display['offsetX'] as double,
               display['offsetY'] as double,
             ),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: height,
-                color: Colors.grey.shade300,
-                child: const Center(child: Icon(Icons.broken_image)),
-              );
-            },
+            errorFallback: Container(
+              height: height,
+              color: Colors.grey.shade300,
+              child: const Center(child: Icon(Icons.broken_image)),
+            ),
           ),
         ),
       ),
@@ -1387,10 +1394,12 @@ class _MultipleChoiceStepState extends State<_MultipleChoiceStep> {
                         width: 60,
                         height: 60,
                         margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
+                        child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          image: DecorationImage(
-                            image: NetworkImage(option['imageUrl']),
+                          child: CachedImage(
+                            imageUrl: option['imageUrl'].toString(),
+                            width: 60,
+                            height: 60,
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -1655,19 +1664,17 @@ class _ImageStep extends StatelessWidget {
           const SizedBox(height: 24),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              imageUrl,
+            child: CachedImage(
+              imageUrl: imageUrl,
               width: double.infinity,
               height: 300,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: double.infinity,
-                  height: 300,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.image_not_supported),
-                );
-              },
+              errorFallback: Container(
+                width: double.infinity,
+                height: 300,
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.image_not_supported),
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -1742,8 +1749,8 @@ class _TextStep extends StatelessWidget {
             const SizedBox(height: 24),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl!,
+              child: CachedImage(
+                imageUrl: imageUrl!,
                 width: double.infinity,
                 height: 250,
                 fit: BoxFit.cover,

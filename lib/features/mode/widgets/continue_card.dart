@@ -69,9 +69,9 @@ class _ContinueCardState extends State<ContinueCard>
 
   @override
   Widget build(BuildContext context) {
-    final selectionProvider = context.watch<OnboardingSelectionProvider>();
-    final hasSelection = selectionProvider.hasSelection();
-    final mode = selectionProvider.mode;
+    final selection = context.watch<OnboardingSelectionProvider>();
+    final mode = selection.mode;
+    final hasSelection = mode != null && selection.selectionId != null;
 
     // Determinar título y emoji según el modo
     String emoji = '🌟';
@@ -128,7 +128,7 @@ class _ContinueCardState extends State<ContinueCard>
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -146,7 +146,7 @@ class _ContinueCardState extends State<ContinueCard>
                             vertical: AppColors.spacing8,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(
                               AppColors.radiusPill,
                             ),
@@ -198,7 +198,7 @@ class _ContinueCardState extends State<ContinueCard>
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       height: 1.5,
                     ),
                   ),
@@ -216,7 +216,7 @@ class _ContinueCardState extends State<ContinueCard>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),

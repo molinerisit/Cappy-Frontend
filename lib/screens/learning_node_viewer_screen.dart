@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api_service.dart';
+import '../core/audio_feedback_service.dart';
 import '../core/lives_service.dart';
 import '../widgets/lives_widget.dart';
 import 'no_lives_screen.dart';
@@ -29,8 +30,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
   int _currentLives = 3;
   int _maxLives = 3;
   DateTime? _nextRefillAt;
-  bool _livesLoaded = false;
-  bool _showingWrongAnswerAnimation = false;
+  bool _isNoLivesScreenOpen = false;
 
   @override
   void initState() {
@@ -49,22 +49,21 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
     try {
       final token = ApiService.getToken();
       if (token == null) {
-        print('DEBUG: No token available');
+        debugPrint('DEBUG: No token available');
         // Set default values and mark as loaded
         if (mounted) {
           setState(() {
             _currentLives = 3;
             _maxLives = 3;
             _nextRefillAt = null;
-            _livesLoaded = true;
           });
         }
         return;
       }
 
-      print('DEBUG: Token available, fetching lives status');
+      debugPrint('DEBUG: Token available, fetching lives status');
       final status = await _livesService.getLivesStatus(token);
-      print('DEBUG: Lives status response: $status');
+      debugPrint('DEBUG: Lives status response: $status');
 
       if (mounted) {
         setState(() {
@@ -73,23 +72,21 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
           _nextRefillAt = status['nextRefillAt'] != null
               ? DateTime.parse(status['nextRefillAt'].toString())
               : null;
-          _livesLoaded = true;
         });
 
         // Check if user has no lives
         if (_currentLives == 0) {
-          _showNoLivesScreen();
+          _openNoLivesScreenSafely();
         }
       }
     } catch (e) {
-      print('Error loading lives: $e');
+      debugPrint('Error loading lives: $e');
       // Set default values even on error
       if (mounted) {
         setState(() {
           _currentLives = 3;
           _maxLives = 3;
           _nextRefillAt = null;
-          _livesLoaded = true;
         });
       }
     }
@@ -97,14 +94,14 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
 
   Future<void> _loseLive() async {
     try {
-      print('DEBUG: Perdiendo vida... Vidas antes: $_currentLives');
+      debugPrint('DEBUG: Perdiendo vida... Vidas antes: $_currentLives');
       final token = ApiService.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
       }
 
       final result = await _livesService.loseLive(token);
-      print('DEBUG: Respuesta del servidor: $result');
+      debugPrint('DEBUG: Respuesta del servidor: $result');
 
       if (mounted) {
         setState(() {
@@ -114,23 +111,34 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
               : null;
         });
 
-        print('DEBUG: Vidas después de actualizar: $_currentLives');
+        debugPrint('DEBUG: Vidas después de actualizar: $_currentLives');
 
         // If no more lives, show no lives screen
         if (_currentLives == 0) {
           Future.delayed(const Duration(milliseconds: 800), () {
             if (mounted) {
-              _showNoLivesScreen();
+              _openNoLivesScreenSafely();
             }
           });
         }
       }
     } catch (e) {
-      print('Error losing life: $e');
+      debugPrint('Error losing life: $e');
     }
   }
 
+  void _openNoLivesScreenSafely() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showNoLivesScreen();
+    });
+  }
+
   void _showNoLivesScreen() {
+    if (!mounted || _isNoLivesScreenOpen) {
+      return;
+    }
+
     final token = ApiService.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,6 +146,8 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
       );
       return;
     }
+
+    _isNoLivesScreenOpen = true;
 
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -149,7 +159,9 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
           },
         ),
       ),
-    );
+    ).whenComplete(() {
+      _isNoLivesScreenOpen = false;
+    });
   }
 
   Future<Map<String, dynamic>> _loadNode() async {
@@ -208,7 +220,6 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
     } else if (_currentStepIndex > 0) {
       setState(() {
         _currentStepIndex--;
-        final prevStep = _currentStepIndex;
         // Go to last card of previous step
         _currentCardIndex = 0; // Will be updated in build
       });
@@ -221,6 +232,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.orange.shade700,
+        toolbarHeight: 64,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -235,13 +247,11 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: LivesWidget(
-                lives: _currentLives,
-                maxLives: _maxLives,
-                nextRefillAt: _nextRefillAt,
-              ),
+            padding: const EdgeInsets.only(top: 6, right: 16, bottom: 6),
+            child: LivesWidget(
+              lives: _currentLives,
+              maxLives: _maxLives,
+              nextRefillAt: _nextRefillAt,
             ),
           ),
         ],
@@ -359,7 +369,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -5),
                     ),
@@ -543,7 +553,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -707,11 +717,11 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                   );
                 } else {
                   // Wrong answer - lose a life
+                  // Reproducir sonido de error al instante
+                  AudioFeedbackService().playFail();
+                  
                   await _loseLive();
-
-                  setState(() {
-                    _showingWrongAnswerAnimation = true;
-                  });
+                  if (!mounted) return;
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -731,14 +741,6 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                       duration: const Duration(milliseconds: 1500),
                     ),
                   );
-
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (mounted) {
-                      setState(() {
-                        _showingWrongAnswerAnimation = false;
-                      });
-                    }
-                  });
                 }
               },
               child: Container(
@@ -749,7 +751,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                   border: Border.all(color: Colors.grey.shade300),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 5,
                       offset: const Offset(0, 2),
                     ),
@@ -800,7 +802,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

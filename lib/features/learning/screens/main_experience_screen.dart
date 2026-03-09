@@ -18,6 +18,7 @@ import '../../../theme/typography.dart';
 import '../../../widgets/app_header.dart';
 import '../../../widgets/app_scaffold.dart';
 import '../../../widgets/app_bottom_nav.dart';
+import '../../../providers/auth_provider.dart';
 
 class MainExperienceScreen extends StatefulWidget {
   const MainExperienceScreen({super.key});
@@ -248,88 +249,136 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
   }
 
   void _showLivesInfoDialog() {
-    final isAtMaxLives = _currentLives >= _maxLives;
+    final isAdmin = context.read<AuthProvider>().isAdmin;
+    bool showAdminActions = false;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: AppColors.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.border),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Tus Vidas',
-                style: AppTypography.title.copyWith(
-                  color: AppColors.textStrong,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          final isAtMaxLives = _currentLives >= _maxLives;
+
+          Future<void> handleAdminRefill() async {
+            try {
+              await ApiService.refillLives();
+              await _loadLives();
+              if (!mounted) return;
+              setDialogState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Vidas recargadas (admin)'),
+                  backgroundColor: Color(0xFF27AE60),
+                  behavior: SnackBarBehavior.floating,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
+              );
+            } catch (e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('No se pudo recargar vidas: $e'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$_currentLives',
-                          style: AppTypography.title.copyWith(
-                            color: Colors.red,
-                            fontSize: 36,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        const Icon(
-                          Icons.favorite_rounded,
-                          color: Colors.red,
-                          size: 32,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          '/ $_maxLives',
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+              );
+            }
+          }
+
+          return Dialog(
+            backgroundColor: AppColors.background,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Tus Vidas',
+                    style: AppTypography.title.copyWith(
+                      color: AppColors.textStrong,
                     ),
-                    if (!isAtMaxLives && _nextRefillAt != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      _NextLifeRefillCountdown(nextRefillAt: _nextRefillAt!),
-                    ],
-                    if (isAtMaxLives) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Tus vidas están completas',
-                        style: AppTypography.badge.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GestureDetector(
+                    onTap: isAdmin
+                        ? () => setDialogState(() {
+                            showAdminActions = !showAdminActions;
+                          })
+                        : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$_currentLives',
+                                style: AppTypography.title.copyWith(
+                                  color: Colors.red,
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              const Icon(
+                                Icons.favorite_rounded,
+                                color: Colors.red,
+                                size: 32,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '/ $_maxLives',
+                                style: AppTypography.body.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!isAtMaxLives && _nextRefillAt != null) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            _NextLifeRefillCountdown(
+                              nextRefillAt: _nextRefillAt!,
+                            ),
+                          ],
+                          if (isAtMaxLives) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Tus vidas están completas',
+                              style: AppTypography.badge.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          if (isAdmin && showAdminActions) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            AppButton(
+                              label: 'Recargar vidas (Admin)',
+                              onPressed: handleAdminRefill,
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppButton(
+                    label: 'Cerrar',
+                    onPressed: () => Navigator.pop(dialogContext),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: 'Cerrar',
-                onPressed: () => Navigator.pop(dialogContext),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

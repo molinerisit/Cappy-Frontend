@@ -25,16 +25,12 @@ class AdminHeader extends StatefulWidget {
 class _AdminHeaderState extends State<AdminHeader> {
   late TextEditingController _searchController;
   late FocusNode _searchFocusNode;
-  bool _isSearchFocused = false;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
-    _searchFocusNode.addListener(() {
-      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
-    });
   }
 
   @override
@@ -178,14 +174,14 @@ class _AdminHeaderState extends State<AdminHeader> {
                         ),
                         itemBuilder: (context) => <PopupMenuEntry<void>>[
                           PopupMenuItem<void>(
-                            child: const Text('Mi Perfil'),
                             onTap: widget.onAvatarTap,
+                            child: const Text('Mi Perfil'),
                           ),
                           const PopupMenuDivider(),
                           const PopupMenuItem<void>(
-                            child: const Text('Configuración'),
+                            child: Text('Configuración'),
                           ),
-                          const PopupMenuItem<void>(child: const Text('Ayuda')),
+                          const PopupMenuItem<void>(child: Text('Ayuda')),
                           const PopupMenuDivider(),
                           PopupMenuItem<void>(
                             child: Text(

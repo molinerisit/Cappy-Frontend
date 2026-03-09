@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api_service.dart';
-import 'tree_layout.dart';
 import '../../../../widgets/image_upload_field.dart';
 
 class NodeTreeEditorScreen extends StatefulWidget {
@@ -88,11 +87,10 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         await _loadContent(nextPathId);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error cargando caminos: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error cargando caminos: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -104,18 +102,18 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       final groups = await ApiService.adminGetGroupsByPath(pathId);
       final nodes = await ApiService.adminGetContentNodesByPath(pathId);
 
-      print('🔍 [_loadContent] Loaded data:');
-      print('  Groups: ${groups.length} items');
+      debugPrint('🔍 [_loadContent] Loaded data:');
+      debugPrint('  Groups: ${groups.length} items');
       for (var g in groups) {
-        print('    - ${g['title']} (${g['_id']})');
+        debugPrint('    - ${g['title']} (${g['_id']})');
       }
-      print('  Nodes: ${nodes.length} items');
+      debugPrint('  Nodes: ${nodes.length} items');
       for (var n in nodes) {
         final gid = n['groupId'];
         final groupIdDisplay = gid is Map
             ? '${gid['_id']} (${gid['title']})'
             : gid?.toString() ?? 'null';
-        print(
+        debugPrint(
           '    - ${n['title']} (groupId: $groupIdDisplay, level: ${n['level']})',
         );
       }
@@ -130,7 +128,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         _pendingSelectNodeId = null;
       }
     } catch (e) {
-      print('❌ [_loadContent] Error: $e');
+      debugPrint('❌ [_loadContent] Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -146,13 +144,6 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       return [];
     }
     return List<Map<String, dynamic>>.from(_selectedNode['steps']);
-  }
-
-  List<Map<String, dynamic>> _currentCards() {
-    if (_selectedStep == null || _selectedStep!['cards'] is! List) {
-      return [];
-    }
-    return List<Map<String, dynamic>>.from(_selectedStep!['cards']);
   }
 
   List<Map<String, dynamic>> _getStepCards(Map<String, dynamic> step) {
@@ -228,6 +219,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         ),
       );
 
+      if (!mounted) return;
       if (confirmed != true) return;
       setState(() {
         _selectedPathId = pathId;
@@ -275,7 +267,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
 
     await searchNodes();
 
-    // ignore: use_build_context_synchronously
+    if (!mounted) return;
     final selected = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -576,54 +568,6 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     return levels.first;
   }
 
-  List<int> _availableLevels() {
-    final levels =
-        _nodes.map((node) => (node['level'] ?? 1) as int).toSet().toList()
-          ..sort();
-    return levels;
-  }
-
-  Map<String, String> _groupTitleById() {
-    final map = <String, String>{};
-    for (final group in _groups) {
-      final groupMap = group as Map<String, dynamic>;
-      final id = groupMap['_id']?.toString() ?? '';
-      final title = groupMap['title']?.toString().trim() ?? '';
-      if (id.isNotEmpty && title.isNotEmpty) {
-        map[id] = title;
-      }
-    }
-    return map;
-  }
-
-  String _resolveGroupTitleForNode(
-    Map<String, dynamic> node,
-    Map<String, String> groupTitleById,
-  ) {
-    final directTitle = node['groupTitle']?.toString().trim() ?? '';
-    if (directTitle.isNotEmpty) return directTitle;
-    final groupId = node['groupId']?.toString() ?? '';
-    return groupTitleById[groupId]?.trim() ?? '';
-  }
-
-  String _levelLabel(int level) {
-    final nodes = _nodesForLevel(level);
-    if (nodes.isEmpty) return 'Nivel $level';
-
-    final groupTitleById = _groupTitleById();
-    final titles = <String>{};
-    for (final node in nodes) {
-      final title = _resolveGroupTitleForNode(node, groupTitleById);
-      if (title.isNotEmpty) {
-        titles.add(title);
-      }
-    }
-
-    if (titles.isEmpty) return 'Nivel $level';
-    if (titles.length == 1) return titles.first;
-    return titles.join(' / ');
-  }
-
   List<Map<String, dynamic>> _nodesForGroup(dynamic groupId) {
     if (groupId == null) return [];
     final groupIdStr = groupId.toString();
@@ -643,7 +587,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         .map<Map<String, dynamic>>((node) => Map<String, dynamic>.from(node))
         .toList();
 
-    print(
+    debugPrint(
       '🔍 [_nodesForGroup] groupId: $groupIdStr -> found ${result.length} nodes',
     );
     return result;
@@ -863,46 +807,6 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         final posB = (b['positionIndex'] ?? 1) as int;
         return posA.compareTo(posB);
       });
-  }
-
-  List<Map<String, dynamic>> _nodesForLevel(int level) {
-    final levelNodes = _nodes
-        .where((node) => (node['level'] ?? 1) == level)
-        .map<Map<String, dynamic>>((node) => Map<String, dynamic>.from(node))
-        .toList();
-    levelNodes.sort((a, b) {
-      final posA = (a['positionIndex'] ?? 1) as int;
-      final posB = (b['positionIndex'] ?? 1) as int;
-      return posA.compareTo(posB);
-    });
-    return levelNodes;
-  }
-
-  Future<void> _reorderLevelNodes(int level, int oldIndex, int newIndex) async {
-    if (newIndex > oldIndex) newIndex -= 1;
-    final levelNodes = _nodesForLevel(level);
-    final moved = levelNodes.removeAt(oldIndex);
-    levelNodes.insert(newIndex, moved);
-
-    final updates = <Map<String, dynamic>>[];
-    for (var i = 0; i < levelNodes.length; i += 1) {
-      updates.add({
-        'nodeId': levelNodes[i]['_id'] ?? levelNodes[i]['id'],
-        'level': level,
-        'positionIndex': i + 1,
-      });
-    }
-
-    try {
-      await ApiService.adminReorderContentNodes(_selectedPathId!, updates);
-      await _loadContent(_selectedPathId!);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error reordenando: $e')));
-      }
-    }
   }
 
   List<Map<String, dynamic>> _buildReorderUpdates(
@@ -1757,44 +1661,9 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     );
   }
 
-  Future<void> _moveNodeToLevel(
-    Map<String, dynamic> node,
-    int targetLevel,
-  ) async {
-    final currentLevel = (node['level'] ?? 1) as int;
-    if (currentLevel == targetLevel) return;
-    if (_selectedPathId == null) return;
-
-    final nodeId = node['_id'] ?? node['id'];
-    if (nodeId == null) return;
-
-    final targetNodes = _nodesForLevel(targetLevel);
-    final nextPosition = targetNodes.length + 1;
-
-    try {
-      await ApiService.adminUpdateContentNode(nodeId, {
-        'level': targetLevel,
-        'positionIndex': nextPosition,
-      });
-      await _loadContent(_selectedPathId!);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error moviendo nodo: $e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final rows = buildParallelLevelRows(
-      _nodes
-          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
-          .toList(),
-    );
     final steps = _currentSteps();
-    final cards = _currentCards();
     final ungroupedNodes = _nodesWithoutGroup();
 
     return Container(
@@ -2197,15 +2066,14 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                       DragTarget<
                                                         Map<String, dynamic>
                                                       >(
-                                                        onWillAccept: (data) {
-                                                          if (data == null)
-                                                            return false;
+                                                        onWillAcceptWithDetails: (details) {
                                                           final current =
-                                                              (data['level'] ??
+                                                              (details.data['level'] ??
                                                                       1)
                                                                   as int;
                                                           final currentGroupId =
-                                                              (data['groupId']
+                                                              (details
+                                                                  .data['groupId']
                                                                   ?.toString() ??
                                                               '');
                                                           return currentGroupId !=
@@ -2213,19 +2081,21 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                       .toString() ||
                                                               current != level;
                                                         },
-                                                        onAccept: (data) async {
-                                                          await _applyNodeDrop(
-                                                            dragged: data,
-                                                            targetGroupId:
-                                                                groupId
-                                                                    .toString(),
-                                                            targetLevel: level,
-                                                            targetIndex:
-                                                                (levelNodes ??
-                                                                        [])
-                                                                    .length,
-                                                          );
-                                                        },
+                                                        onAcceptWithDetails:
+                                                            (details) async {
+                                                              await _applyNodeDrop(
+                                                                dragged: details
+                                                                    .data,
+                                                                targetGroupId:
+                                                                    groupId
+                                                                        .toString(),
+                                                                targetLevel:
+                                                                    level,
+                                                                targetIndex:
+                                                                    levelNodes
+                                                                        .length,
+                                                              );
+                                                            },
                                                         builder:
                                                             (
                                                               context,
@@ -2290,7 +2160,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                             },
                                                       ),
                                                       const SizedBox(height: 4),
-                                                      ...(levelNodes ?? []).asMap().entries.map((
+                                                      ...levelNodes.asMap().entries.map((
                                                         entry,
                                                       ) {
                                                         final index = entry.key;
@@ -2299,12 +2169,11 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                         return DragTarget<
                                                           Map<String, dynamic>
                                                         >(
-                                                          onWillAccept: (data) {
-                                                            if (data == null)
-                                                              return false;
+                                                          onWillAcceptWithDetails: (details) {
                                                             final draggedId =
-                                                                (data['_id'] ??
-                                                                        data['id'])
+                                                                (details.data['_id'] ??
+                                                                        details
+                                                                            .data['id'])
                                                                     .toString();
                                                             final targetId =
                                                                 (node['_id'] ??
@@ -2313,18 +2182,21 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                             return draggedId !=
                                                                 targetId;
                                                           },
-                                                          onAccept: (data) async {
-                                                            await _applyNodeDrop(
-                                                              dragged: data,
-                                                              targetGroupId:
-                                                                  groupId
-                                                                      .toString(),
-                                                              targetLevel:
-                                                                  level,
-                                                              targetIndex:
-                                                                  index,
-                                                            );
-                                                          },
+                                                          onAcceptWithDetails:
+                                                              (details) async {
+                                                                await _applyNodeDrop(
+                                                                  dragged:
+                                                                      details
+                                                                          .data,
+                                                                  targetGroupId:
+                                                                      groupId
+                                                                          .toString(),
+                                                                  targetLevel:
+                                                                      level,
+                                                                  targetIndex:
+                                                                      index,
+                                                                );
+                                                              },
                                                           builder:
                                                               (
                                                                 context,
@@ -2505,8 +2377,8 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                 ),
                                                                                 boxShadow: [
                                                                                   BoxShadow(
-                                                                                    color: Colors.black.withOpacity(
-                                                                                      0.05,
+                                                                                    color: Colors.black.withValues(
+                                                                                      alpha: 0.05,
                                                                                     ),
                                                                                     blurRadius: 2,
                                                                                     offset: const Offset(
@@ -2863,12 +2735,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                                                       cardEntry,
                                                                                                                     ) {
                                                                                                                       final cardIdx = cardEntry.key;
-                                                                                                                      final card =
-                                                                                                                          cardEntry.value
-                                                                                                                              as Map<
-                                                                                                                                String,
-                                                                                                                                dynamic
-                                                                                                                              >;
+                                                                                                                      final card = cardEntry.value;
                                                                                                                       return Padding(
                                                                                                                         padding: const EdgeInsets.only(
                                                                                                                           bottom: 6,
@@ -2903,26 +2770,29 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                 );
                                                               },
                                                         );
-                                                      }).toList(),
+                                                      }),
                                                       DragTarget<
                                                         Map<String, dynamic>
                                                       >(
-                                                        onWillAccept: (data) {
-                                                          return data != null;
-                                                        },
-                                                        onAccept: (data) async {
-                                                          await _applyNodeDrop(
-                                                            dragged: data,
-                                                            targetGroupId:
-                                                                groupId
-                                                                    .toString(),
-                                                            targetLevel: level,
-                                                            targetIndex:
-                                                                (levelNodes ??
-                                                                        [])
-                                                                    .length,
-                                                          );
-                                                        },
+                                                        onWillAcceptWithDetails:
+                                                            (details) {
+                                                              return true;
+                                                            },
+                                                        onAcceptWithDetails:
+                                                            (details) async {
+                                                              await _applyNodeDrop(
+                                                                dragged: details
+                                                                    .data,
+                                                                targetGroupId:
+                                                                    groupId
+                                                                        .toString(),
+                                                                targetLevel:
+                                                                    level,
+                                                                targetIndex:
+                                                                    levelNodes
+                                                                        .length,
+                                                              );
+                                                            },
                                                         builder:
                                                             (
                                                               context,
@@ -2998,8 +2868,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                   const SizedBox(height: 8),
                                   ...steps.asMap().entries.map((entry) {
                                     final stepIdx = entry.key;
-                                    final step =
-                                        entry.value as Map<String, dynamic>;
+                                    final step = entry.value;
                                     final stepCards = _getStepCards(step);
                                     final isExpandedStep =
                                         _selectedStep == step;
@@ -3144,11 +3013,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                           final cardIdx =
                                                               cardEntry.key;
                                                           final card =
-                                                              cardEntry.value
-                                                                  as Map<
-                                                                    String,
-                                                                    dynamic
-                                                                  >;
+                                                              cardEntry.value;
                                                           final isSelectedCard =
                                                               _selectedCard ==
                                                               card;
@@ -3449,9 +3314,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                       entry,
                                     ) {
                                       final index = entry.key;
-                                      final step =
-                                          entry.value as Map<String, dynamic>;
-                                      final stepId = step['_id'] ?? step['id'];
+                                      final step = entry.value;
                                       final title =
                                           step['title'] ?? 'Paso sin título';
                                       final order =
@@ -3647,7 +3510,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                 height: 70,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? type.$3.withOpacity(0.2)
+                      ? type.$3.withValues(alpha: 0.2)
                       : Colors.grey.shade50,
                   border: Border.all(
                     color: isSelected ? type.$3 : Colors.grey.shade200,
@@ -3657,14 +3520,14 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: type.$3.withOpacity(0.5),
+                            color: type.$3.withValues(alpha: 0.5),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
                         ]
                       : [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             blurRadius: 4,
                             spreadRadius: 0,
                           ),
@@ -4332,7 +4195,7 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       }
     } else if (_cardType == 'timer') {
       data['duration'] = int.tryParse(_getCtrl('duration').text) ?? 0;
-      data['sound'] = _getCtrl('sound').text.trim();
+      data['sound'] = 'alarma.mp3';
     }
 
     Navigator.pop(context, {'type': _cardType, 'data': data});
@@ -4705,19 +4568,6 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
               suffixText: 'seg',
             ),
             validator: (v) => v?.isEmpty ?? true ? 'Requiere duración' : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _getCtrl('sound'),
-            decoration: InputDecoration(
-              labelText: 'Sound (opcional)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              hintText: 'ej. alert_sound.mp3',
-            ),
           ),
         ];
       default:
@@ -5126,7 +4976,7 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
               final index = entry.key;
               final asset = entry.value;
               return _buildInteractionAssetItem(index, asset);
-            }).toList(),
+            }),
             if (_interactionAssets.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),

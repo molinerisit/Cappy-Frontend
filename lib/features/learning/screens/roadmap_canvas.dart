@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'path_layout_engine.dart';
 
 class RoadmapCanvas extends StatelessWidget {
@@ -48,7 +47,7 @@ class _RoadmapPainterPremium extends CustomPainter {
       path.cubicTo(start.dx, midY, end.dx, midY, end.dx, end.dy - 36);
       canvas.drawShadow(
         path,
-        const Color(0xFF3B82F6).withOpacity(0.10),
+        const Color(0xFF3B82F6).withValues(alpha: 0.10),
         6,
         false,
       );

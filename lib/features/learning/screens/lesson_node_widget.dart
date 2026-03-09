@@ -19,7 +19,7 @@ class LessonNodeWidget extends StatelessWidget {
     switch (node.status) {
       case NodeStatus.completed:
         borderColor = Colors.green;
-        fillColor = Colors.green.withOpacity(0.10);
+        fillColor = Colors.green.withValues(alpha: 0.10);
         borderWidth = 3.5;
         iconWidget = const Icon(
           Icons.check_circle,
@@ -35,10 +35,9 @@ class LessonNodeWidget extends StatelessWidget {
         borderWidth = 5;
         iconWidget = _buildTypeIcon(node.type, Colors.blueAccent, size: 36);
         shadowBlur = 24;
-        shadowColor = Colors.blueAccent.withOpacity(0.18);
+        shadowColor = Colors.blueAccent.withValues(alpha: 0.18);
         break;
       case NodeStatus.locked:
-      default:
         borderColor = Colors.grey.shade300;
         fillColor = Colors.grey.shade100;
         borderWidth = 2.5;
@@ -114,8 +113,6 @@ class LessonNodeWidget extends StatelessWidget {
         return Text('🌎', style: TextStyle(fontSize: size));
       case NodeType.challenge:
         return Text('🏆', style: TextStyle(fontSize: size));
-      default:
-        return Icon(Icons.circle, color: color, size: size);
     }
   }
 }

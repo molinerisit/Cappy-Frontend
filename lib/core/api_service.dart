@@ -2,13 +2,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/path.dart';
 import '../models/lesson.dart';
+import '../config/app_config.dart';
 
 class ApiService {
-  // For physical device: use your local IP. For emulator: use localhost
-  static const String baseUrl = "http://192.168.100.4:3000/api";
+  // 🌍 Multi-environment API base URL (from AppConfig)
+  static String get baseUrl => AppConfig.apiBaseUrl;
+
   static String? _token;
   static final http.Client _httpClient = http.Client();
-  static const Duration _timeout = Duration(seconds: 15);
+  static Duration get _timeout => AppConfig.apiTimeout;
   static final Map<String, Future<http.Response>> _inFlightGetRequests = {};
 
   static Map<String, String> _headers({bool json = true}) {
@@ -154,7 +156,11 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/auth/register"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "password": password}),
+      body: jsonEncode({
+        "email": email,
+        "password": password,
+        "confirmPassword": password,
+      }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -2488,5 +2494,20 @@ class ApiService {
     }
 
     throw Exception("Módulo de Cultura deshabilitado");
+  }
+
+  // 🎮 DEV TOOL: Refill lives (testing only)
+  static Future<Map<String, dynamic>> refillLives() async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/lives/refill"),
+      headers: _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return body['data'] as Map<String, dynamic>;
+    }
+
+    throw Exception("Error recargando vidas");
   }
 }

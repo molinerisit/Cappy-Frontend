@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'features/auth/welcome_screen.dart';
@@ -11,17 +13,27 @@ import 'features/learning/screens/main_experience_screen.dart';
 import 'features/learning/screens/country_selection_screen.dart';
 import 'features/learning/screens/country_hub_screen.dart';
 import 'features/learning/screens/follow_goals_screen.dart';
+import 'features/learning/screens/recipe_detail_screen.dart';
+import 'features/learning/screens/recipes_list_screen.dart';
 import 'features/lessons/lesson_detail_screen.dart';
 import 'features/pantry/pantry_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/admin_v2/layout/admin_shell_modern.dart';
+import 'core/image_optimize_service.dart';
+import 'core/audio_feedback_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
 import 'theme/app_theme.dart';
+import 'config/app_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  AppConfig.initializeFromDartDefine();
+
+  // Inicializar servicio de audio con pre-caché
+  await AudioFeedbackService().initialize();
 
   final authProvider = AuthProvider();
 
@@ -30,24 +42,36 @@ Future<void> main() async {
   runApp(CappyApp(authProvider: authProvider));
 }
 
-class CappyApp extends StatelessWidget {
+class CappyApp extends StatefulWidget {
   final AuthProvider authProvider;
 
   const CappyApp({super.key, required this.authProvider});
 
   @override
+  State<CappyApp> createState() => _CappyAppState();
+}
+
+class _CappyAppState extends State<CappyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Doble seguridad: el servicio es idempotente y evita latencia por init tardio.
+    unawaited(AudioFeedbackService().initialize());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+        ChangeNotifierProvider<AuthProvider>.value(value: widget.authProvider),
         ChangeNotifierProvider(create: (_) => ProgressProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingSelectionProvider()),
       ],
       child: MaterialApp(
         title: 'Cappy - Cocina feliz',
-        debugShowCheckedModeBanner: false,
+        debugShowCheckedModeBanner: AppConfig.showDebugBanner,
         theme: AppTheme.lightTheme,
-        home: authProvider.isAuthenticated
+        home: widget.authProvider.isAuthenticated
             ? const MainExperienceScreen()
             : const WelcomeScreen(),
         onGenerateRoute: _onGenerateRoute,
@@ -150,14 +174,21 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
   return MaterialPageRoute(
     settings: settings,
     builder: (context) {
-      final authProvider = context.watch<AuthProvider>();
+      final auth = context.read<AuthProvider>();
+      final authState = (
+        isInitializing: auth.isInitializing,
+        isAuthenticated: auth.isAuthenticated,
+        isAdmin: auth.isAdmin,
+      );
 
       // Si todavía inicializa, mostrar splash
-      if (authProvider.isInitializing) {
+      if (authState.isInitializing) {
         return const SplashScreen();
       }
 
       final name = settings.name ?? "/";
+
+      _scheduleRoutePrewarm(context, name, settings.arguments);
 
       const publicAuthRoutes = {
         '/welcome',
@@ -169,7 +200,7 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
         '/onboarding/countries',
       };
 
-      if (authProvider.isAuthenticated && publicAuthRoutes.contains(name)) {
+      if (authState.isAuthenticated && publicAuthRoutes.contains(name)) {
         return const MainExperienceScreen();
       }
 
@@ -187,7 +218,7 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       }
 
       // Si no está autenticado, redirigir a welcome
-      if (!authProvider.isAuthenticated) return const WelcomeScreen();
+      if (!authState.isAuthenticated) return const WelcomeScreen();
 
       // Main routes (requieren autenticación)
       if (name == "/" || name == "/main" || name == "/experience") {
@@ -198,6 +229,31 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
         return const CountrySelectionScreen();
       }
 
+      if (name == '/experience/recipes') {
+        final args = settings.arguments is Map
+            ? Map<String, dynamic>.from(settings.arguments as Map)
+            : <String, dynamic>{};
+
+        return RecipesListScreen(
+          countryId: args['countryId']?.toString() ?? '',
+          pathId: args['pathId']?.toString() ?? '',
+          pathTitle: args['pathTitle']?.toString() ?? 'Recetas',
+          countryName: args['countryName']?.toString() ?? 'Pais',
+        );
+      }
+
+      if (name.startsWith('/experience/recipe/')) {
+        final recipeId = name.split('/').last;
+        final args = settings.arguments is Map
+            ? Map<String, dynamic>.from(settings.arguments as Map)
+            : <String, dynamic>{};
+
+        return RecipeDetailScreen(
+          recipeId: recipeId,
+          recipeTitle: args['recipeTitle']?.toString() ?? 'Receta',
+        );
+      }
+
       if (name == "/goals") {
         return const FollowGoalsScreen();
       }
@@ -205,7 +261,7 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       if (name == "/pantry") return const PantryScreen();
       if (name == "/profile") return const ProfileScreen();
       if (name == "/admin" || name == "/admin-v2") {
-        if (!authProvider.isAdmin) {
+        if (!authState.isAdmin) {
           return const MainExperienceScreen();
         }
 
@@ -221,7 +277,16 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       // Dynamic routes
       if (name.startsWith("/experience/country/")) {
         final countryId = name.split('/').last;
-        return CountryHubScreen(countryId: countryId);
+        final args = settings.arguments is Map
+            ? Map<String, dynamic>.from(settings.arguments as Map)
+            : <String, dynamic>{};
+
+        return CountryHubScreen(
+          countryId: countryId,
+          countryName: args['countryName']?.toString(),
+          countryIcon: args['countryIcon']?.toString(),
+          heroTag: args['heroTag']?.toString(),
+        );
       }
 
       if (name.startsWith("/lesson/")) return LessonDetailScreen();
@@ -230,4 +295,21 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
       return const MainExperienceScreen();
     },
   );
+}
+
+void _scheduleRoutePrewarm(
+  BuildContext context,
+  String routeName,
+  Object? arguments,
+) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!context.mounted) return;
+    unawaited(
+      ImageOptimizeService.prewarmRouteImages(
+        context: context,
+        routeName: routeName,
+        arguments: arguments,
+      ),
+    );
+  });
 }

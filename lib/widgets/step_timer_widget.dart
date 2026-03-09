@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+
+import '../core/audio_feedback_service.dart';
 
 class StepTimerWidget extends StatefulWidget {
   final int durationSeconds;
@@ -8,8 +9,8 @@ class StepTimerWidget extends StatefulWidget {
   const StepTimerWidget({
     required this.durationSeconds,
     required this.onTimerEnd,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<StepTimerWidget> createState() => _StepTimerWidgetState();
@@ -19,13 +20,6 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
   int secondsLeft = 0;
   bool running = false;
   bool finished = false;
-  AudioPlayer? player;
-
-  @override
-  void dispose() {
-    player?.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -70,12 +64,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
   }
 
   Future<void> playAlarm() async {
-    try {
-      player = AudioPlayer();
-      await player!.play(AssetSource('sounds/alarma.mp3'));
-    } catch (e) {
-      // Manejar error de audio
-    }
+    AudioFeedbackService().playAlarm();
   }
 
   String _formatSeconds(int totalSeconds) {

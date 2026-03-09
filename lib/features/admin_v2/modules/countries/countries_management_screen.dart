@@ -256,7 +256,7 @@ class _CountriesManagementScreenState extends State<CountriesManagementScreen> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        '${_filteredCountries.length} en pagina · ${_totalItems} total',
+                        '${_filteredCountries.length} en pagina · $_totalItems total',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,

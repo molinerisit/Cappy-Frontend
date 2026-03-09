@@ -78,11 +78,20 @@ class _LivesWidgetState extends State<LivesWidget>
     _refillTimer?.cancel();
 
     if (widget.nextRefillAt == null || widget.lives >= widget.maxLives) {
-      setState(() => _timeUntilRefill = null);
+      if (_timeUntilRefill != null && mounted) {
+        setState(() => _timeUntilRefill = null);
+      } else {
+        _timeUntilRefill = null;
+      }
       return;
     }
 
     _refillTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
       final now = DateTime.now();
       final difference = widget.nextRefillAt!.difference(now);
 

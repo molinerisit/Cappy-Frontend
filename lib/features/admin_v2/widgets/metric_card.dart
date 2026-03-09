@@ -70,7 +70,7 @@ class _MetricCardState extends State<MetricCard>
             border: Border.all(color: Colors.grey.shade100, width: 1),
             boxShadow: [
               BoxShadow(
-                color: widget.color.withOpacity(0.08),
+                color: widget.color.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -88,7 +88,7 @@ class _MetricCardState extends State<MetricCard>
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: widget.color.withOpacity(0.1),
+                      color: widget.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(widget.icon, color: widget.color, size: 22),

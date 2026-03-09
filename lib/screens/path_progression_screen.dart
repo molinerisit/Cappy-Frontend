@@ -26,7 +26,6 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
   int _currentLives = 3;
   int _maxLives = 3;
   DateTime? _nextRefillAt;
-  bool _livesLoaded = false;
 
   @override
   void initState() {
@@ -44,21 +43,20 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
     try {
       final token = ApiService.getToken();
       if (token == null) {
-        print('DEBUG: No token available');
+        debugPrint('DEBUG: No token available');
         if (mounted) {
           setState(() {
             _currentLives = 3;
             _maxLives = 3;
             _nextRefillAt = null;
-            _livesLoaded = true;
           });
         }
         return;
       }
 
-      print('DEBUG: Token available, fetching lives status');
+      debugPrint('DEBUG: Token available, fetching lives status');
       final status = await _livesService.getLivesStatus(token);
-      print('DEBUG: Lives status response: $status');
+      debugPrint('DEBUG: Lives status response: $status');
 
       if (mounted) {
         setState(() {
@@ -67,17 +65,15 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
           _nextRefillAt = status['nextRefillAt'] != null
               ? DateTime.parse(status['nextRefillAt'].toString())
               : null;
-          _livesLoaded = true;
         });
       }
     } catch (e) {
-      print('Error loading lives: $e');
+      debugPrint('Error loading lives: $e');
       if (mounted) {
         setState(() {
           _currentLives = 3;
           _maxLives = 3;
           _nextRefillAt = null;
-          _livesLoaded = true;
         });
       }
     }
@@ -374,7 +370,7 @@ class _NodeCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getNodeColor().withOpacity(0.1),
+                  color: _getNodeColor().withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

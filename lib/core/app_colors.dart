@@ -62,19 +62,19 @@ class AppColors {
   static const Color surfaceElevated = Colors.white;
 
   /// Overlay oscuro
-  static Color overlayDark = Colors.black.withOpacity(0.5);
+  static Color overlayDark = Colors.black.withValues(alpha: 0.5);
 
   // ========== Sombras ==========
 
   /// Sombra suave para cards
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.04),
+      color: Colors.black.withValues(alpha: 0.04),
       blurRadius: 10,
       offset: const Offset(0, 4),
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.02),
+      color: Colors.black.withValues(alpha: 0.02),
       blurRadius: 20,
       offset: const Offset(0, 8),
     ),
@@ -83,7 +83,7 @@ class AppColors {
   /// Sombra para elementos destacados
   static List<BoxShadow> get highlightShadow => [
     BoxShadow(
-      color: primary.withOpacity(0.2),
+      color: primary.withValues(alpha: 0.2),
       blurRadius: 16,
       offset: const Offset(0, 6),
     ),

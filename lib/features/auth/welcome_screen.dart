@@ -38,11 +38,11 @@ class WelcomeScreen extends StatelessWidget {
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF6B35).withOpacity(0.3),
+                          color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -67,7 +67,7 @@ class WelcomeScreen extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -92,12 +92,14 @@ class WelcomeScreen extends StatelessWidget {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0xFFFF6B35).withOpacity(0.1),
+                            color: const Color(
+                              0xFFFF6B35,
+                            ).withValues(alpha: 0.1),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -179,7 +181,7 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 4,
-                        shadowColor: const Color(0xFFFF6B35).withOpacity(0.4),
+                        shadowColor: const Color(0xFFFF6B35).withValues(alpha: 0.4),
                       ),
                       child: Text(
                         'EMPIEZA AHORA',

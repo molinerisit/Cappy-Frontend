@@ -137,16 +137,6 @@ class _AdminDashboardScreenModernState
     );
   }
 
-  Future<void> _duplicatePath(dynamic path) async {
-    // TODO: Implementar duplicación
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Duplicar camino - próximamente'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Future<void> _archivePath(dynamic path) async {
     final pathId = path['_id'] ?? path['id'];
     final confirmed = await showDialog<bool>(
@@ -522,7 +512,7 @@ class _AdminDashboardScreenModernState
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+          headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
           dataRowMinHeight: 44,
           dataRowMaxHeight: 44,
           columnSpacing: 24,

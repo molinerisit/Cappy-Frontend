@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/api_service.dart';
 import '../core/leaderboard_service.dart';
-import '../widgets/lives_widget.dart';
-import '../core/lives_service.dart';
 
 class GlobalLeaderboardScreen extends StatefulWidget {
   const GlobalLeaderboardScreen({super.key});
@@ -14,7 +12,6 @@ class GlobalLeaderboardScreen extends StatefulWidget {
 
 class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
   late LeaderboardService _leaderboardService;
-  late LivesService _livesService;
 
   List<Map<String, dynamic>> _globalLeaderboard = [];
   Map<String, dynamic>? _myRank;
@@ -22,40 +19,13 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
   bool _isLoadingGlobal = true;
   String? _errorMessage;
 
-  // Lives system
-  int _currentLives = 3;
-  int _maxLives = 3;
-  DateTime? _nextRefillAt;
-
   @override
   void initState() {
     super.initState();
     _leaderboardService = LeaderboardService(baseUrl: ApiService.baseUrl);
-    _livesService = LivesService(baseUrl: ApiService.baseUrl);
 
     _loadGlobalLeaderboard();
     _loadMyRank();
-    _loadLives();
-  }
-
-  Future<void> _loadLives() async {
-    try {
-      final token = ApiService.getToken();
-      if (token != null) {
-        final status = await _livesService.getLivesStatus(token);
-        if (mounted) {
-          setState(() {
-            _currentLives = status['lives'] ?? 3;
-            _maxLives = 3;
-            _nextRefillAt = status['nextRefillAt'] != null
-                ? DateTime.parse(status['nextRefillAt'].toString())
-                : null;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error loading lives: $e');
-    }
   }
 
   Future<void> _loadGlobalLeaderboard() async {
@@ -94,7 +64,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
         });
       }
     } catch (e) {
-      print('Error loading my rank: $e');
+      debugPrint('Error loading my rank: $e');
     }
   }
 
@@ -118,7 +88,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.yellow.shade700.withOpacity(0.4),
+                color: Colors.yellow.shade700.withValues(alpha: 0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -139,7 +109,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade400.withOpacity(0.4),
+                color: Colors.grey.shade400.withValues(alpha: 0.4),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -160,7 +130,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.shade400.withOpacity(0.4),
+                color: Colors.orange.shade400.withValues(alpha: 0.4),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -209,7 +179,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -319,7 +289,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.shade300.withOpacity(0.5),
+            color: Colors.orange.shade300.withValues(alpha: 0.5),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

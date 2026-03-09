@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/audio_feedback_service.dart';
+
 /// Estados posibles para una opción de respuesta
 enum OptionState { idle, selected, correct, incorrect, disabled }
 
@@ -61,6 +63,7 @@ class _OptionCardState extends State<OptionCard>
   void _handleTapUp() {
     _scaleController.reverse();
     if (widget.isEnabled && widget.onTap != null) {
+      AudioFeedbackService().playAddObject();
       widget.onTap?.call();
     }
   }

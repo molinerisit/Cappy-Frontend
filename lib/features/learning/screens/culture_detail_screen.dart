@@ -90,8 +90,8 @@ class _CultureDetailScreenState extends State<CultureDetailScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFF4CAF50).withOpacity(0.1),
-                        const Color(0xFF45a049).withOpacity(0.1),
+                        const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                        const Color(0xFF45a049).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -116,7 +116,7 @@ class _CultureDetailScreenState extends State<CultureDetailScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF27AE60).withOpacity(0.1),
+                          color: const Color(0xFF27AE60).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(

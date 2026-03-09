@@ -319,12 +319,10 @@ class _LearningPathsTabState extends State<_LearningPathsTab> {
 // ==========================================
 class _NodesManagementView extends StatefulWidget {
   final List<dynamic> paths;
-  final String? selectedPathId;
   final Function(String) onPathSelected;
 
   const _NodesManagementView({
     required this.paths,
-    this.selectedPathId,
     required this.onPathSelected,
   });
 
@@ -340,7 +338,6 @@ class _NodesManagementViewState extends State<_NodesManagementView> {
   @override
   void initState() {
     super.initState();
-    selectedPathId = widget.selectedPathId;
   }
 
   Future<void> _loadNodes(String pathId) async {
@@ -700,6 +697,8 @@ class _LegacyRedirectNotice extends StatelessWidget {
 // ==========================================
 // TAB 2: RECIPES (legacy - untuk backward compat)
 // ==========================================
+// DEPRECATED - keeping for reference
+/*
 class _RecipesTab extends StatelessWidget {
   const _RecipesTab();
 
@@ -708,6 +707,7 @@ class _RecipesTab extends StatelessWidget {
     return const _RecipesContentPage();
   }
 }
+*/
 
 // ==========================================
 // TAB 3: CULTURE (legacy - untuk backward compat)
@@ -992,6 +992,8 @@ class _CultureTabContentState extends State<_CultureTabContent> {
 // ==========================================
 // TAB 4: ANALYTICS
 // ==========================================
+// DEPRECATED - keeping for reference
+/*
 class _AnalyticsTab extends StatelessWidget {
   const _AnalyticsTab();
 
@@ -1027,6 +1029,7 @@ class _AnalyticsTab extends StatelessWidget {
     );
   }
 }
+*/
 
 // ==========================================
 // PATH CARD V2: Grid-based design
@@ -1243,6 +1246,8 @@ class _PathCardV2 extends StatelessWidget {
 
 // ==========================================
 
+// DEPRECATED - keeping for reference
+/*
 class _PathCard extends StatelessWidget {
   final dynamic path;
   final VoidCallback onRefresh;
@@ -1280,8 +1285,8 @@ class _PathCard extends StatelessWidget {
               onTap: () => _showEditDialog(context),
             ),
             PopupMenuItem(
-              child: const Text('Abrir contenido'),
               onTap: onOpenPath,
+              child: const Text('Abrir contenido'),
             ),
             PopupMenuItem(
               child: const Text('Eliminar'),
@@ -1339,7 +1344,10 @@ class _PathCard extends StatelessWidget {
     }
   }
 }
+*/
 
+// DEPRECATED - keeping for reference
+/*
 class _CultureCard extends StatelessWidget {
   final dynamic culture;
   final VoidCallback onRefresh;
@@ -1420,7 +1428,10 @@ class _CultureCard extends StatelessWidget {
     }
   }
 }
+*/
 
+// DEPRECATED - keeping for reference
+/*
 class _AnalyticsCard extends StatelessWidget {
   final String title;
   final String value;
@@ -1467,6 +1478,7 @@ class _AnalyticsCard extends StatelessWidget {
     );
   }
 }
+*/
 
 // ==========================================
 // DIALOGS

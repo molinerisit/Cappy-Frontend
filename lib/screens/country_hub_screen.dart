@@ -31,7 +31,6 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
   int _currentLives = 3;
   int _maxLives = 3;
   DateTime? _nextRefillAt;
-  bool _livesLoaded = false;
 
   @override
   void initState() {
@@ -54,7 +53,6 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
             _currentLives = 3;
             _maxLives = 3;
             _nextRefillAt = null;
-            _livesLoaded = true;
           });
         }
         return;
@@ -69,17 +67,15 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
           _nextRefillAt = status['nextRefillAt'] != null
               ? DateTime.parse(status['nextRefillAt'].toString())
               : null;
-          _livesLoaded = true;
         });
       }
     } catch (e) {
-      print('Error loading lives: $e');
+      debugPrint('Error loading lives: $e');
       if (mounted) {
         setState(() {
           _currentLives = 3;
           _maxLives = 3;
           _nextRefillAt = null;
-          _livesLoaded = true;
         });
       }
     }
@@ -151,8 +147,8 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFFF6B35).withOpacity(0.1),
-                        const Color(0xFFFFA500).withOpacity(0.1),
+                        const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                        const Color(0xFFFFA500).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -237,12 +233,12 @@ class _PathCard extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: path.isCountryRecipe
                   ? [
-                      const Color(0xFFFF6B35).withOpacity(0.9),
-                      const Color(0xFFFFA500).withOpacity(0.9),
+                      const Color(0xFFFF6B35).withValues(alpha: 0.9),
+                      const Color(0xFFFFA500).withValues(alpha: 0.9),
                     ]
                   : [
-                      const Color(0xFF4CAF50).withOpacity(0.9),
-                      const Color(0xFF45a049).withOpacity(0.9),
+                      const Color(0xFF4CAF50).withValues(alpha: 0.9),
+                      const Color(0xFF45a049).withValues(alpha: 0.9),
                     ],
             ),
           ),
@@ -263,7 +259,7 @@ class _PathCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -335,7 +331,7 @@ class _DifficultyBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(12),
       ),

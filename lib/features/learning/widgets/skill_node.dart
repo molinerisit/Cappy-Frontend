@@ -193,14 +193,13 @@ class _LessonNodeState extends State<LessonNode>
             builder: (context, constraints) {
               final defaultNodeSize = _getNodeSize();
               final compactMode =
-                  constraints.maxHeight.isFinite &&
-                  constraints.maxHeight <= 168;
+                  constraints.hasBoundedHeight && constraints.maxHeight <= 168;
               final nodeSize = compactMode
                   ? math.min(defaultNodeSize, 76.0)
                   : defaultNodeSize;
 
               return Column(
-                mainAxisSize: MainAxisSize.max,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: nodeSize,
@@ -251,33 +250,29 @@ class _LessonNodeState extends State<LessonNode>
                     ),
                   ),
                   SizedBox(height: compactMode ? 6 : 10),
-                  Flexible(
-                    child: Text(
-                      widget.title,
-                      textAlign: TextAlign.center,
-                      maxLines: compactMode ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.cardTitle.copyWith(
-                        fontSize: compactMode ? 13 : 14,
-                        fontWeight: FontWeight.w700,
-                        color: widget.status == NodeStatus.locked
-                            ? AppColors.textSecondary
-                            : AppColors.textStrong,
-                      ),
+                  Text(
+                    widget.title,
+                    textAlign: TextAlign.center,
+                    maxLines: compactMode ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.cardTitle.copyWith(
+                      fontSize: compactMode ? 13 : 14,
+                      fontWeight: FontWeight.w700,
+                      color: widget.status == NodeStatus.locked
+                          ? AppColors.textSecondary
+                          : AppColors.textStrong,
                     ),
                   ),
                   SizedBox(height: compactMode ? 2 : 4),
-                  Flexible(
-                    child: Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      maxLines: compactMode ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.badge.copyWith(
-                        fontSize: compactMode ? 10 : 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    maxLines: compactMode ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.badge.copyWith(
+                      fontSize: compactMode ? 10 : 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],

@@ -191,12 +191,15 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.warning.withOpacity(0.1),
-            AppColors.warningLight.withOpacity(0.05),
+            AppColors.warning.withValues(alpha: 0.1),
+            AppColors.warningLight.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.warning.withOpacity(0.3), width: 1),
+        border: Border.all(
+          color: AppColors.warning.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -204,7 +207,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.warning.withOpacity(0.2),
+              color: AppColors.warning.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(AppColors.radiusMedium),
             ),
             child: const Center(

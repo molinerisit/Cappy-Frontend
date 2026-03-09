@@ -80,7 +80,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                 ? []
                 : [
                     BoxShadow(
-                      color: const Color(0xFF6FCF97).withOpacity(0.3),
+                      color: const Color(0xFF6FCF97).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

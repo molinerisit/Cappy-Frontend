@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/earth_planet_widget.dart';
+import '../core/audio_feedback_service.dart';
 import '../core/api_service.dart';
 import '../core/countries_service.dart';
 
@@ -25,8 +25,8 @@ class CookingModeScreen extends StatefulWidget {
     this.countryFlag,
     this.countryId,
     this.xpReward = 50,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<CookingModeScreen> createState() => _CookingModeScreenState();
@@ -35,7 +35,6 @@ class CookingModeScreen extends StatefulWidget {
 class _CookingModeScreenState extends State<CookingModeScreen>
     with TickerProviderStateMixin {
   late int _currentStepIndex;
-  late AudioPlayer _audioPlayer;
   late CountriesService _countriesService;
 
   // Timer state
@@ -48,18 +47,13 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   void initState() {
     super.initState();
     _currentStepIndex = 0;
-    _audioPlayer = AudioPlayer();
     _countriesService = CountriesService(baseUrl: ApiService.baseUrl);
-    print("USANDO COOKING MODE NUEVO");
+    // Cooking mode initialized
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    // Delay disposal para que terminen sonidos
-    Future.delayed(const Duration(milliseconds: 4000), () {
-      _audioPlayer.dispose();
-    });
     super.dispose();
   }
 
@@ -106,11 +100,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
   }
 
   Future<void> _onTimerFinished() async {
-    try {
-      await _audioPlayer.play(AssetSource('sounds/alarma.mp3'));
-    } catch (e) {
-      debugPrint('Error playing alarm: $e');
-    }
+    AudioFeedbackService().playAlarm();
 
     if (!mounted) return;
 
@@ -127,7 +117,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 40,
                 offset: const Offset(0, 20),
               ),
@@ -213,7 +203,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 40,
                 offset: const Offset(0, 20),
               ),
@@ -263,9 +253,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
       if (token == null) return;
 
       await _countriesService.markCountryVisited(token, widget.countryId!);
-      print('Country ${widget.countryName} marked as visited');
+      debugPrint('Country ${widget.countryName} marked as visited');
     } catch (e) {
-      print('Error marking country visited: $e');
+      debugPrint('Error marking country visited: $e');
     }
   }
 
@@ -286,7 +276,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 40,
                 offset: const Offset(0, 20),
               ),
@@ -492,7 +482,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                   child: LinearProgressIndicator(
                     value: (_currentStepIndex + 1) / widget.steps.length,
                     minHeight: 6,
-                    backgroundColor: Colors.white.withOpacity(0.1),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       Color(0xFF27AE60),
                     ),
@@ -570,7 +560,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               height: 1.6,
                             ),
                             textAlign: TextAlign.center,
@@ -582,10 +572,10 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                             Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.08),
+                                color: Colors.orange.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: Colors.orange.withOpacity(0.25),
+                                  color: Colors.orange.withValues(alpha: 0.25),
                                   width: 2,
                                 ),
                               ),
@@ -621,8 +611,8 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       style: GoogleFonts.poppins(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.deepOrange.withOpacity(
-                                          0.7,
+                                        color: Colors.deepOrange.withValues(
+                                          alpha: 0.7,
                                         ),
                                       ),
                                     ),
@@ -706,10 +696,10 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                             Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                 ),
                               ),
                               child: Column(
@@ -729,7 +719,9 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       style: GoogleFonts.poppins(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.6),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.6,
+                                        ),
                                       ),
                                     ),
                                   const SizedBox(height: 16),

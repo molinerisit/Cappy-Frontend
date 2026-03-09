@@ -309,7 +309,13 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
               lives: _currentLives,
               maxLives: _maxLives,
               nextRefillAt: _nextRefillAt,
-              onLiveAnimationComplete: () => _loadLivesStatus(),
+              onLiveAnimationComplete: () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _loadLivesStatus();
+                  }
+                });
+              },
             ),
           ),
         ),
@@ -322,7 +328,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
   }
 
   Widget _buildContent() {
-    final auth = context.watch<AuthProvider>();
+    final auth = context.read<AuthProvider>();
     final profileLevel = auth.level < 1 ? 1 : auth.level;
     final xpForCurrentLevel = (profileLevel - 1) * 100;
     final xpForNextLevel = profileLevel * 100;
@@ -386,6 +392,13 @@ class _PathProgressionScreenState extends State<PathProgressionScreen>
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _scrollToCurrentLevel();
                   });
+                }
+
+                if (_cachedLayout == null ||
+                    _cachedLayout!.levelGroups.isEmpty) {
+                  return const Center(
+                    child: Text('No pudimos dibujar el camino todavía.'),
+                  );
                 }
 
                 return OptimizedPathCanvas(

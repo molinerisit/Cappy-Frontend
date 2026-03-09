@@ -21,11 +21,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
     try {
       final response = await ApiService.completePathLesson(lessonId);
-      if (mounted) {
-        context.read<ProgressProvider>().updateFromResponse(response);
-        await _showXpAnimation(xpReward);
-        Navigator.pop(context, true);
-      }
+      if (!mounted) return;
+      context.read<ProgressProvider>().updateFromResponse(response);
+      await _showXpAnimation(xpReward);
+      if (!mounted) return;
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

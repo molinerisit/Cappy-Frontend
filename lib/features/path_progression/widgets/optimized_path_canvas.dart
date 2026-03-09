@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../domain/optimized_layout_engine.dart';
 import '../domain/models/path_node.dart';
-import '../../learning/widgets/skill_node.dart';
-import 'roadmap_painter.dart';
 import 'level_section.dart';
 import 'path_group_header.dart';
 import '../../../theme/colors.dart';

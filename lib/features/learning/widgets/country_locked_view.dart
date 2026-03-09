@@ -17,7 +17,7 @@ class CountryLockedView extends StatelessWidget {
     required this.onRetry,
   });
 
-  static _CountryLockedViewModel parseError(Object error) {
+  static _CountryLockedViewModel _parseError(Object error) {
     final raw = error.toString();
     final normalized = raw.startsWith('Exception: ')
         ? raw.substring('Exception: '.length)
@@ -84,7 +84,7 @@ class CountryLockedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const primaryBlue = Color(0xFF2563EB);
-    final vm = parseError(error);
+    final vm = _parseError(error);
 
     return LearningStateCard(
       child: Column(

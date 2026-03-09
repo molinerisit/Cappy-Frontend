@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/api_service.dart';
-import 'country_hub_screen.dart';
 import '../widgets/country_selection_card.dart';
 
 class CountrySelectionScreen extends StatefulWidget {
@@ -408,37 +407,21 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
       return;
     }
 
-    await Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 320),
-        reverseTransitionDuration: const Duration(milliseconds: 240),
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return CountryHubScreen(
-            countryId: country.id,
-            countryName: country.name,
-            countryIcon: country.icon,
-            heroTag: country.heroTag,
-          );
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
+    final prewarmUrls = <String>[];
+    if (country.heroImageUrl != null &&
+        country.heroImageUrl!.trim().isNotEmpty) {
+      prewarmUrls.add(country.heroImageUrl!.trim());
+    }
 
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.02),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
-            ),
-          );
-        },
-      ),
+    await Navigator.of(context).pushNamed(
+      '/experience/country/${country.id}',
+      arguments: {
+        'countryName': country.name,
+        'countryIcon': country.icon,
+        'heroTag': country.heroTag,
+        'heroImageUrl': country.heroImageUrl,
+        'prewarmUrls': prewarmUrls,
+      },
     );
   }
 
@@ -559,6 +542,7 @@ class _CountryListItem {
   final bool isLocked;
   final String lockLabel;
   final String lockReason;
+  final String? heroImageUrl;
 
   const _CountryListItem({
     required this.id,
@@ -568,6 +552,7 @@ class _CountryListItem {
     required this.isLocked,
     required this.lockLabel,
     required this.lockReason,
+    required this.heroImageUrl,
   });
 
   String get heroTag => 'country-flag-$id';
@@ -636,6 +621,7 @@ class _CountryListItem {
       isLocked: isLocked,
       lockLabel: lockLabel,
       lockReason: lockReason,
+      heroImageUrl: json['heroImageUrl']?.toString(),
     );
   }
 }

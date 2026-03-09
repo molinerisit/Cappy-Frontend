@@ -114,7 +114,7 @@ class _NodeLibraryScreenState extends State<NodeLibraryScreen> {
         node['_id'] ?? node['id'],
       );
 
-      // ignore: use_build_context_synchronously
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
@@ -207,6 +207,7 @@ class _NodeLibraryScreenState extends State<NodeLibraryScreen> {
     if (_paths.isEmpty) {
       await _loadPaths();
     }
+    if (!mounted) return;
     String? selectedPathId = _paths.isNotEmpty
         ? _paths.first['_id']?.toString() ?? _paths.first['id']?.toString()
         : null;

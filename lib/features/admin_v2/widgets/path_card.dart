@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/cached_image.dart';
+
 class PathCard extends StatefulWidget {
   final String id;
   final String title;
@@ -51,15 +53,15 @@ class _PathCardState extends State<PathCard> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _isHovered
-                ? widget.accentColor.withOpacity(0.3)
+                ? widget.accentColor.withValues(alpha: 0.3)
                 : Colors.grey.shade100,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
               color: _isHovered
-                  ? widget.accentColor.withOpacity(0.12)
-                  : Colors.black.withOpacity(0.03),
+                  ? widget.accentColor.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.03),
               blurRadius: _isHovered ? 12 : 6,
               offset: _isHovered ? const Offset(0, 8) : const Offset(0, 4),
             ),
@@ -85,19 +87,19 @@ class _PathCardState extends State<PathCard> {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: widget.accentColor.withOpacity(0.15),
+                          color: widget.accentColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: widget.accentColor.withOpacity(0.3),
+                            color: widget.accentColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: widget.imageUrl != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  widget.imageUrl!,
+                                child: CachedImage(
+                                  imageUrl: widget.imageUrl!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Icon(
+                                  errorFallback: Icon(
                                     Icons.image_not_supported_outlined,
                                     color: widget.accentColor,
                                     size: 28,

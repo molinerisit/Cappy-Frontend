@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../widgets/learning_empty_view.dart';
 import '../widgets/learning_error_view.dart';
-import 'recipe_detail_screen.dart';
 
 class RecipesListScreen extends StatefulWidget {
   final String countryId;
@@ -105,14 +104,21 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
               return _RecipeCard(
                 recipe: recipe,
                 onTap: () {
-                  Navigator.push(
+                  final prewarmUrls = <String>[];
+                  final imageUrl = (recipe['imageUrl'] ?? recipe['image'] ?? '')
+                      .toString()
+                      .trim();
+                  if (imageUrl.isNotEmpty) {
+                    prewarmUrls.add(imageUrl);
+                  }
+
+                  Navigator.pushNamed(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => RecipeDetailScreen(
-                        recipeId: recipeId,
-                        recipeTitle: recipeTitle,
-                      ),
-                    ),
+                    '/experience/recipe/$recipeId',
+                    arguments: {
+                      'recipeTitle': recipeTitle,
+                      'prewarmUrls': prewarmUrls,
+                    },
                   );
                 },
               );
@@ -166,7 +172,6 @@ class _RecipeCardState extends State<_RecipeCard> {
   @override
   Widget build(BuildContext context) {
     final title = widget.recipe['title'] ?? 'Sin título';
-    final description = widget.recipe['description'] ?? '';
     final prepTime = widget.recipe['prepTime'] ?? 0;
     final difficulty = widget.recipe['difficulty'] ?? 2;
     final xpReward = widget.recipe['xpReward'] ?? 50;
@@ -181,11 +186,11 @@ class _RecipeCardState extends State<_RecipeCard> {
           child: Card(
             elevation: _isHovered ? 8 : 2,
             color: Colors.white,
-            shadowColor: _getDifficultyColor(difficulty).withOpacity(0.3),
+            shadowColor: _getDifficultyColor(difficulty).withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
-                color: _getDifficultyColor(difficulty).withOpacity(0.2),
+                color: _getDifficultyColor(difficulty).withValues(alpha: 0.2),
                 width: 1.5,
               ),
             ),
@@ -212,17 +217,17 @@ class _RecipeCardState extends State<_RecipeCard> {
                               colors: [
                                 _getDifficultyColor(
                                   difficulty,
-                                ).withOpacity(0.15),
+                                ).withValues(alpha: 0.15),
                                 _getDifficultyColor(
                                   difficulty,
-                                ).withOpacity(0.05),
+                                ).withValues(alpha: 0.05),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: _getDifficultyColor(
                                 difficulty,
-                              ).withOpacity(0.3),
+                              ).withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
@@ -244,13 +249,15 @@ class _RecipeCardState extends State<_RecipeCard> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                const Color(0xFFFCD34D).withOpacity(0.2),
-                                const Color(0xFFFEF3C7).withOpacity(0.3),
+                                const Color(0xFFFCD34D).withValues(alpha: 0.2),
+                                const Color(0xFFFEF3C7).withValues(alpha: 0.3),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: const Color(0xFFFCD34D).withOpacity(0.4),
+                              color: const Color(
+                                0xFFFCD34D,
+                              ).withValues(alpha: 0.4),
                               width: 1,
                             ),
                           ),
@@ -283,7 +290,7 @@ class _RecipeCardState extends State<_RecipeCard> {
                       decoration: BoxDecoration(
                         color: _getDifficultyColor(
                           difficulty,
-                        ).withOpacity(0.08),
+                        ).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Center(

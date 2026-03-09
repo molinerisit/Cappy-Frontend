@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_path.dart';
+import '../../../widgets/cached_image.dart';
 import '../widgets/country_locked_view.dart';
 import '../widgets/learning_empty_view.dart';
-import 'recipes_list_screen.dart';
 
 class CountryHubScreen extends StatefulWidget {
   final String countryId;
@@ -27,7 +27,6 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
   late Future<CountryHub> futureCountryHub;
 
   static const Color _primaryBlue = Color(0xFF2563EB);
-  static const Color _accentGreen = Color(0xFF10B981);
   static const Color _surface = Color(0xFFF8FAFC);
 
   @override
@@ -46,7 +45,7 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
     return Scaffold(
       backgroundColor: _surface,
       appBar: AppBar(
-        title: Text('${widget.countryName ?? 'País'}'),
+        title: Text(widget.countryName ?? 'País'),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF0F172A),
         elevation: 0,
@@ -103,15 +102,21 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
               _PathCard(
                 path: hub.recipes,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => RecipesListScreen(
-                        countryId: widget.countryId,
-                        pathId: hub.recipes.id,
-                        pathTitle: hub.recipes.title,
-                        countryName: widget.countryName ?? hub.name,
-                      ),
-                    ),
+                  final prewarmUrls = <String>[];
+                  if (hub.heroImageUrl != null &&
+                      hub.heroImageUrl!.trim().isNotEmpty) {
+                    prewarmUrls.add(hub.heroImageUrl!.trim());
+                  }
+
+                  Navigator.of(context).pushNamed(
+                    '/experience/recipes',
+                    arguments: {
+                      'countryId': widget.countryId,
+                      'pathId': hub.recipes.id,
+                      'pathTitle': hub.recipes.title,
+                      'countryName': widget.countryName ?? hub.name,
+                      'prewarmUrls': prewarmUrls,
+                    },
                   );
                 },
               ),
@@ -150,7 +155,7 @@ class _CountryHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -170,10 +175,10 @@ class _CountryHeaderCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   if (heroImageUrl != null && heroImageUrl!.trim().isNotEmpty)
-                    Image.network(
-                      heroImageUrl!,
+                    CachedImage(
+                      imageUrl: heroImageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _gradientFallback(),
+                      errorFallback: _gradientFallback(),
                     )
                   else
                     _gradientFallback(),
@@ -400,7 +405,7 @@ class _DifficultyBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(12),
       ),

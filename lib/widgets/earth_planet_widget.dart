@@ -89,7 +89,7 @@ class _EarthPlanetWidgetState extends State<EarthPlanetWidget>
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.shade400.withOpacity(0.6),
+                        color: Colors.blue.shade400.withValues(alpha: 0.6),
                         blurRadius: 40,
                         spreadRadius: 20,
                       ),
@@ -110,7 +110,7 @@ class _EarthPlanetWidgetState extends State<EarthPlanetWidget>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -166,7 +166,7 @@ class _EarthPlanetWidgetState extends State<EarthPlanetWidget>
                           color: Colors.white,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -301,7 +301,7 @@ class CountryHighlightPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.amber.shade400.withOpacity(0.7)
+      ..color = Colors.amber.shade400.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     final centerX = size.width / 2;

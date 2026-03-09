@@ -90,7 +90,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                       width: 140,
                       height: 140,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B35).withOpacity(0.1),
+                        color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -154,7 +154,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 4,
-                    shadowColor: const Color(0xFFFF6B35).withOpacity(0.4),
+                    shadowColor: const Color(0xFFFF6B35).withValues(alpha: 0.4),
                   ),
                   child: Text(
                     'CONTINUAR',

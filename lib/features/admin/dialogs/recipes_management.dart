@@ -94,6 +94,7 @@ class _RecipesManagementTabState extends State<RecipesManagementTab> {
       try {
         // TODO: Reemplazar con llamada real al API
         // await ApiService.adminDeleteRecipe(recipeId);
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('✅ Receta eliminada')));

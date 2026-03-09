@@ -127,7 +127,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
@@ -184,7 +184,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
               // Loading overlay
               if (_isChangingPath)
                 Container(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
@@ -203,8 +203,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFFF6B35).withOpacity(0.9),
-            const Color(0xFFFFA500).withOpacity(0.9),
+            const Color(0xFFFF6B35).withValues(alpha: 0.9),
+            const Color(0xFFFFA500).withValues(alpha: 0.9),
           ],
         );
       case 'lose_weight':
@@ -212,8 +212,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF2196F3).withOpacity(0.9),
-            const Color(0xFF1976D2).withOpacity(0.9),
+            const Color(0xFF2196F3).withValues(alpha: 0.9),
+            const Color(0xFF1976D2).withValues(alpha: 0.9),
           ],
         );
       case 'become_vegan':
@@ -221,8 +221,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF4CAF50).withOpacity(0.9),
-            const Color(0xFF45a049).withOpacity(0.9),
+            const Color(0xFF4CAF50).withValues(alpha: 0.9),
+            const Color(0xFF45a049).withValues(alpha: 0.9),
           ],
         );
       default:
@@ -230,8 +230,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.purple.withOpacity(0.9),
-            Colors.indigo.withOpacity(0.9),
+            Colors.purple.withValues(alpha: 0.9),
+            Colors.indigo.withValues(alpha: 0.9),
           ],
         );
     }
@@ -261,7 +261,7 @@ class _GoalTypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         border: Border.all(color: Colors.white),
         borderRadius: BorderRadius.circular(12),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/cached_image.dart';
+
 class RecipePreviewScreen extends StatelessWidget {
   final String imageUrl;
   final String title;
@@ -19,8 +21,8 @@ class RecipePreviewScreen extends StatelessWidget {
     required this.level,
     required this.ingredients,
     required this.onStartCooking,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class RecipePreviewScreen extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Image.network(imageUrl, height: 220, fit: BoxFit.cover),
+          CachedImage(imageUrl: imageUrl, height: 220, fit: BoxFit.cover),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -54,10 +56,10 @@ class RecipePreviewScreen extends StatelessWidget {
                 SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: onStartCooking,
-                  child: Text('Comenzar Modo Cocina'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 48),
                   ),
+                  child: Text('Comenzar Modo Cocina'),
                 ),
               ],
             ),

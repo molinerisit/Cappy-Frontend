@@ -138,12 +138,14 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: const Color(0xFFFF6B35).withOpacity(0.2),
+                              color: const Color(
+                                0xFFFF6B35,
+                              ).withValues(alpha: 0.2),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -210,7 +212,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withOpacity(0.1),
+                      color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -250,6 +252,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
       selectionName: countryName,
     );
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡Genial! Elegiste: $countryName'),
@@ -259,11 +262,10 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
     );
 
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
-      }
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
     });
   }
 }

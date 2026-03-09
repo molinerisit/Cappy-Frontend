@@ -21,7 +21,6 @@ class _CreatePathDialogState extends State<CreatePathDialog> {
   final _countryIconicDishesController = TextEditingController();
   String _pathType = 'country_recipe'; // country_recipe, goal
   String? _selectedCountryId;
-  String _goalType = '';
   String _title = '';
   String _description = '';
   bool _isPremium = false;

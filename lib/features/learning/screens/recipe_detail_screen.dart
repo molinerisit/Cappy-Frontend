@@ -163,8 +163,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFFF6B35).withOpacity(0.1),
-                        const Color(0xFFFFA500).withOpacity(0.1),
+                        const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                        const Color(0xFFFFA500).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -256,7 +256,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               ],
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),
@@ -457,13 +457,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                         ],
                                       ),
                                     );
-                                  }).toList(),
+                                  }),
                                 ],
                               ],
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
@@ -543,7 +543,7 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

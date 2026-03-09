@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../widgets/cached_image.dart';
 import '../../../core/api_service.dart';
 import '../../../core/models/learning_node.dart';
 
@@ -17,7 +19,6 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
   bool _showChecklist = true;
   List<bool> _checklistItems = [];
   bool _isCompleting = false;
-  Map<String, dynamic>? _completionResult;
 
   @override
   void initState() {
@@ -40,7 +41,6 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
     try {
       final result = await ApiService.completeNode(widget.node.id);
       setState(() {
-        _completionResult = result;
         _isCompleting = false;
       });
 
@@ -125,13 +125,12 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
     // Don't show loading screen separately - show it in dialog
     final step = widget.node.steps[_currentStepIndex];
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (_currentStepIndex > 0) {
+    return PopScope(
+      canPop: _currentStepIndex == 0,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop && _currentStepIndex > 0) {
           setState(() => _currentStepIndex--);
-          return false;
         }
-        return true;
       },
       child: Scaffold(
         appBar: AppBar(
@@ -282,16 +281,14 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
               color: Colors.grey[200],
               child: Center(
                 child: step.image != null
-                    ? Image.network(
-                        step.image!,
+                    ? CachedImage(
+                        imageUrl: step.image!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.image_not_supported,
-                            size: 64,
-                            color: Colors.grey[400],
-                          );
-                        },
+                        errorFallback: Icon(
+                          Icons.image_not_supported,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
                       )
                     : Icon(
                         Icons.play_circle,

@@ -27,7 +27,6 @@ class _ExploreCardState extends State<ExploreCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
 
   @override
   void initState() {
@@ -49,17 +48,14 @@ class _ExploreCardState extends State<ExploreCard>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    setState(() => _isPressed = true);
     _controller.forward();
   }
 
   void _handleTapUp(TapUpDetails details) {
-    setState(() => _isPressed = false);
     _controller.reverse();
   }
 
   void _handleTapCancel() {
-    setState(() => _isPressed = false);
     _controller.reverse();
   }
 
@@ -77,7 +73,7 @@ class _ExploreCardState extends State<ExploreCard>
             color: AppColors.surfaceElevated,
             borderRadius: BorderRadius.circular(AppColors.radiusXLarge),
             border: Border.all(
-              color: widget.accentColor.withOpacity(0.2),
+              color: widget.accentColor.withValues(alpha: 0.2),
               width: 2,
             ),
             boxShadow: AppColors.cardShadow,
@@ -98,7 +94,7 @@ class _ExploreCardState extends State<ExploreCard>
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: widget.accentColor.withOpacity(0.1),
+                        color: widget.accentColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Center(

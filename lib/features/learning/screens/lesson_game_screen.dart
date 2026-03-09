@@ -10,10 +10,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/api_service.dart';
+import '../../../core/audio_feedback_service.dart';
+import '../../../core/image_optimize_service.dart';
 import '../../../core/lives_service.dart';
 import '../../../core/models/learning_node.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/progress_provider.dart';
+import '../../../widgets/cached_image.dart';
 import '../../../widgets/interactive_animation_card.dart';
 import '../../../widgets/step_timer_widget.dart';
 
@@ -79,37 +82,76 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     _loadLivesStatus();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _precacheCriticalImages();
+      unawaited(_precacheCriticalImages());
     });
   }
 
   Future<void> _precacheCriticalImages() async {
     if (!mounted || widget.node.steps.isEmpty) return;
 
-    final urls = <String>{};
+    final urls = _collectLessonImageUrls();
+    if (urls.isEmpty) return;
 
-    for (final step in widget.node.steps.take(2)) {
-      final stepImage = step.image?.trim();
-      if (stepImage != null && stepImage.isNotEmpty) {
-        urls.add(stepImage);
+    final criticalUrls = urls.take(4).toList(growable: false);
+    final deferredUrls = urls.skip(4).toList(growable: false);
+
+    await Future.wait(criticalUrls.map(_precacheImageSafe));
+
+    if (deferredUrls.isNotEmpty && mounted) {
+      unawaited(_precacheDeferredImages(deferredUrls));
+    }
+  }
+
+  List<String> _collectLessonImageUrls() {
+    final urls = <String>[];
+    final seen = <String>{};
+
+    void addUrl(String? candidate) {
+      final normalized = candidate?.trim();
+      if (normalized == null ||
+          normalized.isEmpty ||
+          seen.contains(normalized)) {
+        return;
       }
+      seen.add(normalized);
+      urls.add(normalized);
+    }
 
-      if (step.cards == null) continue;
-      for (final card in step.cards!.take(3)) {
+    for (final step in widget.node.steps) {
+      addUrl(step.image);
+
+      if (step.cards == null) {
+        continue;
+      }
+      for (final card in step.cards!) {
         final data = card['data'];
-        if (data is! Map) continue;
-        final imageUrl = data['imageUrl']?.toString().trim();
-        if (imageUrl != null && imageUrl.isNotEmpty) {
-          urls.add(imageUrl);
+        if (data is! Map) {
+          continue;
         }
+        addUrl(data['imageUrl']?.toString());
       }
     }
 
-    for (final url in urls) {
-      try {
-        await precacheImage(CachedNetworkImageProvider(url), context);
-      } catch (_) {}
+    return urls;
+  }
+
+  Future<void> _precacheDeferredImages(List<String> deferredUrls) async {
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    for (final url in deferredUrls) {
+      if (!mounted) return;
+      await _precacheImageSafe(url);
+      await Future<void>.delayed(const Duration(milliseconds: 120));
     }
+  }
+
+  Future<void> _precacheImageSafe(String url) async {
+    if (!mounted) return;
+    try {
+      final optimizedUrl = ImageOptimizeService.optimizeUrl(url);
+      await precacheImage(CachedNetworkImageProvider(optimizedUrl), context);
+    } catch (_) {}
   }
 
   @override
@@ -259,6 +301,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     final isCorrect = selectedOption == step.correctAnswer;
 
     if (!isCorrect) {
+      AudioFeedbackService().playFail();
       if (_currentLives > 0) {
         setState(() {
           _currentLives -= 1;
@@ -413,6 +456,72 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         .toList();
   }
 
+  /// Extrae el mensaje de feedback personalizado de las cards de quiz
+  String? _getQuizFeedbackMessage(NodeStep step, {required bool isCorrect}) {
+    if (step.cards == null || step.cards!.isEmpty) {
+      print('DEBUG: No cards found in step');
+      return null;
+    }
+
+    for (final card in step.cards!) {
+      final cardType = card['type']?.toString();
+      print('DEBUG: Card type: $cardType');
+      if (cardType == 'quiz') {
+        final content =
+            (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+        print('DEBUG: Quiz card content keys: ${content.keys}');
+        // El admin guarda el feedback correcto en 'explanation'
+        if (isCorrect) {
+          final explanation = content['explanation']?.toString().trim();
+          print('DEBUG: Explanation found: $explanation');
+          if (explanation != null && explanation.isNotEmpty) {
+            return explanation;
+          }
+        }
+        // Feedback incorrecto (si se implementa en el futuro)
+        else {
+          final incorrectFeedback = content['incorrectFeedback']
+              ?.toString()
+              .trim();
+          if (incorrectFeedback != null && incorrectFeedback.isNotEmpty) {
+            return incorrectFeedback;
+          }
+        }
+      }
+    }
+    print('DEBUG: No feedback message found');
+    return null;
+  }
+
+  /// Extrae optionItems completos (con imágenes) de las cards de quiz
+  List<Map<String, dynamic>>? _getQuizOptionItems(NodeStep step) {
+    if (step.cards == null || step.cards!.isEmpty) return null;
+
+    for (final card in step.cards!) {
+      final cardType = card['type']?.toString();
+      if (cardType == 'quiz') {
+        final content =
+            (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+        final optionItems = content['optionItems'];
+        print('DEBUG: Found quiz card');
+        print('DEBUG: optionItems raw: $optionItems');
+        if (optionItems is List && optionItems.isNotEmpty) {
+          final result = optionItems
+              .map(
+                (item) => item is Map
+                    ? Map<String, dynamic>.from(item)
+                    : {'text': item?.toString() ?? ''},
+              )
+              .toList();
+          print('DEBUG: Processed optionItems: $result');
+          return result;
+        }
+      }
+    }
+    print('DEBUG: No optionItems found');
+    return null;
+  }
+
   String _normalizeContentText(String? value) {
     if (value == null) {
       return '';
@@ -483,20 +592,14 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         color: const Color(0xFFF3F4F6),
         child: Transform.scale(
           scale: display['zoom'] as double,
-          child: CachedNetworkImage(
+          child: CachedImage(
             imageUrl: imageUrl,
             fit: _boxFitFromDisplay(display['fit'] as String),
             alignment: Alignment(
               display['offsetX'] as double,
               display['offsetY'] as double,
             ),
-            placeholder: (context, url) => SizedBox(
-              height: height,
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-            errorWidget: (context, url, error) => SizedBox(
+            errorFallback: SizedBox(
               height: height,
               child: const Center(child: Icon(Icons.broken_image_outlined)),
             ),
@@ -714,8 +817,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                             ],
                           ),
                         ),
-                      )
-                      .toList(),
+                      ),
                 ],
               ),
             ),
@@ -987,6 +1089,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
 
     final step = widget.node.steps[_currentStepIndex];
     final options = _sanitizeOptions(step.options);
+    final optionItems = _getQuizOptionItems(step);
     final isQuizStep = options.length >= 2;
     final contentCards = _buildContentCards(step, excludeQuiz: isQuizStep);
     final showStepInstruction =
@@ -1063,26 +1166,17 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                         margin: const EdgeInsets.only(bottom: 30),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: CachedNetworkImage(
+                          child: CachedImage(
                             imageUrl: step.image!,
                             height: 240,
                             width: double.infinity,
                             fit: BoxFit.cover,
-                            placeholder: (context, url) => const SizedBox(
+                            errorFallback: const SizedBox(
                               height: 240,
                               child: Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: Icon(Icons.broken_image_outlined),
                               ),
                             ),
-                            errorWidget: (context, url, error) =>
-                                const SizedBox(
-                                  height: 240,
-                                  child: Center(
-                                    child: Icon(Icons.broken_image_outlined),
-                                  ),
-                                ),
                           ),
                         ),
                       ),
@@ -1111,147 +1205,181 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     const SizedBox(height: 40),
                     if (contentCards.isNotEmpty) ...contentCards,
                     if (isQuizStep)
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 20,
-                        crossAxisSpacing: 20,
-                        childAspectRatio: 0.9,
-                        children: List.generate(options.length, (index) {
-                          final option = options[index];
-                          final isSelected = _selectedAnswerIndex == index;
-                          final isCorrectAnswer = option == step.correctAnswer;
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 1.0,
+                          children: List.generate(options.length, (index) {
+                            final option = options[index];
+                            final optionItem =
+                                optionItems != null &&
+                                    index < optionItems.length
+                                ? optionItems[index]
+                                : null;
+                            final optionImageUrl = optionItem?['imageUrl']
+                                ?.toString();
+                            print(
+                              'DEBUG: Option $index - text: "$option", imageUrl: "$optionImageUrl", fullItem: $optionItem',
+                            );
+                            final isSelected = _selectedAnswerIndex == index;
+                            final isCorrectAnswer =
+                                option == step.correctAnswer;
 
-                          Color cardColor = const Color(0xFFFFFFFF);
-                          Color borderColor = const Color(0xFFE5E7EB);
-                          double borderWidth = 2;
-                          Color textColor = const Color(0xFF1F2937);
-                          Color iconColor = Colors.transparent;
-                          IconData? iconData;
-                          double scale = 1.0;
+                            Color cardColor = const Color(0xFFFFFFFF);
+                            Color borderColor = const Color(0xFFE5E7EB);
+                            double borderWidth = 2;
+                            Color textColor = const Color(0xFF1F2937);
+                            Color iconColor = Colors.transparent;
+                            IconData? iconData;
+                            double scale = 1.0;
 
-                          if (_currentState == 'answering') {
-                            if (isSelected) {
-                              cardColor = const Color(0xFFD4EDDA);
-                              borderColor = const Color(0xFF27AE60);
-                              borderWidth = 3;
-                              scale = 0.95;
+                            if (_currentState == 'answering') {
+                              if (isSelected) {
+                                cardColor = const Color(0xFFD4EDDA);
+                                borderColor = const Color(0xFF27AE60);
+                                borderWidth = 3;
+                                scale = 0.95;
+                              }
+                            } else if (_currentState == 'feedback') {
+                              if (isCorrectAnswer) {
+                                cardColor = const Color(0xFFD4EDDA);
+                                borderColor = const Color(0xFF27AE60);
+                                borderWidth = 3;
+                                iconData = Icons.check_circle_rounded;
+                                iconColor = const Color(0xFF27AE60);
+                              } else if (isSelected &&
+                                  _isAnswerCorrect == false) {
+                                cardColor = const Color(0xFFF8D7DA);
+                                borderColor = const Color(0xFFDC3545);
+                                borderWidth = 3;
+                                iconData = Icons.cancel_rounded;
+                                iconColor = const Color(0xFFDC3545);
+                              } else {
+                                textColor = const Color(0xFFD1D5DB);
+                                borderColor = const Color(0xFFF3F4F6);
+                                cardColor = const Color(0xFFF9FAFB);
+                              }
                             }
-                          } else if (_currentState == 'feedback') {
-                            if (isCorrectAnswer) {
-                              cardColor = const Color(0xFFD4EDDA);
-                              borderColor = const Color(0xFF27AE60);
-                              borderWidth = 3;
-                              iconData = Icons.check_circle_rounded;
-                              iconColor = const Color(0xFF27AE60);
-                            } else if (isSelected &&
-                                _isAnswerCorrect == false) {
-                              cardColor = const Color(0xFFF8D7DA);
-                              borderColor = const Color(0xFFDC3545);
-                              borderWidth = 3;
-                              iconData = Icons.cancel_rounded;
-                              iconColor = const Color(0xFFDC3545);
-                            } else {
-                              textColor = const Color(0xFFD1D5DB);
-                              borderColor = const Color(0xFFF3F4F6);
-                              cardColor = const Color(0xFFF9FAFB);
-                            }
-                          }
 
-                          Widget card = AnimatedScale(
-                            scale: scale,
-                            duration: const Duration(milliseconds: 150),
-                            child: GestureDetector(
-                              onTap:
-                                  _currentState == 'answering' &&
-                                      _selectedAnswerIndex == null
-                                  ? () => _handleOptionSelected(index)
-                                  : null,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                decoration: BoxDecoration(
-                                  color: cardColor,
-                                  border: Border.all(
-                                    color: borderColor,
-                                    width: borderWidth,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    if (isSelected &&
-                                        _currentState == 'answering')
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF27AE60,
-                                        ).withValues(alpha: 0.3),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (iconData != null)
-                                      Icon(iconData, size: 40, color: iconColor)
-                                    else
-                                      Text(
-                                        [
-                                          '🌮',
-                                          '🍕',
-                                          '🍝',
-                                          '🍜',
-                                          '🥘',
-                                          '🍲',
-                                        ][index % 6],
-                                        style: const TextStyle(fontSize: 40),
-                                      ),
-                                    const SizedBox(height: 12),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      child: Text(
-                                        option,
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: textColor,
-                                          height: 1.2,
-                                        ),
-                                      ),
+                            Widget card = AnimatedScale(
+                              scale: scale,
+                              duration: const Duration(milliseconds: 150),
+                              child: GestureDetector(
+                                onTap:
+                                    _currentState == 'answering' &&
+                                        _selectedAnswerIndex == null
+                                    ? () => _handleOptionSelected(index)
+                                    : null,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: borderWidth,
                                     ),
-                                  ],
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      if (isSelected &&
+                                          _currentState == 'answering')
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF27AE60,
+                                          ).withValues(alpha: 0.3),
+                                          blurRadius: 15,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                    ],
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 8,
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        if (iconData != null)
+                                          Icon(
+                                            iconData,
+                                            size: 40,
+                                            color: iconColor,
+                                          )
+                                        else if (optionImageUrl != null &&
+                                            optionImageUrl.isNotEmpty)
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            child: CachedImage(
+                                              imageUrl: optionImageUrl,
+                                              width: 80,
+                                              height: 80,
+                                              fit: BoxFit.cover,
+                                              errorFallback: const Icon(
+                                                Icons.broken_image_outlined,
+                                                size: 40,
+                                                color: Color(0xFF9CA3AF),
+                                              ),
+                                            ),
+                                          ),
+                                        if (iconData != null ||
+                                            (optionImageUrl != null &&
+                                                optionImageUrl.isNotEmpty))
+                                          const SizedBox(height: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                          child: Text(
+                                            option,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-
-                          if (isSelected &&
-                              _isAnswerCorrect == false &&
-                              _currentState == 'feedback') {
-                            card = AnimatedBuilder(
-                              animation: _shakeController,
-                              builder: (context, child) {
-                                final shake =
-                                    math.sin(
-                                      _shakeController.value * 4 * 3.14159,
-                                    ) *
-                                    12;
-                                return Transform.translate(
-                                  offset: Offset(shake, 0),
-                                  child: child,
-                                );
-                              },
-                              child: card,
                             );
-                          }
 
-                          return card;
-                        }),
+                            if (isSelected &&
+                                _isAnswerCorrect == false &&
+                                _currentState == 'feedback') {
+                              card = AnimatedBuilder(
+                                animation: _shakeController,
+                                builder: (context, child) {
+                                  final shake =
+                                      math.sin(
+                                        _shakeController.value * 4 * 3.14159,
+                                      ) *
+                                      12;
+                                  return Transform.translate(
+                                    offset: Offset(shake, 0),
+                                    child: child,
+                                  );
+                                },
+                                child: card,
+                              );
+                            }
+
+                            return card;
+                          }),
+                        ),
                       ),
                     if (!isQuizStep && contentCards.isEmpty)
                       ..._buildContentCards(step),
@@ -1260,6 +1388,70 @@ class _LessonGameScreenState extends State<LessonGameScreen>
               ),
             ],
           ),
+          if (_currentState == 'feedback' && isQuizStep)
+            Positioned(
+              bottom: 90,
+              left: 20,
+              right: 20,
+              child: Builder(
+                builder: (context) {
+                  final feedbackMessage = _getQuizFeedbackMessage(
+                    step,
+                    isCorrect: _isAnswerCorrect == true,
+                  );
+
+                  // Siempre mostrar feedback, con mensaje por defecto si no hay personalizado
+                  final displayMessage =
+                      feedbackMessage ??
+                      (_isAnswerCorrect == true
+                          ? '¡Correcto! ✓'
+                          : 'Intenta de nuevo');
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _isAnswerCorrect == true
+                          ? const Color(0xFFD1FAE5)
+                          : const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _isAnswerCorrect == true
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFEF4444),
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isAnswerCorrect == true
+                              ? Icons.check_circle_rounded
+                              : Icons.cancel_rounded,
+                          color: _isAnswerCorrect == true
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFDC2626),
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            displayMessage,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _isAnswerCorrect == true
+                                  ? const Color(0xFF065F46)
+                                  : const Color(0xFF991B1B),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           if (_currentState == 'feedback')
             Positioned(
               bottom: 20,

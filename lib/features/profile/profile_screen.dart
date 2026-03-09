@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/progress_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,7 +19,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // Profile stats
   int _completedLessonsCount = 0;
-  int _streak = 0;
   Map<String, dynamic>? _analytics;
   bool _isLoadingProfile = true;
   String _nickname = 'Chef en Progreso';
@@ -65,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       } catch (_) {
         analytics = null;
       }
+      if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
       final nickname = (profile['username'] ?? _nickname).toString();
       final avatarIcon = (profile['avatarIcon'] ?? _avatarIcon).toString();
@@ -79,7 +78,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         setState(() {
           _completedLessonsCount =
               (profile['completedLessonsCount'] ?? 0) as int;
-          _streak = (profile['streak'] ?? 0) as int;
           _analytics = analytics;
           _nickname = nickname;
           _avatarIcon = avatarIcon;
@@ -129,13 +127,13 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final displayedNickname = authProvider.username;
-    final displayedAvatar = authProvider.avatarIcon;
+    final auth = context.watch<AuthProvider>();
+    final displayedNickname = auth.username;
+    final displayedAvatar = auth.avatarIcon;
 
     // Usar datos GLOBALES del usuario desde AuthProvider
-    final level = authProvider.level;
-    final totalXP = authProvider.totalXP;
+    final level = auth.level;
+    final totalXP = auth.totalXP;
     final xpInLevel = totalXP % 100;
     final xpForNextLevel = 100;
     final progressPercent = xpInLevel / xpForNextLevel;
@@ -150,7 +148,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 // Hero Section
                 SliverToBoxAdapter(
                   child: _buildHeroSection(
-                    authProvider,
                     level,
                     xpInLevel,
                     xpForNextLevel,
@@ -165,7 +162,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                    child: _buildMainStats(authProvider),
+                    child: _buildMainStats(
+                      currentStreak: auth.streak,
+                      totalXP: totalXP,
+                    ),
                   ),
                 ),
 
@@ -186,10 +186,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                         const SizedBox(height: 16),
                         _buildLearningMetrics(
-                          authProvider: authProvider,
                           totalXP: totalXP,
                           level: level,
                           xpInLevel: xpInLevel,
+                          currentStreak: auth.streak,
                         ),
                       ],
                     ),
@@ -211,7 +211,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                         const SizedBox(height: 20),
-                        _buildAchievements(level),
+                        _buildAchievements(
+                          level: level,
+                          currentStreak: auth.streak,
+                        ),
                       ],
                     ),
                   ),
@@ -233,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildActions(context, authProvider),
+                        _buildActions(context, auth.isAdmin),
                       ],
                     ),
                   ),
@@ -252,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               top: 10,
               left: 12,
               child: Material(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: const CircleBorder(),
                 child: IconButton(
                   tooltip: 'Volver',
@@ -272,7 +275,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildHeroSection(
-    AuthProvider authProvider,
     int level,
     int xpInLevel,
     int xpForNextLevel,
@@ -286,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
         ),
       ),
       child: Padding(
@@ -302,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -333,15 +335,15 @@ class _ProfileScreenState extends State<ProfileScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(25),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   width: 2.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -377,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     Text(
@@ -385,7 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -397,7 +399,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     return Container(
                       height: 14,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.white.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: ClipRRect(
@@ -422,9 +424,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildMainStats(AuthProvider authProvider) {
-    final currentStreak = authProvider.streak;
-
+  Widget _buildMainStats({required int currentStreak, required int totalXP}) {
     return Row(
       children: [
         Expanded(
@@ -475,7 +475,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 scale: value,
                 child: _StatItem(
                   icon: '⭐',
-                  value: authProvider.totalXP.toString(),
+                  value: totalXP.toString(),
                   label: 'XP Total',
                 ),
               );
@@ -486,9 +486,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildAchievements(int level) {
-    final currentStreak = context.watch<AuthProvider>().streak;
-
+  Widget _buildAchievements({required int level, required int currentStreak}) {
     final achievements = [
       _Achievement(
         emoji: '🌟',
@@ -537,12 +535,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildLearningMetrics({
-    required AuthProvider authProvider,
     required int totalXP,
     required int level,
     required int xpInLevel,
+    required int currentStreak,
   }) {
-    final currentStreak = authProvider.streak;
     final analytics = _analytics;
     final nextLevelXp =
         ((analytics?['xpToNextLevel'] as num?)?.toInt() ?? (100 - xpInLevel))
@@ -638,7 +635,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildActions(BuildContext context, AuthProvider authProvider) {
+  Widget _buildActions(BuildContext context, bool isAdmin) {
     return Column(
       children: [
         _ActionTile(
@@ -658,7 +655,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           label: 'Mi Despensa',
           onTap: () => Navigator.pushNamed(context, "/pantry"),
         ),
-        if (authProvider.isAdmin) ...[
+        if (isAdmin) ...[
           const SizedBox(height: 8),
           _ActionTile(
             icon: Icons.admin_panel_settings_rounded,
@@ -724,14 +721,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.primary.withOpacity(0.15)
+                                    ? AppColors.primary.withValues(alpha: 0.15)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
                                   color: isSelected
                                       ? AppColors.primary
-                                      : AppColors.textSecondary.withOpacity(
-                                          0.25,
+                                      : AppColors.textSecondary.withValues(
+                                          alpha: 0.25,
                                         ),
                                   width: isSelected ? 2 : 1,
                                 ),
@@ -759,6 +756,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   onPressed: isSaving
                       ? null
                       : () async {
+                          final authProvider = context.read<AuthProvider>();
                           final nickname = nicknameController.text.trim();
                           if (nickname.length < 3 || nickname.length > 24) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -785,12 +783,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 (updated['avatarIcon'] ?? selectedAvatar)
                                     .toString();
 
-                            await context
-                                .read<AuthProvider>()
-                                .syncProfileIdentity(
-                                  username: updatedNickname,
-                                  avatarIcon: updatedAvatar,
-                                );
+                            if (!mounted) {
+                              return;
+                            }
+                            await authProvider.syncProfileIdentity(
+                              username: updatedNickname,
+                              avatarIcon: updatedAvatar,
+                            );
 
                             if (mounted) {
                               setState(() {
@@ -882,12 +881,12 @@ class _StatItem extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Colors.white, Colors.white.withOpacity(0.95)],
+                  colors: [Colors.white, Colors.white.withValues(alpha: 0.95)],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -946,7 +945,7 @@ class _MetricCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withOpacity(0.06),
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -1017,7 +1016,7 @@ class _MetricProgressCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withOpacity(0.06),
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -1056,7 +1055,7 @@ class _MetricProgressCard extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 9,
               value: progress,
-              backgroundColor: AppColors.textSecondary.withOpacity(0.15),
+              backgroundColor: AppColors.textSecondary.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(progressColor),
             ),
           ),
@@ -1095,7 +1094,7 @@ class _WeeklyActivityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withOpacity(0.06),
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -1143,7 +1142,7 @@ class _WeeklyActivityCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: active
                               ? AppColors.success
-                              : AppColors.textSecondary.withOpacity(0.2),
+                              : AppColors.textSecondary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -1199,30 +1198,30 @@ class _AchievementBadge extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.success.withOpacity(0.25),
-                  AppColors.success.withOpacity(0.08),
+                  AppColors.success.withValues(alpha: 0.25),
+                  AppColors.success.withValues(alpha: 0.08),
                 ],
               )
             : null,
         color: achievement.unlocked
             ? null
-            : AppColors.textSecondary.withOpacity(0.06),
+            : AppColors.textSecondary.withValues(alpha: 0.06),
         border: Border.all(
           color: achievement.unlocked
-              ? AppColors.success.withOpacity(0.6)
-              : AppColors.textSecondary.withOpacity(0.15),
+              ? AppColors.success.withValues(alpha: 0.6)
+              : AppColors.textSecondary.withValues(alpha: 0.15),
           width: 2.5,
         ),
         boxShadow: achievement.unlocked
             ? [
                 BoxShadow(
-                  color: AppColors.success.withOpacity(0.3),
+                  color: AppColors.success.withValues(alpha: 0.3),
                   blurRadius: 18,
                   spreadRadius: 2,
                   offset: const Offset(0, 6),
                 ),
                 BoxShadow(
-                  color: AppColors.success.withOpacity(0.08),
+                  color: AppColors.success.withValues(alpha: 0.08),
                   blurRadius: 8,
                   spreadRadius: -2,
                   offset: const Offset(0, 2),
@@ -1230,7 +1229,7 @@ class _AchievementBadge extends StatelessWidget {
               ]
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1261,7 +1260,7 @@ class _AchievementBadge extends StatelessWidget {
                   letterSpacing: 0.2,
                   color: achievement.unlocked
                       ? AppColors.textPrimary
-                      : AppColors.textSecondary.withOpacity(0.5),
+                      : AppColors.textSecondary.withValues(alpha: 0.5),
                   height: 1.15,
                 ),
               ),
@@ -1301,14 +1300,16 @@ class _ActionTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.textSecondary.withOpacity(0.1)),
+            border: Border.all(
+              color: AppColors.textSecondary.withValues(alpha: 0.1),
+            ),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: tileColor.withOpacity(0.1),
+                  color: tileColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: tileColor, size: 22),

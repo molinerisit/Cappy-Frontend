@@ -10,8 +10,8 @@ class CultureNodeDetailScreen extends StatelessWidget {
     required this.nodeTitle,
     required this.steps,
     required this.onStepComplete,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

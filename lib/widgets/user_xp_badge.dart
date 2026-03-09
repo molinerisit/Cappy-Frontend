@@ -30,7 +30,7 @@ class UserXPBadge extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -72,7 +72,7 @@ class UserXPBadge extends StatelessWidget {
                       width: 50,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: ClipRRect(
@@ -81,7 +81,7 @@ class UserXPBadge extends StatelessWidget {
                           value: xpProgress,
                           backgroundColor: Colors.transparent,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withOpacity(0.8),
+                            Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
                       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../theme/colors.dart';
 import '../../../widgets/progress_card.dart';
 import '../models/level_model.dart';
 import '../widgets/level_row.dart';
@@ -277,16 +276,18 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     }
 
     rows.sort((a, b) {
-      if (a.groupOrder != b.groupOrder)
+      if (a.groupOrder != b.groupOrder) {
         return a.groupOrder.compareTo(b.groupOrder);
+      }
       final groupCmp = a.groupId.compareTo(b.groupId);
       if (groupCmp != 0 && a.groupOrder == b.groupOrder) {
         // preserve deterministic grouping when order equal
         return groupCmp;
       }
       if (a.level != b.level) return a.level.compareTo(b.level);
-      if (a.positionIndex != b.positionIndex)
+      if (a.positionIndex != b.positionIndex) {
         return a.positionIndex.compareTo(b.positionIndex);
+      }
       return a.order.compareTo(b.order);
     });
 

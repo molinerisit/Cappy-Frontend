@@ -133,7 +133,7 @@ class _CultureCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: const Color(0xFFFAFAFA),
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -150,7 +150,7 @@ class _CultureCard extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(

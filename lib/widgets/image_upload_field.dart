@@ -6,7 +6,9 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import '../core/api_service.dart';
+import '../core/image_compress_service.dart';
 import '../providers/auth_provider.dart';
+import 'cached_image.dart';
 
 /// Widget profesional para subir y gestionar imágenes
 /// Soporta: selección, crop, upload, preview y URL manual
@@ -159,8 +161,13 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
       final croppedFile = await _cropImage(pickedFile.path);
       if (croppedFile == null) return;
 
+      // Compress locally before upload to reduce payload size.
+      final compressedFile = await ImageCompressService.compressForUpload(
+        File(croppedFile.path),
+      );
+
       // Upload to server
-      await _uploadImage(File(croppedFile.path));
+      await _uploadImage(compressedFile);
     } catch (e) {
       _showError('Error al seleccionar imagen: $e');
     }
@@ -213,7 +220,7 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
       });
 
       final response = await dio.post(
-        'http://192.168.100.4:3000/api/admin/v2/upload/image',
+        '${ApiService.baseUrl}/admin/v2/upload/image',
         data: formData,
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
@@ -281,7 +288,7 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
 
       final dio = Dio();
       final response = await dio.post(
-        'http://192.168.100.4:3000/api/admin/v2/upload/image/from-url',
+        '${ApiService.baseUrl}/admin/v2/upload/image/from-url',
         data: {'url': sourceUrl},
         options: Options(
           headers: {
@@ -610,41 +617,31 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
               color: Colors.black.withValues(alpha: 0.04),
               child: Transform.scale(
                 scale: _zoom,
-                child: Image.network(
-                  _imageUrl!,
+                child: CachedImage(
+                  imageUrl: _imageUrl!,
                   fit: _boxFitFromMode(_fitMode),
                   alignment: Alignment(_offsetX, _offsetY),
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey.shade300,
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Error al cargar imagen',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
+                  errorFallback: Container(
+                    height: 200,
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Error al cargar imagen',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: Colors.grey.shade200,
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),

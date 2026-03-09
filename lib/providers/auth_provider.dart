@@ -98,7 +98,9 @@ class AuthProvider extends ChangeNotifier {
       final data = await ApiService.login(email, password);
 
       final token = data["token"]?.toString() ?? "";
-      final role = data["role"]?.toString() ?? "user";
+      final role = data["user"] is Map<String, dynamic>
+          ? (data["user"]["role"]?.toString() ?? "user")
+          : (data["role"]?.toString() ?? "user");
 
       if (token.isEmpty) {
         throw Exception("No se recibió token del servidor");

@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class CountriesService {
   final String baseUrl;
@@ -28,7 +29,7 @@ class CountriesService {
         throw Exception('Failed to mark country visited');
       }
     } catch (e) {
-      print('Error marking country visited: $e');
+      debugPrint('Error marking country visited: $e');
       rethrow;
     }
   }
@@ -51,7 +52,7 @@ class CountriesService {
         throw Exception('Failed to fetch visited countries');
       }
     } catch (e) {
-      print('Error fetching visited countries: $e');
+      debugPrint('Error fetching visited countries: $e');
       rethrow;
     }
   }

@@ -39,11 +39,11 @@ class _GameHeaderState extends State<GameHeader>
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final totalXP = authProvider.totalXP;
-    final level = authProvider.level;
-    final streak = authProvider.streak;
-    final avatarIcon = authProvider.avatarIcon;
+    final auth = context.watch<AuthProvider>();
+    final totalXP = auth.totalXP;
+    final level = auth.level;
+    final streak = auth.streak;
+    final avatarIcon = auth.avatarIcon;
 
     // Calcular progreso en el nivel actual
     // Formula: XP necesario para siguiente nivel = nivel * 100
@@ -105,7 +105,7 @@ class _GameHeaderState extends State<GameHeader>
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -123,7 +123,7 @@ class _GameHeaderState extends State<GameHeader>
                       size: 24,
                     ),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -150,10 +150,13 @@ class _GameHeaderState extends State<GameHeader>
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 3,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -169,9 +172,12 @@ class _GameHeaderState extends State<GameHeader>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.22),
+        color: Colors.white.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.35),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -203,7 +209,7 @@ class _GameHeaderState extends State<GameHeader>
         Container(
           height: 10,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(AppColors.radiusPill),
           ),
           child: AnimatedBuilder(
@@ -220,7 +226,7 @@ class _GameHeaderState extends State<GameHeader>
                     borderRadius: BorderRadius.circular(AppColors.radiusPill),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.4),
+                        color: Colors.white.withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 0),
                       ),

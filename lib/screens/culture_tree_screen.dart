@@ -8,8 +8,8 @@ class CultureTreeScreen extends StatelessWidget {
   const CultureTreeScreen({
     required this.nodes,
     required this.onNodeTap,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

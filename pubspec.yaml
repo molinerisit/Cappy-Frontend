@@ -45,6 +45,9 @@ dependencies:
   dio: ^5.4.0
   path_provider: ^2.1.2
   mime: ^1.0.5
+  # Multi-environment configuration
+  flutter_dotenv: ^5.1.0
+  flutter_image_compress: ^2.4.0
 
 dev_dependencies:
   flutter_test:
@@ -69,8 +72,7 @@ flutter:
 
   assets:
     - assets/logo_cappy.png
-    - assets/sounds/success.mp3
-    - assets/sounds/alarma.mp3
+    - assets/sounds/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

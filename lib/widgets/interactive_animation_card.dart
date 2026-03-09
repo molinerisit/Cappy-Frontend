@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../core/audio_feedback_service.dart';
 
 /// Componente para renderizar animaciones interactivas en las lecciones.
 /// Soporta múltiples tipos de interacción: click, swipe, drag, hold, etc.
@@ -14,7 +15,7 @@ class InteractiveAnimationCard extends StatefulWidget {
 }
 
 class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _showingInteraction = false;
   int _interactionSequenceIndex = -1;
   double _dragPosition = 0.0;
@@ -24,6 +25,26 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   // Estado para add_remove_objects
   final List<Offset> _addedObjects = [];
 
+  // ---- NUEVAS VARIABLES PARA FEEDBACK MULTISENSORIAL ----
+  late AnimationController _sparkleController;
+  late Animation<double> _sparkleOpacity;
+  late Animation<double> _sparkleScale;
+  Offset? _sparklePosition;
+  final Map<int, AnimationController> _objectAnimations = {};
+  // ---- FIN NUEVAS VARIABLES ----
+
+  // ---- NUEVAS VARIABLES PARA SWIPE RESPONSIVE ----
+  late AnimationController _swipeAnimationController;
+  late ValueNotifier<double> _dragProgressNotifier;
+  
+  double _dragStartX = 0.0;
+  double _currentDragX = 0.0;
+  bool _isDragging = false;
+  
+  // Constantes configurables
+  static const double _activationThreshold = 0.4;
+  static const double _deadZone = 20.0;
+
   @override
   void initState() {
     super.initState();
@@ -31,12 +52,41 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+
+    // ---- NUEVO: Sparkle Controller para feedback visual ----
+    _sparkleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _sparkleOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _sparkleController, curve: Curves.easeOut),
+    );
+    
+    _sparkleScale = Tween<double>(begin: 0.3, end: 1.8).animate(
+      CurvedAnimation(parent: _sparkleController, curve: Curves.easeOut),
+    );
+    // ---- FIN NUEVO: Sparkle Controller ----
+
+    // ---- NUEVO: Swipe/Drag Controller ----
+    _swipeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _dragProgressNotifier = ValueNotifier<double>(0.0);
   }
 
   @override
   void dispose() {
     _holdTimer?.cancel();
     _pulseController.dispose();
+    _swipeAnimationController.dispose();
+    _dragProgressNotifier.dispose();
+    _sparkleController.dispose();
+    for (var controller in _objectAnimations.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -239,95 +289,6 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     return {'type': 'image', 'url': '', 'text': ''};
   }
 
-  String _extractPayloadText(dynamic raw, {int depth = 0}) {
-    if (raw == null || depth > 5) return '';
-
-    if (raw is String) {
-      final value = raw.trim();
-      if (value.isEmpty || _looksLikeUrl(value)) return '';
-      return value;
-    }
-
-    if (raw is List) {
-      for (final item in raw) {
-        final text = _extractPayloadText(item, depth: depth + 1);
-        if (text.isNotEmpty) return text;
-      }
-      return '';
-    }
-
-    if (raw is Map) {
-      const preferredKeys = [
-        'text',
-        'content',
-        'value',
-        'label',
-        'title',
-        'description',
-        'instruction',
-        'prompt',
-        'message',
-        'body',
-      ];
-      for (final key in preferredKeys) {
-        if (raw.containsKey(key)) {
-          final text = _extractPayloadText(raw[key], depth: depth + 1);
-          if (text.isNotEmpty) return text;
-        }
-      }
-
-      const ignoreKeys = {
-        'url',
-        'imageUrl',
-        'videoUrl',
-        'src',
-        'assetUrl',
-        'animationUrl',
-        'media',
-        'type',
-        'animationType',
-        'config',
-        'loop',
-        'trigger',
-        'allowRemove',
-        'maxObjects',
-        'objectSize',
-      };
-      for (final entry in raw.entries) {
-        if (ignoreKeys.contains(entry.key.toString())) continue;
-        final text = _extractPayloadText(entry.value, depth: depth + 1);
-        if (text.isNotEmpty) return text;
-      }
-    }
-
-    return '';
-  }
-
-  Map<String, dynamic> _fallbackTextAssetFromPayload() {
-    final text = _extractPayloadText(_animationPayload);
-    if (text.isEmpty) {
-      return {'type': 'image', 'url': '', 'text': ''};
-    }
-    return {'type': 'text', 'url': '', 'text': text};
-  }
-
-  Map<String, dynamic> _resolveDisplayAsset({
-    required Map<String, dynamic> initial,
-    Map<String, dynamic>? interaction,
-    required Map<String, dynamic> fallbackText,
-    required bool showingInteraction,
-  }) {
-    final safeInitial = _isAssetEmpty(initial) ? null : initial;
-    final safeInteraction = _isAssetEmpty(interaction) ? null : interaction;
-    final safeFallback = _isAssetEmpty(fallbackText) ? null : fallbackText;
-
-    if (showingInteraction) {
-      return safeInteraction ?? safeInitial ?? safeFallback ?? initial;
-    }
-
-    return safeInitial ?? safeInteraction ?? safeFallback ?? initial;
-  }
-
   int _toInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
     if (value is num) return value.toInt();
@@ -402,6 +363,150 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     }
   }
 
+  // ---- NUEVOS MÉTODOS PARA PAN GESTURES (SWIPE RESPONSIVE) ----
+  void _handlePanStart(DragStartDetails details) {
+    if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
+      return;
+    }
+    
+    setState(() {
+      _isDragging = true;
+      _dragStartX = details.localPosition.dx;
+      _currentDragX = _dragStartX;
+    });
+    
+    // Reset animation controller si estaba en progreso
+    _swipeAnimationController.reset();
+  }
+
+  void _handlePanUpdate(DragUpdateDetails details) {
+    if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
+      return;
+    }
+    
+    if (!_isDragging) return;
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dragRange = screenWidth * 0.75; // 75% del ancho como rango efectivo
+    
+    _currentDragX = details.localPosition.dx;
+    final dragDistance = (_currentDragX - _dragStartX).abs();
+    
+    // Aplicar dead zone
+    if (dragDistance < _deadZone) {
+      _dragProgressNotifier.value = 0.0;
+      return;
+    }
+    
+    // Normalizar progreso: (distancia - deadZone) / rango
+    final normalizedProgress = ((dragDistance - _deadZone) / dragRange).clamp(0.0, 1.0);
+    
+    // Actualizar notifier (no usa setState - MÁS EFICIENTE)
+    _dragProgressNotifier.value = normalizedProgress;
+    
+    // Actualizar si mostrar interacción (soft threshold)
+    if (normalizedProgress > 0.15 && !_showingInteraction) {
+      setState(() => _showingInteraction = true);
+    } else if (normalizedProgress <= 0.15 && _showingInteraction) {
+      setState(() => _showingInteraction = false);
+    }
+  }
+
+  void _handlePanEnd(DragEndDetails details) {
+    if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
+      return;
+    }
+    
+    if (!_isDragging) return;
+    
+    final currentProgress = _dragProgressNotifier.value;
+    
+    setState(() => _isDragging = false);
+    
+    // UMBRAL DE ACTIVACIÓN: 40%
+    if (currentProgress >= _activationThreshold) {
+      // ✅ Usuario deslizó suficiente → COMPLETAR ANIMACIÓN
+      _completeSwipeAnimation();
+    } else {
+      // ❌ Usuario NO deslizó suficiente → VOLVER A ESTADO INICIAL
+      _cancelSwipeAnimation();
+    }
+  }
+
+  void _completeSwipeAnimation() {
+    // Animar _dragProgressNotifier desde su valor actual hasta 1.0
+    final startValue = _dragProgressNotifier.value;
+    
+    _swipeAnimationController.reset();
+    
+    // Crear tween desde el progreso actual hasta 1.0
+    final tween = Tween<double>(begin: startValue, end: 1.0);
+    final animation = tween.animate(_swipeAnimationController);
+    
+    // Listener para actualizar _dragProgressNotifier en tiempo real
+    void listener() {
+      _dragProgressNotifier.value = animation.value;
+    }
+    
+    animation.addListener(listener);
+    
+    _swipeAnimationController.forward().then((_) {
+      animation.removeListener(listener);
+      _dragProgressNotifier.value = 1.0; // Asegurar estado final
+      _showInteraction(autoHide: false, advanceSequence: true);
+      
+      // Auto-reset después de 2 segundos
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _swipeAnimationController.reset();
+          
+          // Animar desde 1.0 hasta 0.0
+          final resetTween = Tween<double>(begin: 1.0, end: 0.0);
+          final resetAnimation = resetTween.animate(_swipeAnimationController);
+          
+          void resetListener() {
+            _dragProgressNotifier.value = resetAnimation.value;
+          }
+          
+          resetAnimation.addListener(resetListener);
+          _swipeAnimationController.forward().then((_) {
+            resetAnimation.removeListener(resetListener);
+            if (mounted) {
+              setState(() => _showingInteraction = false);
+              _dragProgressNotifier.value = 0.0;
+            }
+          });
+        }
+      });
+    });
+  }
+
+  void _cancelSwipeAnimation() {
+    // Animar _dragProgressNotifier desde su valor actual hasta 0.0 (rebote)
+    final startValue = _dragProgressNotifier.value;
+    
+    _swipeAnimationController.reset();
+    
+    // Crear tween desde el progreso actual hasta 0.0
+    final tween = Tween<double>(begin: startValue, end: 0.0);
+    final animation = tween.animate(_swipeAnimationController);
+    
+    // Listener para actualizar _dragProgressNotifier en tiempo real
+    void listener() {
+      _dragProgressNotifier.value = animation.value;
+    }
+    
+    animation.addListener(listener);
+    
+    _swipeAnimationController.forward().then((_) {
+      animation.removeListener(listener);
+      if (mounted) {
+        setState(() => _showingInteraction = false);
+        _dragProgressNotifier.value = 0.0;
+      }
+    });
+  }
+
   void _showInteraction({bool autoHide = true, bool advanceSequence = false}) {
     setState(() {
       if (advanceSequence && _interactionAssets.isNotEmpty) {
@@ -449,10 +554,32 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
         final objectSize = _toDouble(payload['objectSize'], fallback: 40);
 
         if (distance < objectSize / 2) {
-          // Remover objeto si está cerca
+          // ---- NUEVO: Feedback multisensorial al REMOVER ----
+          AudioFeedbackService().playRemoveObject();
+          
+          // Disparar destello en posición del objeto
           setState(() {
-            _addedObjects.removeAt(i);
+            _sparklePosition = objPos;
           });
+          _sparkleController.forward(from: 0.0);
+          
+          // Animar salida del objeto
+          final controller = _objectAnimations[i];
+          if (controller != null) {
+            controller.reverse().then((_) {
+              if (mounted) {
+                setState(() {
+                  _addedObjects.removeAt(i);
+                  _objectAnimations.remove(i);
+                });
+              }
+            });
+          } else {
+            setState(() {
+              _addedObjects.removeAt(i);
+            });
+          }
+          // ---- FIN NUEVO ----
           return;
         }
       }
@@ -460,9 +587,16 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
     // Agregar nuevo objeto si no se alcanzó el límite
     if (_addedObjects.length < maxObjects) {
+      // ---- NUEVO: Feedback multisensorial al AGREGAR ----
+      AudioFeedbackService().playAddObject();
+      
+      // Disparar destello en posición del tap
       setState(() {
+        _sparklePosition = position;
         _addedObjects.add(position);
       });
+      _sparkleController.forward(from: 0.0);
+      // ---- FIN NUEVO ----
     }
   }
 
@@ -603,8 +737,8 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [
-                Colors.black.withOpacity(0.85),
-                Colors.black.withOpacity(0.0),
+                Colors.black.withValues(alpha: 0.85),
+                Colors.black.withValues(alpha: 0.0),
               ],
             ),
           ),
@@ -669,10 +803,209 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.3),
+        color: Colors.white.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, color: Colors.white, size: 24),
+    );
+  }
+
+  // ---- CARRUSEL TIPO INSTAGRAM: Transiciones fluidas sin superposición ----
+  Widget _buildInteractiveAsset(Map<String, dynamic> asset) {
+    return ValueListenableBuilder<double>(
+      valueListenable: _dragProgressNotifier,
+      builder: (context, progress, child) {
+        // Sincronización perfecta:
+        // - Asset 1 (initial) sale completamente para cuando progress = 1.0
+        // - Asset 2 (new) entra mientras Asset 1 sale
+        // - Sin zona de superposición
+        
+        return Stack(
+          children: [
+            // ============================================================
+            // ASSET INICIAL - Sale por la IZQUIERDA (carrusél style)
+            // ============================================================
+            Transform.translate(
+              offset: Offset(-progress * 500, 0), // Full-width swipe
+              child: Opacity(
+                opacity: 1.0 - progress, // Fade out sincronizado
+                child: _buildAsset(_initialAsset),
+              ),
+            ),
+            
+            // ============================================================
+            // ASSET NUEVO - Entra desde la DERECHA (carrusél style)
+            // ============================================================
+            // Siempre renderizar (no esperar al 15%) para transición suave
+            Transform.translate(
+              offset: Offset((1.0 - progress) * 500, 0), // Full-width entrada
+              child: Opacity(
+                opacity: progress, // Fade in sincronizado
+                child: _buildAsset(asset),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ---- NUEVO: Indicador de progreso del gesto ----
+  Widget _buildSwipeProgressIndicator() {
+    if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
+      return const SizedBox.shrink();
+    }
+    
+    return ValueListenableBuilder<double>(
+      valueListenable: _dragProgressNotifier,
+      builder: (context, progress, _) {
+        if (progress == 0.0 && !_isDragging) return const SizedBox.shrink();
+        
+        final activationColor = progress >= _activationThreshold
+            ? Colors.green
+            : Colors.blue;
+        
+        return Positioned(
+          bottom: 16,
+          left: 16,
+          right: 16,
+          child: AnimatedOpacity(
+            opacity: _isDragging ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 150),
+            child: Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        activationColor.withValues(alpha: 0.7),
+                        activationColor,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: activationColor.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---- NUEVO: Efecto de destello sparkle para feedback visual ----
+  Widget _buildSparkleEffect() {
+    if (_sparklePosition == null || !_sparkleController.isAnimating) {
+      return const SizedBox.shrink();
+    }
+    
+    return AnimatedBuilder(
+      animation: _sparkleController,
+      builder: (context, child) {
+        return Positioned(
+          left: _sparklePosition!.dx - 20,
+          top: _sparklePosition!.dy - 20,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: _sparkleOpacity.value,
+              child: Transform.scale(
+                scale: _sparkleScale.value,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white,
+                        Colors.amber.shade300.withValues(alpha: 0.8),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---- NUEVO: Widget de objeto con animación de escala ----
+  Widget _buildAnimatedObject({
+    required Offset position,
+    required int objectIndex,
+    required double objectSize,
+    required String objectType,
+    required String objectUrl,
+  }) {
+    // Crear controller si no existe
+    if (!_objectAnimations.containsKey(objectIndex)) {
+      final controller = AnimationController(
+        duration: const Duration(milliseconds: 300),
+        vsync: this,
+      );
+      _objectAnimations[objectIndex] = controller;
+      
+      // Trigger animación de entrada
+      controller.forward();
+    }
+    
+    final controller = _objectAnimations[objectIndex]!;
+    final scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: controller, curve: Curves.elasticOut),
+    );
+    
+    return AnimatedBuilder(
+      animation: scaleAnimation,
+      builder: (context, child) {
+        return Positioned(
+          left: position.dx - objectSize / 2,
+          top: position.dy - objectSize / 2,
+          child: Transform.scale(
+            scale: scaleAnimation.value,
+            child: objectType == 'icon'
+                ? Icon(
+                    Icons.circle,
+                    size: objectSize,
+                    color: Colors.purple.withValues(alpha: 0.85),
+                  )
+                : Image.network(
+                    objectUrl,
+                    width: objectSize,
+                    height: objectSize,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.circle,
+                      size: objectSize,
+                      color: Colors.purple.withValues(alpha: 0.7),
+                    ),
+                  ),
+          ),
+        );
+      },
     );
   }
 
@@ -702,29 +1035,49 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
             GestureDetector(
               onTap: _animationType == 'click' ? _handleClick : null,
               onDoubleTap: _animationType == 'double_tap' ? _handleClick : null,
-              onHorizontalDragEnd: _animationType.startsWith('swipe_')
+              
+              // ---- NUEVO: Pan gestures para swipe responsive ----
+              onPanStart: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+                  ? _handlePanStart
+                  : null,
+              onPanUpdate: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+                  ? _handlePanUpdate
+                  : null,
+              onPanEnd: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+                  ? _handlePanEnd
+                  : null,
+              
+              // Mantener swipe vertical (up/down) con lógica antigua
+              onVerticalDragEnd: (_animationType == 'swipe_up' || _animationType == 'swipe_down')
                   ? _handleSwipe
                   : null,
-              onVerticalDragEnd: _animationType.startsWith('swipe_')
-                  ? _handleSwipe
-                  : null,
+              
+              // Mantener drag horizontal/vertical para otros tipos
               onHorizontalDragUpdate: _animationType == 'drag_horizontal'
                   ? _handleDragUpdate
                   : null,
               onVerticalDragUpdate: _animationType == 'drag_vertical'
                   ? _handleDragUpdate
                   : null,
+              
+              // Long press mantener igual
               onLongPressStart: _animationType == 'hold'
                   ? (_) => _handleLongPressStart()
                   : null,
               onLongPressEnd: _animationType == 'hold'
                   ? (_) => _handleLongPressEnd()
                   : null,
-              child: _buildAsset(currentAsset),
+              
+              child: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+                  ? _buildInteractiveAsset(currentAsset)
+                  : _buildAsset(currentAsset),
             ),
 
             // Overlay de instrucciones
             if (!_showingInteraction) _buildInstructionOverlay(),
+            
+            // ---- NUEVO: Progress indicator ----
+            _buildSwipeProgressIndicator(),
 
             // Indicador de drag (opcional)
             if (_animationType.startsWith('drag_') && _dragPosition > 0)
@@ -734,7 +1087,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
                 right: 0,
                 child: Container(
                   width: 4,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   child: FractionallySizedBox(
                     alignment: Alignment.topCenter,
                     heightFactor: _dragPosition,
@@ -780,29 +1133,23 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
               child: _buildAsset(backgroundAsset),
             ),
 
-            // Objetos colocados
-            ..._addedObjects.map((position) {
-              return Positioned(
-                left: position.dx - objectSize / 2,
-                top: position.dy - objectSize / 2,
-                child: objectType == 'icon'
-                    ? Icon(
-                        Icons.circle,
-                        size: objectSize,
-                        color: Colors.purple.withOpacity(0.85),
-                      )
-                    : Image.network(
-                        objectUrl,
-                        width: objectSize,
-                        height: objectSize,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.circle,
-                          size: objectSize,
-                          color: Colors.purple.withOpacity(0.7),
-                        ),
-                      ),
+            // ---- NUEVO: Objetos colocados con animación ----
+            ..._addedObjects.asMap().entries.map((entry) {
+              final index = entry.key;
+              final position = entry.value;
+              return _buildAnimatedObject(
+                position: position,
+                objectIndex: index,
+                objectSize: objectSize,
+                objectType: objectType,
+                objectUrl: objectUrl,
               );
-            }).toList(),
+            }),
+            // ---- FIN NUEVO ----
+
+            // ---- NUEVO: Efecto destello sparkle ----
+            _buildSparkleEffect(),
+            // ---- FIN NUEVO ----
 
             // Instrucciones overlay
             Positioned(
@@ -815,7 +1162,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
