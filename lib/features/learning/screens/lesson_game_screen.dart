@@ -703,12 +703,12 @@ class _LessonGameScreenState extends State<LessonGameScreen>
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.timer, color: Color(0xFFFF6B35), size: 36),
+                  const Icon(Icons.timer, color: Color(0xFF22C55E), size: 36),
                   const SizedBox(height: 8),
                   const Text(
                     'Timer',
                     style: TextStyle(
-                      color: Color(0xFFFF6B35),
+                      color: Color(0xFF22C55E),
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
                     ),
@@ -895,7 +895,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         _buildTextCard(
           text: step.feedback!,
           icon: Icons.emoji_events_rounded,
-          iconColor: const Color(0xFFFF6B35),
+          iconColor: const Color(0xFF22C55E),
         ),
       );
     }
@@ -1472,7 +1472,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isAnswerCorrect == true
                       ? const Color(0xFF27AE60)
-                      : const Color(0xFFFF6B35),
+                      : const Color(0xFF22C55E),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     vertical: 16,
@@ -1911,3 +1911,4 @@ class _AnimatedContinueButton extends StatelessWidget {
     );
   }
 }
+

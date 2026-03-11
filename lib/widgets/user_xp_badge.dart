@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
@@ -41,7 +41,7 @@ class UserXPBadge extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B35),
+                    color: const Color(0xFF22C55E),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
@@ -96,3 +96,4 @@ class UserXPBadge extends StatelessWidget {
     );
   }
 }
+

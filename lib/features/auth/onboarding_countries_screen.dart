@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/api_service.dart';
 import '../../../providers/onboarding_selection_provider.dart';
+import '../../../theme/colors.dart';
 import 'register_screen.dart';
 
 class OnboardingCountriesScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -37,7 +38,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back_ios, size: 20),
-                    color: const Color(0xFF333333),
+                    color: AppColors.textStrong,
                   ),
                   const Spacer(),
                   Text(
@@ -45,7 +46,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -63,7 +64,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF333333),
+                      color: AppColors.textStrong,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -72,7 +73,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -88,7 +89,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     return const Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFFFF6B35),
+                          AppColors.primary,
                         ),
                       ),
                     );
@@ -97,7 +98,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                       child: Text(
                         'Error al cargar países',
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF666666),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     );
@@ -106,7 +107,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                       child: Text(
                         'No hay países disponibles',
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF666666),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     );
@@ -138,9 +139,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: const Color(
-                                0xFFFF6B35,
-                              ).withValues(alpha: 0.2),
+                              color: AppColors.primary.withValues(alpha: 0.2),
                               width: 2,
                             ),
                             boxShadow: [
@@ -171,7 +170,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF333333),
+                                      color: AppColors.textStrong,
                                     ),
                                     textAlign: TextAlign.center,
                                     maxLines: 2,
@@ -182,7 +181,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                                     width: 24,
                                     height: 24,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFF6B35),
+                                      color: AppColors.primary,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -212,7 +211,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                      color: AppColors.primarySoft,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -230,7 +229,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF666666),
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -256,7 +255,7 @@ class _OnboardingCountriesScreenState extends State<OnboardingCountriesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡Genial! Elegiste: $countryName'),
-        backgroundColor: const Color(0xFFFF6B35),
+        backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 1),
       ),
     );

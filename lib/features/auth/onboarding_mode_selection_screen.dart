@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../theme/colors.dart';
 import 'onboarding_goals_screen.dart';
 import 'onboarding_countries_screen.dart';
 
@@ -9,7 +10,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -21,7 +22,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back_ios, size: 20),
-                    color: const Color(0xFF333333),
+                    color: AppColors.textStrong,
                   ),
                   const Spacer(),
                   Text(
@@ -29,7 +30,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -49,7 +50,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF333333),
+                        color: AppColors.textStrong,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -113,7 +114,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                      color: AppColors.primarySoft,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -135,7 +136,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF333333),
+                            color: AppColors.textStrong,
                           ),
                         ),
                         Text(
@@ -143,7 +144,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: const Color(0xFF666666),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -172,7 +173,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFFF6B35).withValues(alpha: 0.2),
+            color: AppColors.primary.withValues(alpha: 0.2),
             width: 2,
           ),
           boxShadow: [
@@ -203,7 +204,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF333333),
+                            color: AppColors.textStrong,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -212,7 +213,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: const Color(0xFF666666),
+                            color: AppColors.textSecondary,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -224,7 +225,7 @@ class OnboardingModeSelectionScreen extends StatelessWidget {
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: const Color(0xFFFF6B35),
+                    color: AppColors.primary,
                   ),
                 ],
               ),

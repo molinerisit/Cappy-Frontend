@@ -308,7 +308,7 @@ class _AdminDashboardScreenModernState
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.orange.shade600,
+                                    Colors.green.shade600,
                                   ),
                                 ),
                               ),
@@ -488,7 +488,7 @@ class _AdminDashboardScreenModernState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.shade600 : Colors.transparent,
+          color: isSelected ? Colors.green.shade600 : Colors.transparent,
           borderRadius: BorderRadius.circular(5),
         ),
         child: Text(
@@ -816,9 +816,10 @@ class _AdminDashboardScreenModernState
       case 'country_recipe':
         return Colors.green.shade600;
       case 'goal':
-        return Colors.orange.shade600;
+        return Colors.green.shade600;
       default:
         return Colors.grey.shade600;
     }
   }
 }
+

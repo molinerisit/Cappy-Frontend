@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cooklevel_app/core/lives_service.dart';
+import '../theme/colors.dart';
 
 class NoLivesScreen extends StatefulWidget {
   final String token;
@@ -170,10 +171,10 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: AppColors.primarySoft,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.orange.shade200,
+                          color: AppColors.primary.withValues(alpha: 0.35),
                           width: 2,
                         ),
                       ),
@@ -182,14 +183,14 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
                         children: [
                           const Icon(
                             Icons.schedule,
-                            color: Colors.orange,
+                            color: AppColors.primary,
                             size: 40,
                           ),
                           const SizedBox(height: 12),
                           const Text(
                             'Próxima vida en:',
                             style: TextStyle(
-                              color: Colors.orange,
+                              color: AppColors.primary,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -201,7 +202,7 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange,
+                                color: AppColors.primary,
                               ),
                             )
                           else
@@ -210,7 +211,7 @@ class _NoLivesScreenState extends State<NoLivesScreen> {
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange,
+                                color: AppColors.primary,
                               ),
                             ),
                         ],

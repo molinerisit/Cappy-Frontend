@@ -1179,7 +1179,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('⚠️ Debes seleccionar un nodo primero'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -1298,7 +1298,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('⚠️ Selecciona un paso primero'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -2121,7 +2121,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                   color:
                                                                       isActive
                                                                       ? Colors
-                                                                            .orange
+                                                                            .green
                                                                             .shade50
                                                                       : Colors
                                                                             .transparent,
@@ -2133,7 +2133,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                     color:
                                                                         isActive
                                                                         ? Colors
-                                                                              .orange
+                                                                              .green
                                                                               .shade200
                                                                         : Colors
                                                                               .transparent,
@@ -2150,7 +2150,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                     color:
                                                                         isActive
                                                                         ? Colors
-                                                                              .orange
+                                                                              .green
                                                                               .shade700
                                                                         : Colors
                                                                               .black54,
@@ -2223,7 +2223,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                       ),
                                                                       decoration: BoxDecoration(
                                                                         color: Colors
-                                                                            .orange
+                                                                            .green
                                                                             .shade300,
                                                                         borderRadius:
                                                                             BorderRadius.circular(
@@ -2243,7 +2243,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                         border: Border.all(
                                                                           color:
                                                                               isActive
-                                                                              ? Colors.orange.shade300
+                                                                              ? Colors.green.shade300
                                                                               : Colors.transparent,
                                                                           width:
                                                                               isActive
@@ -2812,7 +2812,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                   color:
                                                                       isActive
                                                                       ? Colors
-                                                                            .orange
+                                                                            .green
                                                                             .shade100
                                                                       : Colors
                                                                             .transparent,
@@ -3480,7 +3480,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
 
   Widget _buildNodeTypeSelector() {
     final types = [
-      ('recipe', Icons.restaurant, Colors.orange),
+      ('recipe', Icons.restaurant, Colors.green),
       ('explanation', Icons.auto_stories, Colors.blue),
       ('tips', Icons.lightbulb, Colors.yellow.shade700),
       ('quiz', Icons.quiz, Colors.red),
@@ -3600,7 +3600,7 @@ class _StepEditorDialogState extends State<_StepEditorDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ El título del paso es requerido'),
-          backgroundColor: Colors.orange,
+          backgroundColor: Colors.green,
         ),
       );
       return;
@@ -4385,8 +4385,8 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              border: Border.all(color: Colors.orange.shade200),
+              color: Colors.green.shade50,
+              border: Border.all(color: Colors.green.shade200),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(

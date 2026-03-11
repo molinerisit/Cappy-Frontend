@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_service.dart';
 import '../../models/lesson_model.dart';
@@ -132,12 +132,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
+                      color: Colors.green.shade100,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
                       "Premium",
-                      style: TextStyle(color: Colors.orange),
+                      style: TextStyle(color: Colors.green),
                     ),
                   ),
               ],
@@ -221,7 +221,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                       (tip) => ListTile(
                         leading: const Icon(
                           Icons.lightbulb,
-                          color: Colors.orange,
+                          color: Colors.green,
                         ),
                         title: Text(tip),
                       ),
@@ -267,3 +267,4 @@ class _NutritionChip extends StatelessWidget {
     );
   }
 }
+

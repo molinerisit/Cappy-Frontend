@@ -9,6 +9,8 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       primary: AppColors.primary,
+      secondary: AppColors.secondaryAccent,
+      error: AppColors.critical,
       surface: AppColors.surface,
     ),
     textTheme: GoogleFonts.interTextTheme(),

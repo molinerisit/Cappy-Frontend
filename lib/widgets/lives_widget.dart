@@ -161,7 +161,7 @@ class _LivesWidgetState extends State<LivesWidget>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     color: index < widget.lives
-                        ? AppColors.primary
+                        ? AppColors.critical
                         : AppColors.textSecondary,
                     size: 20,
                   ),

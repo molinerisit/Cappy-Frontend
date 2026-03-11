@@ -351,7 +351,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFFF6B35),
+                      color: Color(0xFF22C55E),
                     ),
                   ),
                   Text(
@@ -359,7 +359,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                     style: GoogleFonts.poppins(
                       fontSize: 36,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFFFF6B35),
+                      color: const Color(0xFF22C55E),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -572,10 +572,10 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                             Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.08),
+                                color: Colors.green.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: Colors.orange.withValues(alpha: 0.25),
+                                  color: Colors.green.withValues(alpha: 0.25),
                                   width: 2,
                                 ),
                               ),
@@ -584,7 +584,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                   const Icon(
                                     Icons.timer,
                                     size: 48,
-                                    color: Colors.deepOrange,
+                                    color: Colors.green,
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
@@ -592,7 +592,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                     style: GoogleFonts.poppins(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.deepOrange,
+                                      color: Colors.green,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -602,7 +602,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       style: GoogleFonts.poppins(
                                         fontSize: 48,
                                         fontWeight: FontWeight.w800,
-                                        color: Colors.deepOrange,
+                                        color: Colors.green,
                                       ),
                                     )
                                   else
@@ -611,7 +611,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       style: GoogleFonts.poppins(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.deepOrange.withValues(
+                                        color: Colors.green.withValues(
                                           alpha: 0.7,
                                         ),
                                       ),
@@ -647,7 +647,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       icon: const Icon(Icons.timer),
                                       label: const Text('Iniciar cronómetro'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.deepOrange,
+                                        backgroundColor: Colors.green,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 24,
                                           vertical: 12,
@@ -672,7 +672,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                                 : 'Pausar',
                                           ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.deepOrange,
+                                            backgroundColor: Colors.green,
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -710,7 +710,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       style: GoogleFonts.poppins(
                                         fontSize: 48,
                                         fontWeight: FontWeight.w800,
-                                        color: const Color(0xFFFF6B35),
+                                        color: const Color(0xFF22C55E),
                                       ),
                                     )
                                   else
@@ -732,7 +732,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                       label: const Text('Iniciar cronómetro'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(
-                                          0xFFFF6B35,
+                                          0xFF22C55E,
                                         ),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 24,
@@ -759,7 +759,7 @@ class _CookingModeScreenState extends State<CookingModeScreen>
                                           ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
-                                              0xFFFF6B35,
+                                              0xFF22C55E,
                                             ),
                                           ),
                                         ),
@@ -830,3 +830,4 @@ class _CookingModeScreenState extends State<CookingModeScreen>
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 }
+

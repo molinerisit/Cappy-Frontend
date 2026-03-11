@@ -163,8 +163,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFFF6B35).withValues(alpha: 0.1),
-                        const Color(0xFFFFA500).withValues(alpha: 0.1),
+                        const Color(0xFF22C55E).withValues(alpha: 0.1),
+                        const Color(0xFF4ADE80).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -564,3 +564,4 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
