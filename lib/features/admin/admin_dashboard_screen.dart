@@ -356,9 +356,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                                         node['difficulty'] ??
                                                             'normal',
                                                       ),
-                                                      backgroundColor: Colors
-                                                          .orange
-                                                          .shade100,
+                                                      backgroundColor:
+                                                          Colors.green.shade100,
                                                     ),
                                                     Chip(
                                                       label: Text(

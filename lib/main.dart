@@ -25,6 +25,7 @@ import 'providers/auth_provider.dart';
 import 'providers/progress_provider.dart';
 import 'providers/onboarding_selection_provider.dart';
 import 'theme/app_theme.dart';
+import 'theme/colors.dart';
 import 'config/app_config.dart';
 
 Future<void> main() async {
@@ -140,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF3E6),
+      backgroundColor: AppColors.background,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -154,12 +155,12 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.orange,
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 40),
             // Loading
-            const CircularProgressIndicator(color: Colors.orange),
+            const CircularProgressIndicator(color: AppColors.primary),
           ],
         ),
       ),

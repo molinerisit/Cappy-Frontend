@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/audio_feedback_service.dart';
+import '../theme/colors.dart';
 
 class StepTimerWidget extends StatefulWidget {
   final int durationSeconds;
@@ -80,7 +81,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
         Text(
           _formatSeconds(secondsLeft),
           style: const TextStyle(
-            color: Color(0xFFFF6B35),
+            color: AppColors.primary,
             fontWeight: FontWeight.w700,
             fontSize: 32,
           ),
@@ -92,7 +93,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
             icon: const Icon(Icons.timer_outlined, size: 18),
             label: const Text('Iniciar cronómetro'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B35),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
@@ -109,8 +110,8 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
                 icon: const Icon(Icons.pause, size: 18),
                 label: const Text('Pausar'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFFF6B35),
-                  side: const BorderSide(color: Color(0xFFFF6B35)),
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -126,8 +127,8 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
                 icon: const Icon(Icons.close, size: 18),
                 label: const Text('Cancelar'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFFF6B35),
-                  side: const BorderSide(color: Color(0xFFFF6B35)),
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -144,7 +145,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
         if (finished)
           const Text(
             '⏰ Tiempo finalizado',
-            style: TextStyle(color: Color(0xFF27AE60)),
+            style: TextStyle(color: AppColors.successDark),
           ),
       ],
     );

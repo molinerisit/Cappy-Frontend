@@ -292,12 +292,12 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen>
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
+                  color: const Color(0xFF22C55E).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.restaurant_menu_rounded,
-                  color: Color(0xFFFF6B35),
+                  color: Color(0xFF22C55E),
                   size: 19,
                 ),
               ),
@@ -625,3 +625,4 @@ class _CountryListItem {
     );
   }
 }
+

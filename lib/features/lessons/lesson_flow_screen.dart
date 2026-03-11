@@ -124,7 +124,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.lessonTitle),
-          backgroundColor: Colors.orange.shade700,
+          backgroundColor: Colors.green.shade700,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.close),
@@ -154,7 +154,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
                     value: (_currentStep + 1) / steps.length,
                     minHeight: 6,
                     backgroundColor: Colors.grey.shade300,
-                    valueColor: AlwaysStoppedAnimation(Colors.orange.shade600),
+                    valueColor: AlwaysStoppedAnimation(Colors.green.shade600),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -168,7 +168,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
+                            color: Colors.green.shade700,
                           ),
                         ),
                         const Spacer(),
@@ -178,7 +178,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
+                            color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -186,7 +186,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
+                              color: Colors.green.shade700,
                             ),
                           ),
                         ),
@@ -245,7 +245,7 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
                         : 'Siguiente',
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: Colors.green,
                   ),
                 ),
               ],
@@ -403,7 +403,7 @@ class _CardStepState extends State<_CardStep> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.orange,
+                    color: Colors.green,
                   ),
                 ),
                 const Spacer(),
@@ -418,7 +418,7 @@ class _CardStepState extends State<_CardStep> {
                         color: _completedCards[i]
                             ? Colors.green.shade400
                             : i == _currentCard
-                            ? Colors.orange.shade400
+                            ? Colors.green.shade400
                             : Colors.grey.shade300,
                       ),
                       child: Center(
@@ -492,7 +492,7 @@ class _CardStepState extends State<_CardStep> {
                   icon: const Icon(Icons.arrow_forward),
                   label: const Text('Siguiente'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: Colors.green,
                   ),
                 ),
             ],
@@ -747,7 +747,7 @@ class _CardStepState extends State<_CardStep> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           border: Border.all(
-            color: isCompleted ? Colors.green : Colors.orange,
+            color: isCompleted ? Colors.green : Colors.green,
             width: 2,
           ),
         ),
@@ -786,7 +786,7 @@ class _CardStepState extends State<_CardStep> {
                 icon: Icon(isCompleted ? Icons.check : Icons.done_all),
                 label: Text(isCompleted ? 'Completado' : 'Entendido'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                  backgroundColor: isCompleted ? Colors.green : Colors.green,
                 ),
               ),
             ),
@@ -816,7 +816,7 @@ class _CardStepState extends State<_CardStep> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           border: Border.all(
-            color: isCompleted ? Colors.green : Colors.orange,
+            color: isCompleted ? Colors.green : Colors.green,
             width: 2,
           ),
         ),
@@ -855,7 +855,7 @@ class _CardStepState extends State<_CardStep> {
                 icon: Icon(isCompleted ? Icons.check : Icons.done_all),
                 label: Text(isCompleted ? 'Completado' : 'Entendido'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                  backgroundColor: isCompleted ? Colors.green : Colors.green,
                 ),
               ),
             ),
@@ -886,7 +886,7 @@ class _CardStepState extends State<_CardStep> {
               borderRadius: BorderRadius.circular(12),
               color: Colors.white,
               border: Border.all(
-                color: isCompleted ? Colors.green : Colors.orange,
+                color: isCompleted ? Colors.green : Colors.green,
                 width: 2,
               ),
             ),
@@ -910,7 +910,7 @@ class _CardStepState extends State<_CardStep> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Card(
                           color: selectedIndex == i
-                              ? Colors.orange.shade100
+                              ? Colors.green.shade100
                               : Colors.grey.shade50,
                           child: ListTile(
                             onTap: isCompleted
@@ -953,7 +953,7 @@ class _CardStepState extends State<_CardStep> {
                     icon: const Icon(Icons.check),
                     label: const Text('Verificar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.green,
                     ),
                   ),
                 ),
@@ -980,7 +980,7 @@ class _CardStepState extends State<_CardStep> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           border: Border.all(
-            color: isCompleted ? Colors.green : Colors.orange,
+            color: isCompleted ? Colors.green : Colors.green,
             width: 2,
           ),
         ),
@@ -1021,7 +1021,7 @@ class _CardStepState extends State<_CardStep> {
                           onCompleted();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: Colors.green,
                         ),
                         child: Text(ans.toString()),
                       ),
@@ -1050,7 +1050,7 @@ class _CardStepState extends State<_CardStep> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           border: Border.all(
-            color: isCompleted ? Colors.green : Colors.orange,
+            color: isCompleted ? Colors.green : Colors.green,
             width: 2,
           ),
         ),
@@ -1070,7 +1070,7 @@ class _CardStepState extends State<_CardStep> {
                 const Icon(
                   Icons.play_circle_outline,
                   size: 64,
-                  color: Colors.orange,
+                  color: Colors.green,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -1087,7 +1087,7 @@ class _CardStepState extends State<_CardStep> {
                 icon: Icon(isCompleted ? Icons.check : Icons.done_all),
                 label: Text(isCompleted ? 'Completado' : 'Escuchado'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                  backgroundColor: isCompleted ? Colors.green : Colors.green,
                 ),
               ),
             ),
@@ -1112,7 +1112,7 @@ class _CardStepState extends State<_CardStep> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.white,
           border: Border.all(
-            color: isCompleted ? Colors.green : Colors.orange,
+            color: isCompleted ? Colors.green : Colors.green,
             width: 2,
           ),
         ),
@@ -1132,7 +1132,7 @@ class _CardStepState extends State<_CardStep> {
                 const Icon(
                   Icons.play_circle_outline,
                   size: 64,
-                  color: Colors.orange,
+                  color: Colors.green,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -1149,7 +1149,7 @@ class _CardStepState extends State<_CardStep> {
                 icon: Icon(isCompleted ? Icons.check : Icons.done_all),
                 label: Text(isCompleted ? 'Completado' : 'Visto'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                  backgroundColor: isCompleted ? Colors.green : Colors.green,
                 ),
               ),
             ),
@@ -1502,7 +1502,7 @@ class _VideoStepState extends State<_VideoStep> {
                 Icon(
                   Icons.play_circle_fill,
                   size: 80,
-                  color: Colors.orange.shade400,
+                  color: Colors.green.shade400,
                 ),
                 // TODO: Implementar video player (video_player package)
               ],
@@ -1529,7 +1529,7 @@ class _VideoStepState extends State<_VideoStep> {
               _videoCompleted ? 'Video Completado ✓' : 'He visto el video',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _videoCompleted ? Colors.green : Colors.orange,
+              backgroundColor: _videoCompleted ? Colors.green : Colors.green,
               minimumSize: const Size(double.infinity, 48),
             ),
           ),
@@ -1577,13 +1577,13 @@ class _AudioStepState extends State<_AudioStep> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: Colors.green.shade200),
             ),
             child: Column(
               children: [
-                Icon(Icons.volume_up, size: 80, color: Colors.orange.shade600),
+                Icon(Icons.volume_up, size: 80, color: Colors.green.shade600),
                 const SizedBox(height: 16),
                 Text(
                   widget.title,
@@ -1604,7 +1604,7 @@ class _AudioStepState extends State<_AudioStep> {
             icon: const Icon(Icons.play_arrow),
             label: const Text('Reproducir Audio'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.green,
               minimumSize: const Size(double.infinity, 48),
             ),
           ),
@@ -1691,7 +1691,7 @@ class _ImageStep extends StatelessWidget {
           ElevatedButton(
             onPressed: onCompleted,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.green,
               minimumSize: const Size(double.infinity, 48),
             ),
             child: const Text('Entendido'),
@@ -1733,7 +1733,7 @@ class _TextStep extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -1761,7 +1761,7 @@ class _TextStep extends StatelessWidget {
           ElevatedButton(
             onPressed: onCompleted,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.green,
               minimumSize: const Size(double.infinity, 48),
             ),
             child: const Text('Continuar'),
@@ -1771,3 +1771,4 @@ class _TextStep extends StatelessWidget {
     );
   }
 }
+

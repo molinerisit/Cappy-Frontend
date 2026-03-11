@@ -124,13 +124,13 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [Colors.orange.shade400, Colors.orange.shade700],
+              colors: [Colors.green.shade400, Colors.green.shade700],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.shade400.withValues(alpha: 0.4),
+                color: Colors.green.shade400.withValues(alpha: 0.4),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -171,10 +171,10 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCurrentUser ? Colors.orange.shade50 : Colors.white,
+        color: isCurrentUser ? Colors.green.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isCurrentUser ? Colors.orange.shade300 : Colors.grey.shade200,
+          color: isCurrentUser ? Colors.green.shade300 : Colors.grey.shade200,
           width: isCurrentUser ? 2 : 1,
         ),
         boxShadow: [
@@ -207,7 +207,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
                               ? FontWeight.bold
                               : FontWeight.w600,
                           color: isCurrentUser
-                              ? Colors.orange.shade800
+                              ? Colors.green.shade800
                               : Colors.grey.shade800,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -221,7 +221,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade600,
+                          color: Colors.green.shade600,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -258,7 +258,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade700,
+                      color: Colors.green.shade700,
                     ),
                   ),
                 ],
@@ -282,14 +282,14 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.orange.shade400, Colors.orange.shade600],
+          colors: [Colors.green.shade400, Colors.green.shade600],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.shade300.withValues(alpha: 0.5),
+            color: Colors.green.shade300.withValues(alpha: 0.5),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -353,7 +353,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
           'Ranking Mundial',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.orange.shade700,
+        backgroundColor: Colors.green.shade700,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -363,7 +363,7 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
       ),
       body: _isLoadingGlobal
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+              child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             )
           : _errorMessage != null
           ? Center(
@@ -402,3 +402,4 @@ class _GlobalLeaderboardScreenState extends State<GlobalLeaderboardScreen> {
     );
   }
 }
+

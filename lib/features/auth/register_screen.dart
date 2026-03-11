@@ -106,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Funcionalidad próximamente'),
-          backgroundColor: const Color(0xFFFF6B35),
+          backgroundColor: const Color(0xFF22C55E),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -453,3 +453,4 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
+

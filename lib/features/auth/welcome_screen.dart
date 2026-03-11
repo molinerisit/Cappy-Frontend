@@ -9,7 +9,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2), // Fondo crema claro
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
@@ -20,10 +20,7 @@ class WelcomeScreen extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFFFF6B35), // Naranja principal
-                    const Color(0xFFFF8C5A), // Naranja claro
-                  ],
+                  colors: [const Color(0xFF22C55E), const Color(0xFF4ADE80)],
                 ),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(30),
@@ -42,7 +39,7 @@ class WelcomeScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
+                          color: const Color(0xFF22C55E).withValues(alpha: 0.3),
                           blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
@@ -93,7 +90,7 @@ class WelcomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: const Color(
-                              0xFFFF6B35,
+                              0xFF22C55E,
                             ).withValues(alpha: 0.1),
                             width: 2,
                           ),
@@ -176,12 +173,14 @@ class WelcomeScreen extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B35),
+                        backgroundColor: const Color(0xFF22C55E),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 4,
-                        shadowColor: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+                        shadowColor: const Color(
+                          0xFF22C55E,
+                        ).withValues(alpha: 0.4),
                       ),
                       child: Text(
                         'EMPIEZA AHORA',
@@ -211,7 +210,7 @@ class WelcomeScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(
-                          color: Color(0xFFFF6B35),
+                          color: Color(0xFF22C55E),
                           width: 2,
                         ),
                         shape: RoundedRectangleBorder(
@@ -223,7 +222,7 @@ class WelcomeScreen extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFF6B35),
+                          color: const Color(0xFF22C55E),
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -253,7 +252,7 @@ class WelcomeScreen extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFFFF6B35),
+                  color: const Color(0xFF22C55E),
                 ),
               ),
               const SizedBox(height: 4),

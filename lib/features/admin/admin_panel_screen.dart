@@ -37,7 +37,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade600,
+                  color: Colors.green.shade600,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.restaurant, color: Colors.white),
@@ -134,10 +134,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             },
             labelType: NavigationRailLabelType.all,
             backgroundColor: Colors.grey.shade50,
-            indicatorColor: Colors.orange.shade100,
-            selectedIconTheme: IconThemeData(color: Colors.orange.shade600),
+            indicatorColor: Colors.green.shade100,
+            selectedIconTheme: IconThemeData(color: Colors.green.shade600),
             selectedLabelTextStyle: TextStyle(
-              color: Colors.orange.shade600,
+              color: Colors.green.shade600,
               fontWeight: FontWeight.bold,
             ),
             destinations: const [
@@ -248,7 +248,7 @@ class _LearningPathsTabState extends State<_LearningPathsTab> {
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo Camino'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange.shade600,
+                  backgroundColor: Colors.green.shade600,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 16,
@@ -455,12 +455,12 @@ class _NodesManagementViewState extends State<_NodesManagementView> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
+                      color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '📭 Este camino no tiene nodos. ¡Agrega contenido!',
-                      style: TextStyle(color: Colors.orange.shade700),
+                      style: TextStyle(color: Colors.green.shade700),
                     ),
                   )
                 else
@@ -664,14 +664,14 @@ class _LegacyRedirectNotice extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 500),
           padding: const EdgeInsets.all(48),
           decoration: BoxDecoration(
-            color: Colors.orange.shade50,
+            color: Colors.green.shade50,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.shade200),
+            border: Border.all(color: Colors.green.shade200),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.orange.shade600, size: 48),
+              Icon(icon, color: Colors.green.shade600, size: 48),
               const SizedBox(height: 16),
               Text(
                 title,
@@ -772,7 +772,7 @@ class _PathContentScreenState extends State<PathContentScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text('Camino: ${widget.pathTitle}'),
-        backgroundColor: Colors.orange.shade700,
+        backgroundColor: Colors.green.shade700,
         bottom: TabBar(controller: _tabController, tabs: _buildTabs()),
       ),
       body: TabBarView(
@@ -1221,7 +1221,7 @@ class _PathCardV2 extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
+                  color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1229,7 +1229,7 @@ class _PathCardV2 extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.orange.shade700,
+                    color: Colors.green.shade700,
                   ),
                 ),
               ),
@@ -1451,7 +1451,7 @@ class _AnalyticsCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: Colors.orange),
+            Icon(icon, size: 32, color: Colors.green),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -1950,3 +1950,4 @@ class _NodeCard extends StatelessWidget {
     );
   }
 }
+

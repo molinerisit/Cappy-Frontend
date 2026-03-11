@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/colors.dart';
 
 class XPDisplay extends StatelessWidget {
   final int currentXp;
@@ -38,7 +39,7 @@ class XPDisplay extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.green.shade600, Colors.green.shade800],
+          colors: const [AppColors.primary, AppColors.successDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -104,7 +105,7 @@ class XPDisplay extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.local_fire_department,
-                      color: Colors.orange,
+                      color: AppColors.secondaryAccent,
                       size: 28,
                     ),
                     const SizedBox(width: 4),

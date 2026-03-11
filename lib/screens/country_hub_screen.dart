@@ -93,7 +93,7 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
         title: Text(
           '${widget.countryIcon ?? '🌍'} ${widget.countryName ?? 'País'}',
         ),
-        backgroundColor: const Color(0xFFFF6B35),
+        backgroundColor: const Color(0xFF22C55E),
         elevation: 0,
         actions: [
           Padding(
@@ -113,7 +113,7 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+              child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             );
           } else if (snapshot.hasError) {
             return CountryLockedView(
@@ -147,8 +147,8 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFFF6B35).withValues(alpha: 0.1),
-                        const Color(0xFFFFA500).withValues(alpha: 0.1),
+                        const Color(0xFF22C55E).withValues(alpha: 0.1),
+                        const Color(0xFF4ADE80).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -164,7 +164,7 @@ class _CountryHubScreenState extends State<CountryHubScreen> {
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
+                          color: Color(0xFF22C55E),
                         ),
                       ),
                       if (hub.description != null) ...[
@@ -233,8 +233,8 @@ class _PathCard extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: path.isCountryRecipe
                   ? [
-                      const Color(0xFFFF6B35).withValues(alpha: 0.9),
-                      const Color(0xFFFFA500).withValues(alpha: 0.9),
+                      const Color(0xFF22C55E).withValues(alpha: 0.9),
+                      const Color(0xFF4ADE80).withValues(alpha: 0.9),
                     ]
                   : [
                       const Color(0xFF4CAF50).withValues(alpha: 0.9),
@@ -346,3 +346,4 @@ class _DifficultyBadge extends StatelessWidget {
     );
   }
 }
+

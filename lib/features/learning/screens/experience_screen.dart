@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 // DEPRECATED: Use main_experience_screen.dart instead
 class ExperienceScreen extends StatelessWidget {
@@ -11,7 +11,7 @@ class ExperienceScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.warning, size: 48, color: Colors.orange),
+            Icon(Icons.warning, size: 48, color: Colors.green),
             SizedBox(height: 16),
             Text(
               'Screen deprecated',
@@ -25,3 +25,4 @@ class ExperienceScreen extends StatelessWidget {
     );
   }
 }
+

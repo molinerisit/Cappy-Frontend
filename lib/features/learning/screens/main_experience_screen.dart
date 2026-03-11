@@ -241,6 +241,12 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
                   textAlign: TextAlign.center,
                 ),
               ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: isCompact ? 18 : 20,
+                color: AppColors.textSecondary,
+              ),
             ],
           ),
         ),

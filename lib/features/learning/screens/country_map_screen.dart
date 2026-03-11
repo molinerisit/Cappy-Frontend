@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 // DEPRECATED: Use path_progression_screen.dart instead
 class CountryMapScreen extends StatelessWidget {
@@ -13,7 +13,7 @@ class CountryMapScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.warning, size: 48, color: Colors.orange),
+            Icon(Icons.warning, size: 48, color: Colors.green),
             SizedBox(height: 16),
             Text(
               'Screen deprecated',
@@ -27,3 +27,4 @@ class CountryMapScreen extends StatelessWidget {
     );
   }
 }
+

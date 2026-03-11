@@ -211,13 +211,13 @@ class _SkillLessonsScreenState extends State<SkillLessonsScreen> {
                                               const Icon(
                                                 Icons.alarm,
                                                 size: 16,
-                                                color: Colors.orange,
+                                                color: Colors.green,
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 "${step["timer"]} segundos",
                                                 style: const TextStyle(
-                                                  color: Colors.orange,
+                                                  color: Colors.green,
                                                   fontSize: 13,
                                                 ),
                                               ),
@@ -365,3 +365,4 @@ class _SkillLessonsScreenState extends State<SkillLessonsScreen> {
     );
   }
 }
+

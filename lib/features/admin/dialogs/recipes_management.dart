@@ -128,7 +128,7 @@ class _RecipesManagementTabState extends State<RecipesManagementTab> {
                 onPressed: _showCreateRecipeDialog,
                 icon: const Icon(Icons.add),
                 label: const Text('Nueva Receta'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               ),
             ],
           ),
@@ -239,11 +239,11 @@ class _RecipeCard extends StatelessWidget {
       child: ListTile(
         leading: Container(
           decoration: BoxDecoration(
-            color: Colors.orange.shade100,
+            color: Colors.green.shade100,
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.all(8),
-          child: const Icon(Icons.restaurant, color: Colors.orange),
+          child: const Icon(Icons.restaurant, color: Colors.green),
         ),
         title: Text(
           recipe['title'] ?? 'Sin título',
@@ -435,7 +435,7 @@ class _CreateRecipeDialogState extends State<CreateRecipeDialog>
           children: [
             // Header
             Container(
-              color: Colors.orange.shade700,
+              color: Colors.green.shade700,
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
@@ -630,7 +630,7 @@ class _CreateRecipeDialogState extends State<CreateRecipeDialog>
                   child: ListTile(
                     leading: const Icon(
                       Icons.local_grocery_store,
-                      color: Colors.orange,
+                      color: Colors.green,
                     ),
                     title: Text(ing['name'] ?? '?'),
                     subtitle: Text('${ing['quantity']} ${ing['unit']}'),
@@ -683,7 +683,7 @@ class _CreateRecipeDialogState extends State<CreateRecipeDialog>
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.green,
                       child: Text(
                         '${index + 1}',
                         style: const TextStyle(color: Colors.white),
@@ -1031,3 +1031,4 @@ class _AddIngredientDialogState extends State<AddIngredientDialog> {
     );
   }
 }
+

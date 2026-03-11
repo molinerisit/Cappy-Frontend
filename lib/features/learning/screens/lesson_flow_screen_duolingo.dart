@@ -228,7 +228,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
+                          color: Color(0xFF22C55E),
                         ),
                       ),
                       Text(
@@ -236,7 +236,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: GoogleFonts.poppins(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFF6B35),
+                          color: const Color(0xFF22C55E),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -526,3 +526,4 @@ class _ShakeWidget extends StatelessWidget {
     );
   }
 }
+

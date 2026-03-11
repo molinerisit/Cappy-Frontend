@@ -490,7 +490,7 @@ class _EditNodeDialogV2State extends State<EditNodeDialogV2>
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.green,
                       child: Text(
                         '${index + 1}',
                         style: const TextStyle(color: Colors.white),
@@ -506,7 +506,7 @@ class _EditNodeDialogV2State extends State<EditNodeDialogV2>
                           const Icon(
                             Icons.style,
                             size: 14,
-                            color: Colors.orange,
+                            color: Colors.green,
                           ),
                         if (hasCards) const SizedBox(width: 4),
                         Expanded(
@@ -582,7 +582,7 @@ class _EditNodeDialogV2State extends State<EditNodeDialogV2>
                   child: ListTile(
                     leading: const Icon(
                       Icons.local_grocery_store,
-                      color: Colors.orange,
+                      color: Colors.green,
                     ),
                     title: Text(ing['name'] ?? '?'),
                     subtitle: Text(
@@ -640,7 +640,7 @@ class _EditNodeDialogV2State extends State<EditNodeDialogV2>
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    leading: const Icon(Icons.build, color: Colors.orange),
+                    leading: const Icon(Icons.build, color: Colors.green),
                     title: Text(tool['name'] ?? '?'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
@@ -753,3 +753,4 @@ class _AddIngredientDialogState extends State<AddIngredientDialog> {
     );
   }
 }
+

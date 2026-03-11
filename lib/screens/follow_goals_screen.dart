@@ -46,7 +46,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+              child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             );
           } else if (snapshot.hasError) {
             return Center(
@@ -56,7 +56,7 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
                   const Icon(
                     Icons.error_outline,
                     size: 48,
-                    color: Color(0xFFFF6B35),
+                    color: Color(0xFF22C55E),
                   ),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}'),
@@ -203,8 +203,8 @@ class _FollowGoalsScreenState extends State<FollowGoalsScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFFF6B35).withValues(alpha: 0.9),
-            const Color(0xFFFFA500).withValues(alpha: 0.9),
+            const Color(0xFF22C55E).withValues(alpha: 0.9),
+            const Color(0xFF4ADE80).withValues(alpha: 0.9),
           ],
         );
       case 'lose_weight':
@@ -276,3 +276,4 @@ class _GoalTypeBadge extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/colors.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;
@@ -10,7 +11,7 @@ class AppLogo extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.restaurant_menu, size: size, color: Colors.orange),
+        Icon(Icons.restaurant_menu, size: size, color: AppColors.primary),
         const SizedBox(height: 16),
         const Text(
           "Cappy",
@@ -19,7 +20,7 @@ class AppLogo extends StatelessWidget {
         const SizedBox(height: 4),
         const Text(
           "Cocina feliz",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
         ),
       ],
     );

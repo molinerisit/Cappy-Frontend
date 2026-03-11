@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/api_service.dart';
 import '../../../providers/onboarding_selection_provider.dart';
+import '../../../theme/colors.dart';
 import 'register_screen.dart';
 
 class OnboardingGoalsScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -36,7 +37,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back_ios, size: 20),
-                    color: const Color(0xFF333333),
+                    color: AppColors.textStrong,
                   ),
                   const Spacer(),
                   Text(
@@ -44,7 +45,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -62,7 +63,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF333333),
+                      color: AppColors.textStrong,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -71,7 +72,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -87,7 +88,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                     return const Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFFFF6B35),
+                          AppColors.primary,
                         ),
                       ),
                     );
@@ -96,7 +97,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                       child: Text(
                         'Error al cargar objetivos',
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF666666),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     );
@@ -105,7 +106,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                       child: Text(
                         'No hay objetivos disponibles',
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF666666),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     );
@@ -133,9 +134,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: const Color(
-                                  0xFFFF6B35,
-                                ).withValues(alpha: 0.2),
+                                color: AppColors.primary.withValues(alpha: 0.2),
                                 width: 2,
                               ),
                               boxShadow: [
@@ -172,7 +171,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                                               style: GoogleFonts.poppins(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF333333),
+                                                color: AppColors.textStrong,
                                               ),
                                             ),
                                             if (description.isNotEmpty) ...[
@@ -182,9 +181,8 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w400,
-                                                  color: const Color(
-                                                    0xFF666666,
-                                                  ),
+                                                  color:
+                                                      AppColors.textSecondary,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -198,7 +196,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                                         width: 32,
                                         height: 32,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFFF6B35),
+                                          color: AppColors.primary,
                                           shape: BoxShape.circle,
                                         ),
                                         child: const Icon(
@@ -230,7 +228,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                      color: AppColors.primarySoft,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -248,7 +246,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF666666),
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -283,7 +281,7 @@ class _OnboardingGoalsScreenState extends State<OnboardingGoalsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡Excelente! Elegiste: $goalTitle'),
-        backgroundColor: const Color(0xFFFF6B35),
+        backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 1),
       ),
     );
