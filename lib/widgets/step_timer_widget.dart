@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/audio_feedback_service.dart';
 import '../theme/colors.dart';
+import '../theme/motion.dart';
 
 class StepTimerWidget extends StatefulWidget {
   final int durationSeconds;
@@ -21,6 +24,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
   int secondsLeft = 0;
   bool running = false;
   bool finished = false;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -29,34 +33,28 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
   }
 
   void startTimer() {
+    _timer?.cancel();
     setState(() {
       secondsLeft = widget.durationSeconds;
       running = true;
       finished = false;
     });
-    Future.doWhile(() async {
-      await Future.delayed(Duration(seconds: 1));
-      if (!running || secondsLeft <= 0) return false;
-      setState(() => secondsLeft--);
-      if (secondsLeft == 0) {
-        running = false;
-        finished = true;
-        playAlarm();
-        widget.onTimerEnd();
-      }
-      return running;
-    });
+    _startTicker();
   }
 
   void pauseTimer() {
+    _timer?.cancel();
     setState(() => running = false);
   }
 
   void resumeTimer() {
-    if (secondsLeft > 0) setState(() => running = true);
+    if (secondsLeft <= 0 || running) return;
+    setState(() => running = true);
+    _startTicker();
   }
 
   void cancelTimer() {
+    _timer?.cancel();
     setState(() {
       running = false;
       secondsLeft = widget.durationSeconds;
@@ -64,8 +62,38 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
     });
   }
 
+  void _startTicker() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || !running) {
+        timer.cancel();
+        return;
+      }
+
+      if (secondsLeft <= 1) {
+        timer.cancel();
+        setState(() {
+          secondsLeft = 0;
+          running = false;
+          finished = true;
+        });
+        playAlarm();
+        widget.onTimerEnd();
+        return;
+      }
+
+      setState(() => secondsLeft--);
+    });
+  }
+
   Future<void> playAlarm() async {
     AudioFeedbackService().playAlarm();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   String _formatSeconds(int totalSeconds) {
@@ -99,6 +127,7 @@ class _StepTimerWidgetState extends State<StepTimerWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
+              animationDuration: AppMotionDurations.quick,
             ),
           ),
         if (running)

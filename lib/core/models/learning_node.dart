@@ -5,6 +5,9 @@ class NodeStep {
   final String type; // text, image, video, quiz, interactive, checklist
   final String? image;
   final String? video;
+  final bool? videoLoop;
+  final bool? videoMuted;
+  final String? videoEndText;
   final String? animationUrl;
   final String? question;
   final List<String>? options;
@@ -24,6 +27,9 @@ class NodeStep {
     required this.type,
     this.image,
     this.video,
+    this.videoLoop,
+    this.videoMuted,
+    this.videoEndText,
     this.animationUrl,
     this.question,
     this.options,
@@ -169,6 +175,9 @@ class NodeStep {
       type: json['type'] ?? 'text',
       image: json['image'],
       video: json['video'],
+      videoLoop: json['videoLoop'] ?? json['loop'],
+      videoMuted: json['videoMuted'] ?? json['muted'],
+      videoEndText: json['videoEndText'] ?? json['completionText'],
       animationUrl: json['animationUrl'],
       question: question?.toString(),
       options: options,
@@ -195,6 +204,9 @@ class NodeStep {
       'type': type,
       'image': image,
       'video': video,
+      'videoLoop': videoLoop,
+      'videoMuted': videoMuted,
+      'videoEndText': videoEndText,
       'animationUrl': animationUrl,
       'question': question,
       'options': options,

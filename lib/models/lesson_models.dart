@@ -12,6 +12,9 @@ class LessonStep {
   final String? imageUrl;
   final String? videoUrl;
   final String? audioUrl;
+  final bool? videoLoop;
+  final bool? videoMuted;
+  final String? videoEndText;
 
   // Para múltiple choice
   final String? question;
@@ -33,6 +36,9 @@ class LessonStep {
     this.imageUrl,
     this.videoUrl,
     this.audioUrl,
+    this.videoLoop,
+    this.videoMuted,
+    this.videoEndText,
     this.question,
     this.options,
     this.ingredients,
@@ -48,8 +54,11 @@ class LessonStep {
       title: json['title'] ?? '',
       instruction: json['instruction'] ?? json['content'],
       imageUrl: json['imageUrl'],
-      videoUrl: json['videoUrl'],
+      videoUrl: json['videoUrl'] ?? json['url'],
       audioUrl: json['audioUrl'],
+      videoLoop: json['videoLoop'] ?? json['loop'],
+      videoMuted: json['videoMuted'] ?? json['muted'],
+      videoEndText: json['videoEndText'] ?? json['completionText'],
       question: json['question'],
       options: (json['options'] as List?)
           ?.map((o) => MultipleChoiceOption.fromJson(o))
@@ -72,6 +81,9 @@ class LessonStep {
       'imageUrl': imageUrl,
       'videoUrl': videoUrl,
       'audioUrl': audioUrl,
+      'videoLoop': videoLoop,
+      'videoMuted': videoMuted,
+      'videoEndText': videoEndText,
       'question': question,
       'options': options?.map((o) => o.toJson()).toList(),
       'ingredients': ingredients?.map((i) => i.toJson()).toList(),

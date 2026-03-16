@@ -7,6 +7,7 @@ import '../config/app_config.dart';
 class ApiService {
   // 🌍 Multi-environment API base URL (from AppConfig)
   static String get baseUrl => AppConfig.apiBaseUrl;
+  static final RegExp _objectIdPattern = RegExp(r'[a-fA-F0-9]{24}');
 
   static String? _token;
   static final http.Client _httpClient = http.Client();
@@ -18,6 +19,40 @@ class ApiService {
       if (json) "Content-Type": "application/json",
       if (_token != null) "Authorization": "Bearer $_token",
     };
+  }
+
+  static String _normalizePathId(String pathId) {
+    final trimmed = pathId.trim();
+    final objectIdMatch = _objectIdPattern.firstMatch(trimmed);
+    if (objectIdMatch != null) {
+      return objectIdMatch.group(0)!;
+    }
+
+    final withoutQuery = trimmed.split('?').first.split('#').first;
+    final parts = withoutQuery.split('/').where((part) => part.isNotEmpty);
+    if (parts.isNotEmpty) {
+      return parts.first;
+    }
+
+    return trimmed;
+  }
+
+  static Uri _buildAdminPathUri(String pathId, List<String> trailingSegments) {
+    final base = Uri.parse(baseUrl);
+    final normalizedPathId = _normalizePathId(pathId);
+    final baseSegments = base.pathSegments.where(
+      (segment) => segment.isNotEmpty,
+    );
+
+    return base.replace(
+      pathSegments: [
+        ...baseSegments,
+        'admin',
+        'paths',
+        normalizedPathId,
+        ...trailingSegments,
+      ],
+    );
   }
 
   static Future<http.Response> _get(
@@ -1603,27 +1638,23 @@ class ApiService {
   // ====================================
 
   static Future<List<dynamic>> adminGetGroupsByPath(String pathId) async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
-    );
+    final uri = _buildAdminPathUri(pathId, ['groups']);
+    final response = await http.get(uri, headers: _headers(json: false));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando grupos");
+    _throwApiErrorWithDetails(response, "Error cargando grupos");
   }
 
   static Future<Map<String, dynamic>> adminCreateGroup(
     String pathId,
     Map<String, dynamic> data,
   ) async {
+    final uri = _buildAdminPathUri(pathId, ['groups']);
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/paths/$pathId/groups"),
+      uri,
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",
@@ -1675,19 +1706,14 @@ class ApiService {
   }
 
   static Future<List<dynamic>> adminGetContentNodesByPath(String pathId) async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/admin/paths/$pathId/nodes"),
-      headers: {
-        "Content-Type": "application/json",
-        if (_token != null) "Authorization": "Bearer $_token",
-      },
-    );
+    final uri = _buildAdminPathUri(pathId, ['nodes']);
+    final response = await http.get(uri, headers: _headers(json: false));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
 
-    throw Exception("Error cargando nodos");
+    _throwApiErrorWithDetails(response, "Error cargando nodos");
   }
 
   static Future<Map<String, dynamic>> adminCreateContentNode(
@@ -1749,8 +1775,9 @@ class ApiService {
     String pathId,
     List<Map<String, dynamic>> updates,
   ) async {
+    final uri = _buildAdminPathUri(pathId, ['nodes', 'reorder']);
     final response = await http.post(
-      Uri.parse("$baseUrl/admin/paths/$pathId/nodes/reorder"),
+      uri,
       headers: {
         "Content-Type": "application/json",
         if (_token != null) "Authorization": "Bearer $_token",

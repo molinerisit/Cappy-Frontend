@@ -4,6 +4,7 @@ import '../core/audio_feedback_service.dart';
 import '../core/lives_service.dart';
 import '../theme/colors.dart';
 import '../widgets/lives_widget.dart';
+import '../widgets/video_card_player.dart';
 import 'no_lives_screen.dart';
 
 class LearningNodeViewerScreen extends StatefulWidget {
@@ -842,19 +843,23 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
   }
 
   Widget _buildVideoCard(Map<String, dynamic> data) {
-    final videoUrl = data['videoUrl'] ?? '';
+    final videoUrl = (data['url'] ?? data['videoUrl'] ?? '').toString();
+    final loopEnabled = data['loop'] == true || data['videoLoop'] == true;
+    final muted = data['muted'] == true || data['videoMuted'] == true;
+    final completionText =
+        (data['completionText'] ?? data['videoEndText'] ?? '').toString();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        children: [
-          const Icon(Icons.play_circle_outline, size: 64, color: Colors.grey),
-          const SizedBox(height: 12),
-          Text('Video: $videoUrl'),
-        ],
+      child: VideoCardPlayer(
+        videoUrl: videoUrl,
+        initialLooping: loopEnabled,
+        initialMuted: muted,
+        completionText: completionText,
       ),
     );
   }

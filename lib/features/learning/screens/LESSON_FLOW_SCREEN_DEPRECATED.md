@@ -15,7 +15,7 @@
 // - Código más mantenible
 //
 // Instrucciones de migración:
-// Ver: lib/features/learning/INTEGRATION_GUIDE.dart
+// Ver: lib/features/learning/integration_guide.dart
 //
 // Cambio simple:
 // OLD: LessonFlowScreen(lessonId: id, ...)

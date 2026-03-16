@@ -19,6 +19,8 @@ import '../../../providers/progress_provider.dart';
 import '../../../widgets/cached_image.dart';
 import '../../../widgets/interactive_animation_card.dart';
 import '../../../widgets/step_timer_widget.dart';
+import '../../../widgets/video_card_player.dart';
+import '../../../theme/motion.dart';
 
 /// Pantalla de leccion gamificada tipo Duolingo.
 class LessonGameScreen extends StatefulWidget {
@@ -42,6 +44,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   String _currentState = 'answering'; // answering, feedback, loading
   bool _isApplyingLifePenalty = false;
   int _currentLives = 3;
+  bool _checklistAllChecked = false;
 
   Widget _buildLivesIndicator() {
     return Container(
@@ -74,7 +77,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     super.initState();
     _currentStepIndex = 0;
     _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: AppMotionDurations.emphasis,
       vsync: this,
     );
     _audioPlayer = AudioPlayer();
@@ -311,7 +314,11 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       unawaited(_applyLifePenaltyForMistake());
     }
 
-    Future.delayed(const Duration(milliseconds: 600), () {
+    final feedbackDelay = isCorrect
+        ? AppMotionDurations.feedbackSuccess
+        : AppMotionDurations.feedbackError;
+
+    Future.delayed(feedbackDelay, () {
       if (!mounted) return;
       setState(() {
         _isAnswerCorrect = isCorrect;
@@ -344,6 +351,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         _selectedAnswerIndex = null;
         _isAnswerCorrect = null;
         _currentState = 'answering';
+        _checklistAllChecked = false;
       });
     }
   }
@@ -407,7 +415,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 520),
+      transitionDuration: AppMotionDurations.celebrationEntrance,
       pageBuilder: (BuildContext dialogContext, _, __) {
         return _LessonCompletionCelebrationDialog(
           xpEarned: xpEarned,
@@ -425,12 +433,15 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       transitionBuilder: (_, animation, __, child) {
         final curved = CurvedAnimation(
           parent: animation,
-          curve: Curves.easeOutCubic,
+          curve: AppMotionCurves.entrance,
         );
-        final scale = Tween<double>(
-          begin: 0.88,
-          end: 1,
-        ).animate(CurvedAnimation(parent: animation, curve: Curves.elasticOut));
+        final scale =
+            Tween<double>(
+              begin: AppMotionValues.dialogScaleStart,
+              end: 1,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: AppMotionCurves.bounce),
+            );
 
         return FadeTransition(
           opacity: curved,
@@ -459,21 +470,17 @@ class _LessonGameScreenState extends State<LessonGameScreen>
   /// Extrae el mensaje de feedback personalizado de las cards de quiz
   String? _getQuizFeedbackMessage(NodeStep step, {required bool isCorrect}) {
     if (step.cards == null || step.cards!.isEmpty) {
-      print('DEBUG: No cards found in step');
       return null;
     }
 
     for (final card in step.cards!) {
       final cardType = card['type']?.toString();
-      print('DEBUG: Card type: $cardType');
       if (cardType == 'quiz') {
         final content =
             (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
-        print('DEBUG: Quiz card content keys: ${content.keys}');
         // El admin guarda el feedback correcto en 'explanation'
         if (isCorrect) {
           final explanation = content['explanation']?.toString().trim();
-          print('DEBUG: Explanation found: $explanation');
           if (explanation != null && explanation.isNotEmpty) {
             return explanation;
           }
@@ -489,7 +496,6 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         }
       }
     }
-    print('DEBUG: No feedback message found');
     return null;
   }
 
@@ -503,8 +509,6 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         final content =
             (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
         final optionItems = content['optionItems'];
-        print('DEBUG: Found quiz card');
-        print('DEBUG: optionItems raw: $optionItems');
         if (optionItems is List && optionItems.isNotEmpty) {
           final result = optionItems
               .map(
@@ -513,12 +517,10 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                     : {'text': item?.toString() ?? ''},
               )
               .toList();
-          print('DEBUG: Processed optionItems: $result');
           return result;
         }
       }
     }
-    print('DEBUG: No optionItems found');
     return null;
   }
 
@@ -576,6 +578,60 @@ class _LessonGameScreenState extends State<LessonGameScreen>
       default:
         return BoxFit.cover;
     }
+  }
+
+  bool _parseBoolLike(dynamic value, {bool fallback = false}) {
+    if (value is bool) {
+      return value;
+    }
+
+    final normalized = value?.toString().trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) {
+      return fallback;
+    }
+
+    if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
+      return true;
+    }
+    if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+      return false;
+    }
+
+    return fallback;
+  }
+
+  bool _looksLikeVideoUrl(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return false;
+    }
+
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('data:video/')) {
+      return true;
+    }
+
+    final parsed = Uri.tryParse(trimmed);
+    final path = (parsed?.path ?? lower).toLowerCase();
+    const videoExtensions = [
+      '.mp4',
+      '.webm',
+      '.mov',
+      '.m4v',
+      '.m3u8',
+      '.avi',
+      '.mkv',
+    ];
+
+    if (videoExtensions.any(path.endsWith) ||
+        path.contains('/videos/') ||
+        path.contains('/video/')) {
+      return true;
+    }
+
+    final query = parsed?.query.toLowerCase() ?? '';
+    return query.contains('resource_type=video') ||
+        query.contains('format=mp4');
   }
 
   Widget _buildDisplayAwareCachedImage({
@@ -670,6 +726,9 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     );
   }
 
+  bool _stepHasChecklist(NodeStep step) =>
+      step.cards?.any((c) => c['type'] == 'checklist') ?? false;
+
   List<Widget> _buildContentCards(NodeStep step, {bool excludeQuiz = false}) {
     final cards = <Widget>[];
     final hasCards = step.cards != null && step.cards!.isNotEmpty;
@@ -759,6 +818,23 @@ class _LessonGameScreenState extends State<LessonGameScreen>
             content['media']?.toString() ??
             card['image']?.toString() ??
             card['media']?.toString();
+        final cardVideo = _firstNonEmpty([
+          content['videoUrl']?.toString(),
+          content['video']?.toString(),
+          card['videoUrl']?.toString(),
+          card['video']?.toString(),
+          if (cardType == 'video') content['url']?.toString(),
+          if (cardType == 'video') content['media']?.toString(),
+          if (cardType == 'video') card['media']?.toString(),
+          if (_looksLikeVideoUrl(content['url']?.toString()))
+            content['url']?.toString(),
+          if (_looksLikeVideoUrl(content['media']?.toString()))
+            content['media']?.toString(),
+          if (_looksLikeVideoUrl(card['media']?.toString()))
+            card['media']?.toString(),
+          if (_looksLikeVideoUrl(card['image']?.toString()))
+            card['image']?.toString(),
+        ], '');
         final cardImageDisplay = _normalizeImageDisplay(
           content['display'] ?? content['imageDisplay'],
         );
@@ -767,6 +843,14 @@ class _LessonGameScreenState extends State<LessonGameScreen>
         final isItalic = content['isItalic'] ?? card['isItalic'] ?? false;
 
         if (cardType == 'list' && listItems.isNotEmpty) {
+          final listStyle =
+              content['listStyle']?.toString() ??
+              card['listStyle']?.toString() ??
+              'checks';
+          final filteredItems = listItems
+              .map((e) => e?.toString() ?? '')
+              .where((e) => e.trim().isNotEmpty)
+              .toList();
           cards.add(
             Container(
               margin: const EdgeInsets.only(top: 12),
@@ -789,35 +873,62 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                       ),
                     ),
                   if (cardTitle.isNotEmpty) const SizedBox(height: 8),
-                  ...listItems
-                      .map((item) => item?.toString() ?? '')
-                      .where((item) => item.trim().isNotEmpty)
-                      .map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.check_circle_outline,
-                                size: 18,
-                                color: Color(0xFF27AE60),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  item,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: const Color(0xFF1F2937),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
+                  ...List.generate(filteredItems.length, (i) {
+                    final item = filteredItems[i];
+                    Widget leading;
+                    if (listStyle == 'crosses') {
+                      leading = const Icon(
+                        Icons.cancel_outlined,
+                        size: 18,
+                        color: Color(0xFFDC2626),
+                      );
+                    } else if (listStyle == 'numbered') {
+                      leading = Container(
+                        width: 22,
+                        height: 22,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF27AE60),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Text(
+                          '${i + 1}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1,
                           ),
                         ),
+                      );
+                    } else {
+                      leading = const Icon(
+                        Icons.check_circle_outline,
+                        size: 18,
+                        color: Color(0xFF27AE60),
+                      );
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          leading,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: const Color(0xFF1F2937),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -825,8 +936,24 @@ class _LessonGameScreenState extends State<LessonGameScreen>
           continue;
         }
 
-        final hasImage = cardImage != null && cardImage.isNotEmpty;
-        if (cardTitle.isEmpty && cardBody.isEmpty && !hasImage) {
+        if (cardType == 'checklist' && listItems.isNotEmpty) {
+          final filteredChecklist = listItems
+              .map((e) => e?.toString() ?? '')
+              .where((e) => e.trim().isNotEmpty)
+              .toList();
+          cards.add(
+            _ChecklistCardWidget(
+              title: cardTitle,
+              items: filteredChecklist,
+              onAllChecked: () => setState(() => _checklistAllChecked = true),
+            ),
+          );
+          continue;
+        }
+
+        final hasVideo = cardVideo.isNotEmpty;
+        final hasImage = !hasVideo && cardImage != null && cardImage.isNotEmpty;
+        if (cardTitle.isEmpty && cardBody.isEmpty && !hasImage && !hasVideo) {
           continue;
         }
 
@@ -867,6 +994,33 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                       fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
                       fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
                     ),
+                  ),
+                ],
+                if (hasVideo) ...[
+                  if (cardTitle.isNotEmpty || showCardBody)
+                    const SizedBox(height: 12),
+                  VideoCardPlayer(
+                    videoUrl: cardVideo,
+                    autoPlay: true,
+                    showControls: false,
+                    initialLooping: _parseBoolLike(
+                      content['videoLoop'] ??
+                          content['loop'] ??
+                          card['videoLoop'] ??
+                          card['loop'],
+                    ),
+                    initialMuted: _parseBoolLike(
+                      content['videoMuted'] ??
+                          content['muted'] ??
+                          card['videoMuted'] ??
+                          card['muted'],
+                    ),
+                    completionText: _firstNonEmpty([
+                      content['videoEndText']?.toString(),
+                      content['completionText']?.toString(),
+                      card['videoEndText']?.toString(),
+                      card['completionText']?.toString(),
+                    ], ''),
                   ),
                 ],
                 if (hasImage) ...[
@@ -1223,9 +1377,6 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                                 : null;
                             final optionImageUrl = optionItem?['imageUrl']
                                 ?.toString();
-                            print(
-                              'DEBUG: Option $index - text: "$option", imageUrl: "$optionImageUrl", fullItem: $optionItem',
-                            );
                             final isSelected = _selectedAnswerIndex == index;
                             final isCorrectAnswer =
                                 option == step.correctAnswer;
@@ -1268,7 +1419,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
 
                             Widget card = AnimatedScale(
                               scale: scale,
-                              duration: const Duration(milliseconds: 150),
+                              duration: AppMotionDurations.quick,
                               child: GestureDetector(
                                 onTap:
                                     _currentState == 'answering' &&
@@ -1276,7 +1427,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                                     ? () => _handleOptionSelected(index)
                                     : null,
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
+                                  duration: AppMotionDurations.medium,
                                   decoration: BoxDecoration(
                                     color: cardColor,
                                     border: Border.all(
@@ -1367,7 +1518,7 @@ class _LessonGameScreenState extends State<LessonGameScreen>
                                       math.sin(
                                         _shakeController.value * 4 * 3.14159,
                                       ) *
-                                      12;
+                                      AppMotionValues.shakeDistance;
                                   return Transform.translate(
                                     offset: Offset(shake, 0),
                                     child: child,
@@ -1490,30 +1641,38 @@ class _LessonGameScreenState extends State<LessonGameScreen>
               bottom: 20,
               left: 20,
               right: 20,
-              child: ElevatedButton.icon(
-                onPressed: _handleContinue,
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: Text(
-                  _currentStepIndex == widget.node.steps.length - 1
-                      ? 'Completar Leccion'
-                      : 'Continuar',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF27AE60),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 24,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 8,
-                ),
+              child: Builder(
+                builder: (context) {
+                  final isBlocked =
+                      _stepHasChecklist(step) && !_checklistAllChecked;
+                  return ElevatedButton.icon(
+                    onPressed: isBlocked ? null : _handleContinue,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: Text(
+                      _currentStepIndex == widget.node.steps.length - 1
+                          ? 'Completar Leccion'
+                          : 'Continuar',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isBlocked
+                          ? const Color(0xFFD1D5DB)
+                          : const Color(0xFF27AE60),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 24,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 8,
+                    ),
+                  );
+                },
               ),
             ),
           if (_currentState == 'loading')
@@ -1531,6 +1690,174 @@ class _LessonGameScreenState extends State<LessonGameScreen>
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Checklist card widget – interactive, tracks checked items per render
+// ---------------------------------------------------------------------------
+class _ChecklistCardWidget extends StatefulWidget {
+  final String title;
+  final List<String> items;
+  final VoidCallback onAllChecked;
+
+  const _ChecklistCardWidget({
+    required this.title,
+    required this.items,
+    required this.onAllChecked,
+  });
+
+  @override
+  State<_ChecklistCardWidget> createState() => _ChecklistCardWidgetState();
+}
+
+class _ChecklistCardWidgetState extends State<_ChecklistCardWidget> {
+  late final List<bool> _checked;
+  bool _allDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = List.filled(widget.items.length, false);
+  }
+
+  void _toggle(int i) {
+    if (_allDone) return;
+    setState(() {
+      _checked[i] = !_checked[i];
+      if (_checked.every((c) => c)) {
+        _allDone = true;
+        widget.onAllChecked();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _allDone ? const Color(0xFF27AE60) : const Color(0xFFE5E7EB),
+          width: _allDone ? 2 : 1,
+        ),
+        boxShadow: _allDone
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF27AE60).withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : const [],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.title.isNotEmpty) ...[
+            Text(
+              widget.title,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          ...List.generate(widget.items.length, (i) {
+            final checked = _checked[i];
+            return GestureDetector(
+              onTap: () => _toggle(i),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: checked
+                            ? const Color(0xFF27AE60)
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: checked
+                              ? const Color(0xFF27AE60)
+                              : const Color(0xFFD1D5DB),
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: checked
+                          ? const Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          height: 1.4,
+                          color: checked
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF1F2937),
+                          decoration: checked
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationColor: const Color(0xFF9CA3AF),
+                        ),
+                        child: Text(widget.items[i]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (_allDone) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1FAE5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF34D399)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🎉', style: TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '¡Tenés todo listo para empezar!',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF065F46),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 class _LessonCompletionCelebrationDialog extends StatefulWidget {
   final int xpEarned;
@@ -1573,23 +1900,23 @@ class _LessonCompletionCelebrationDialogState
     super.initState();
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: AppMotionDurations.celebrationEntrance,
     )..forward();
 
     _xpController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: AppMotionDurations.xpCount,
     );
 
     _xpCounter = IntTween(begin: 0, end: widget.xpEarned).animate(
-      CurvedAnimation(parent: _xpController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _xpController, curve: AppMotionCurves.entrance),
     );
 
     _confettiController = ConfettiController(
-      duration: const Duration(milliseconds: 2200),
+      duration: AppMotionDurations.confettiBurst,
     )..play();
 
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(AppMotionDurations.short, () {
       if (mounted) {
         _xpController.forward();
       }
@@ -1624,7 +1951,7 @@ class _LessonCompletionCelebrationDialogState
                 return Opacity(
                   opacity: CurvedAnimation(
                     parent: _entryController,
-                    curve: Curves.easeOut,
+                    curve: AppMotionCurves.feedback,
                   ).value,
                   child: Container(
                     decoration: const BoxDecoration(
@@ -1679,7 +2006,7 @@ class _LessonCompletionCelebrationDialogState
               child: AnimatedBuilder(
                 animation: _entryController,
                 builder: (_, child) {
-                  final bounce = Curves.elasticOut.transform(
+                  final bounce = AppMotionCurves.bounce.transform(
                     _entryController.value,
                   );
                   return Transform.scale(
@@ -1877,10 +2204,12 @@ class _AnimatedContinueButton extends StatelessWidget {
       onTapUp: (_) => onPressedState(false),
       onTap: onTap,
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 120),
-        scale: pressed ? 0.97 : 1,
+        duration: AppMotionDurations.quick,
+        curve: AppMotionCurves.tap,
+        scale: pressed ? AppMotionValues.pressedScale : 1,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+          duration: AppMotionDurations.quick,
+          curve: AppMotionCurves.tap,
           height: 58,
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -1911,4 +2240,3 @@ class _AnimatedContinueButton extends StatelessWidget {
     );
   }
 }
-

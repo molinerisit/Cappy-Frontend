@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/app_colors.dart';
+import '../../../theme/motion.dart';
+
 class ModeCard extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -32,13 +35,13 @@ class _ModeCardState extends State<ModeCard>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: AppMotionDurations.quick,
       vsync: this,
     );
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 0.98,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      end: AppMotionValues.pressedScale,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotionCurves.tap));
   }
 
   @override
@@ -69,20 +72,9 @@ class _ModeCardState extends State<ModeCard>
         scale: _scaleAnimation,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceElevated,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            boxShadow: AppColors.cardShadow,
           ),
           child: Material(
             color: Colors.transparent,
@@ -144,7 +136,7 @@ class _ModeCardState extends State<ModeCard>
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1F2937),
+                        color: AppColors.textPrimary,
                         letterSpacing: -0.3,
                         height: 1.2,
                       ),
@@ -157,7 +149,7 @@ class _ModeCardState extends State<ModeCard>
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: const Color(0xFF6B7280),
+                        color: AppColors.textSecondary,
                         height: 1.5,
                       ),
                     ),

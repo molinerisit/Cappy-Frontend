@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../theme/colors.dart';
+import '../../../theme/motion.dart';
+
 class PrimaryButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -26,13 +29,13 @@ class _PrimaryButtonState extends State<PrimaryButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
+      duration: AppMotionDurations.micro,
       vsync: this,
     );
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      end: AppMotionValues.buttonPressedScale,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotionCurves.tap));
   }
 
   @override
@@ -71,7 +74,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                     colors: [Color(0xFFD1D5DB), Color(0xFFD1D5DB)],
                   )
                 : const LinearGradient(
-                    colors: [Color(0xFF27AE60), Color(0xFF6FCF97)],
+                    colors: [AppColors.successDark, AppColors.primary],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
@@ -80,7 +83,7 @@ class _PrimaryButtonState extends State<PrimaryButton>
                 ? []
                 : [
                     BoxShadow(
-                      color: const Color(0xFF6FCF97).withValues(alpha: 0.3),
+                      color: AppColors.primaryGlow,
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/cached_image.dart';
+import '../../widgets/video_card_player.dart';
 
 class LessonFlowScreen extends StatefulWidget {
   final String lessonId;
@@ -290,9 +291,13 @@ class _LessonFlowScreenState extends State<LessonFlowScreen> {
 
       case 'video':
         return _VideoStep(
-          videoUrl: step['videoUrl'] ?? '',
+          videoUrl: (step['videoUrl'] ?? step['url'] ?? '').toString(),
           title: step['title'] ?? 'Video',
           description: step['instruction'] ?? '',
+          initialLooping: step['loop'] == true || step['videoLoop'] == true,
+          initialMuted: step['muted'] == true || step['videoMuted'] == true,
+          completionText: (step['completionText'] ?? step['videoEndText'] ?? '')
+              .toString(),
           onCompleted: () => _markStepCompleted(stepId),
         );
 
@@ -717,8 +722,12 @@ class _CardStepState extends State<_CardStep> {
         );
       case 'video':
         return _buildVideoCard(
-          content['videoUrl'] ?? '',
+          (content['videoUrl'] ?? content['url'] ?? '').toString(),
           content['title'] ?? 'Video',
+          content['loop'] == true || content['videoLoop'] == true,
+          content['muted'] == true || content['videoMuted'] == true,
+          (content['completionText'] ?? content['videoEndText'] ?? '')
+              .toString(),
           isCompleted,
           onCompleted,
         );
@@ -1100,6 +1109,9 @@ class _CardStepState extends State<_CardStep> {
   Widget _buildVideoCard(
     String videoUrl,
     String title,
+    bool initialLooping,
+    bool initialMuted,
+    String completionText,
     bool isCompleted,
     VoidCallback onCompleted,
   ) {
@@ -1120,6 +1132,7 @@ class _CardStepState extends State<_CardStep> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '🎥 $title',
@@ -1128,16 +1141,13 @@ class _CardStepState extends State<_CardStep> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 32),
-                const Icon(
-                  Icons.play_circle_outline,
-                  size: 64,
-                  color: Colors.green,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Video disponible',
-                  style: TextStyle(color: Colors.grey),
+                const SizedBox(height: 12),
+                VideoCardPlayer(
+                  videoUrl: videoUrl,
+                  initialLooping: initialLooping,
+                  initialMuted: initialMuted,
+                  completionText: completionText,
+                  onCompleted: onCompleted,
                 ),
               ],
             ),
@@ -1145,9 +1155,11 @@ class _CardStepState extends State<_CardStep> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: isCompleted ? null : onCompleted,
+                onPressed: null,
                 icon: Icon(isCompleted ? Icons.check : Icons.done_all),
-                label: Text(isCompleted ? 'Completado' : 'Visto'),
+                label: Text(
+                  isCompleted ? 'Completado' : 'Mira el video completo',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isCompleted ? Colors.green : Colors.green,
                 ),
@@ -1460,12 +1472,18 @@ class _VideoStep extends StatefulWidget {
   final String videoUrl;
   final String title;
   final String description;
+  final bool initialLooping;
+  final bool initialMuted;
+  final String completionText;
   final VoidCallback onCompleted;
 
   const _VideoStep({
     required this.videoUrl,
     required this.title,
     required this.description,
+    this.initialLooping = false,
+    this.initialMuted = false,
+    this.completionText = '',
     required this.onCompleted,
   });
 
@@ -1475,6 +1493,12 @@ class _VideoStep extends StatefulWidget {
 
 class _VideoStepState extends State<_VideoStep> {
   bool _videoCompleted = false;
+
+  void _handleCompleted() {
+    if (_videoCompleted) return;
+    setState(() => _videoCompleted = true);
+    widget.onCompleted();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1490,22 +1514,12 @@ class _VideoStepState extends State<_VideoStep> {
           const SizedBox(height: 24),
           Container(
             width: double.infinity,
-            height: 300,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Placeholder para video
-                Icon(
-                  Icons.play_circle_fill,
-                  size: 80,
-                  color: Colors.green.shade400,
-                ),
-                // TODO: Implementar video player (video_player package)
-              ],
+            child: VideoCardPlayer(
+              videoUrl: widget.videoUrl,
+              initialLooping: widget.initialLooping,
+              initialMuted: widget.initialMuted,
+              completionText: widget.completionText,
+              onCompleted: _handleCompleted,
             ),
           ),
           const SizedBox(height: 24),
@@ -1520,13 +1534,12 @@ class _VideoStepState extends State<_VideoStep> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              setState(() => _videoCompleted = true);
-              widget.onCompleted();
-            },
+            onPressed: null,
             icon: const Icon(Icons.check),
             label: Text(
-              _videoCompleted ? 'Video Completado ✓' : 'He visto el video',
+              _videoCompleted
+                  ? 'Video Completado ✓'
+                  : 'Mira el video completo para continuar',
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _videoCompleted ? Colors.green : Colors.green,
@@ -1771,4 +1784,3 @@ class _TextStep extends StatelessWidget {
     );
   }
 }
-

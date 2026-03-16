@@ -139,7 +139,7 @@ lib/features/learning/
 ├── screens/
 │   └── lesson_flow_screen_duolingo.dart  (Nueva pantalla)
 ├── LESSON_UX_DESIGN.md                (Decisiones UX)
-├── INTEGRATION_GUIDE.dart             (Cómo integrar)
+├── integration_guide.dart             (Cómo integrar)
 └── LESSON_FLOW_SCREEN_DEPRECATED.md   (Deprecation)
 ```
 

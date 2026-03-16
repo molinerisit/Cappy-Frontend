@@ -45,7 +45,7 @@ AHORA (Juego):
 ### Documentación Técnica (3)
 ```
 ✅ LESSON_UX_DESIGN.md              - Decisiones UX detalladas
-✅ INTEGRATION_GUIDE.dart            - Paso a paso integración  
+✅ integration_guide.dart            - Paso a paso integración  
 ✅ README_DUOLINGO_LESSON.md         - Overview completo
 ✅ EXECUTIVE_SUMMARY.md              - Comparativa antes/después
 ```

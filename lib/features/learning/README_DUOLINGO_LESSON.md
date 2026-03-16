@@ -25,7 +25,7 @@ lib/features/learning/screens/
 lib/features/learning/
 ├── LESSON_UX_DESIGN.md                  ← Decisiones UX (colores, animaciones)
 ├── EXECUTIVE_SUMMARY.md                 ← Resumen antes/después
-└── INTEGRATION_GUIDE.dart              ← Cómo integrar (paso a paso)
+└── integration_guide.dart              ← Cómo integrar (paso a paso)
 ```
 
 ---
@@ -240,7 +240,7 @@ Ahora: "¡Es como jugar a Duolingo!"
 ### Documentación Incluida
 1. **LESSON_UX_DESIGN.md** - Decisiones UX detalladas
 2. **EXECUTIVE_SUMMARY.md** - Antes/después comparativo
-3. **INTEGRATION_GUIDE.dart** - Paso a paso integración
+3. **integration_guide.dart** - Paso a paso integración
 4. **LESSON_FLOW_SCREEN_DEPRECATED.md** - Deprecation notice
 
 ### Código Limpio
@@ -269,8 +269,8 @@ Ahora: "¡Es como jugar a Duolingo!"
 Si necesitas:
 - Cambiar colores → Ver `lesson_progress_header.dart` línea ~X
 - Ajustar animaciones → Ver `lesson_flow_screen_duolingo.dart` línea ~Y
-- Agregar sonidos → Ver `INTEGRATION_GUIDE.dart` sección 9
-- Cuestiones modelo → Ver `INTEGRATION_GUIDE.dart` sección 5
+- Agregar sonidos → Ver `integration_guide.dart` sección 9
+- Cuestiones modelo → Ver `integration_guide.dart` sección 5
 
 ---
 

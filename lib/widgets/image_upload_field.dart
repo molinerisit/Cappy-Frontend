@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:mime/mime.dart';
 import '../core/api_service.dart';
 import '../core/image_compress_service.dart';
 import '../providers/auth_provider.dart';
@@ -157,6 +159,28 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
 
       if (pickedFile == null) return;
 
+      if (kIsWeb) {
+        // Web cropper can throw repeated "cropper has not been initialized"
+        // errors depending on render timing; upload selected bytes directly.
+        final imageBytes = await pickedFile.readAsBytes();
+        if (imageBytes.isEmpty) {
+          _showError('No se pudo procesar la imagen seleccionada');
+          return;
+        }
+
+        final filename = pickedFile.name.isNotEmpty
+            ? pickedFile.name
+            : 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final mimeType = pickedFile.mimeType ?? lookupMimeType(filename);
+
+        await _uploadImageBytes(
+          imageBytes,
+          filename: filename,
+          mimeType: mimeType,
+        );
+        return;
+      }
+
       // Crop image
       final croppedFile = await _cropImage(pickedFile.path);
       if (croppedFile == null) return;
@@ -175,6 +199,13 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
 
   Future<CroppedFile?> _cropImage(String imagePath) async {
     try {
+      final mediaSize = MediaQuery.of(context).size;
+      const webControlsReservedHeight = 220.0;
+      final cropperWidth = (mediaSize.width - 80).clamp(300.0, 960.0);
+      final cropperHeight = (mediaSize.height - webControlsReservedHeight)
+          .clamp(260.0, 620.0);
+      final usePageStyle = mediaSize.height < 760 || mediaSize.width < 900;
+
       return await ImageCropper().cropImage(
         sourcePath: imagePath,
         aspectRatio: CropAspectRatio(ratioX: widget.aspectRatio, ratioY: 1.0),
@@ -190,8 +221,13 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
           IOSUiSettings(title: 'Ajustar Imagen', aspectRatioLockEnabled: false),
           WebUiSettings(
             context: context,
-            presentStyle: WebPresentStyle.dialog,
-            size: const CropperSize(width: 520, height: 520),
+            presentStyle: usePageStyle
+                ? WebPresentStyle.page
+                : WebPresentStyle.dialog,
+            size: CropperSize(
+              width: cropperWidth.toInt(),
+              height: cropperHeight.toInt(),
+            ),
           ),
         ],
       );
@@ -245,7 +281,67 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
         _showError(response.data['message'] ?? 'Error al subir imagen');
       }
     } catch (e) {
-      _showError('Error de conexión: $e');
+      _showError(_extractUploadErrorMessage(e));
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
+  Future<void> _uploadImageBytes(
+    Uint8List imageBytes, {
+    required String filename,
+    String? mimeType,
+  }) async {
+    setState(() => _isUploading = true);
+
+    try {
+      final token = await _resolveAuthToken();
+      if (token == null || token.isEmpty) {
+        _showError('No hay sesión activa');
+        return;
+      }
+
+      final dio = Dio();
+      final resolvedMimeType = (mimeType != null && mimeType.isNotEmpty)
+          ? mimeType
+          : (lookupMimeType(filename) ?? 'image/jpeg');
+
+      final formData = FormData.fromMap({
+        'image': MultipartFile.fromBytes(
+          imageBytes,
+          filename: filename,
+          contentType: DioMediaType.parse(resolvedMimeType),
+        ),
+      });
+
+      final response = await dio.post(
+        '${ApiService.baseUrl}/admin/v2/upload/image',
+        data: formData,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+          validateStatus: (status) => status! < 500,
+        ),
+        onSendProgress: (sent, total) {
+          final progress = (sent / total * 100).toStringAsFixed(0);
+          debugPrint('Upload progress: $progress%');
+        },
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final url = response.data['data']['url'];
+        setState(() {
+          _imageUrl = url;
+          _urlController.text = url;
+        });
+        widget.onImageChanged(url);
+        _showSuccess('Imagen subida exitosamente');
+      } else {
+        _showError(response.data['message'] ?? 'Error al subir imagen');
+      }
+    } catch (e) {
+      _showError(_extractUploadErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() => _isUploading = false);
@@ -320,7 +416,7 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
         );
       }
     } catch (e) {
-      _showError('Error de conexión al importar URL: $e');
+      _showError(_extractUploadErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() => _isUploading = false);
@@ -375,6 +471,36 @@ class _ImageUploadFieldState extends State<ImageUploadField> {
       _urlController.clear();
     });
     widget.onImageChanged(null);
+  }
+
+  String _extractUploadErrorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final directError = data['error'];
+        if (directError is String && directError.trim().isNotEmpty) {
+          return directError;
+        }
+        final message = data['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+        final nestedError = data['error'];
+        if (nestedError is Map<String, dynamic>) {
+          final nestedMessage = nestedError['message'];
+          if (nestedMessage is String && nestedMessage.trim().isNotEmpty) {
+            return nestedMessage;
+          }
+        }
+      }
+
+      final status = error.response?.statusCode;
+      if (status != null) {
+        return 'Error del servidor ($status) al subir imagen';
+      }
+    }
+
+    return 'Error de conexión al subir imagen: $error';
   }
 
   void _showError(String message) {

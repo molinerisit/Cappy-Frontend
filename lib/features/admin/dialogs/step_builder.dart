@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/image_upload_field.dart';
+import '../../../widgets/video_upload_field.dart';
+
 // ==========================================
 // ADD STEP DIALOG V2: Pasos estilo Duolingo con múltiples cards
 // ==========================================
@@ -574,12 +577,14 @@ class _AddCardDialogState extends State<AddCardDialog> {
           },
         };
       case 'video':
+        final videoUrl = _getCtrl('videoUrl').text.trim();
         return {
           'type': 'video',
           'order': widget.cardIndex,
           'content': {
             'title': _getCtrl('title').text,
-            'videoUrl': _getCtrl('videoUrl').text,
+            'videoUrl': videoUrl,
+            'url': videoUrl,
           },
         };
       case 'animation':
@@ -670,7 +675,8 @@ class _AddCardDialogState extends State<AddCardDialog> {
             _controllers[key]!.text = content['transcription'] ?? '';
             break;
           case 'videoUrl':
-            _controllers[key]!.text = content['videoUrl'] ?? '';
+            _controllers[key]!.text =
+                (content['videoUrl'] ?? content['url'] ?? '').toString();
             break;
           case 'animationUrl':
             _controllers[key]!.text = content['animationUrl'] ?? '';
@@ -816,13 +822,14 @@ class _AddCardDialogState extends State<AddCardDialog> {
             decoration: const InputDecoration(labelText: 'Título'),
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _getCtrl('imageUrl'),
-            decoration: const InputDecoration(
-              labelText: 'URL de imagen',
-              hintText: 'https://...',
-            ),
-            validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
+          ImageUploadField(
+            label: 'Imagen',
+            initialUrl: _getCtrl('imageUrl').text,
+            onImageChanged: (url) {
+              _getCtrl('imageUrl').text = url ?? '';
+            },
+            required: true,
+            helperText: 'Puedes subir desde PC/móvil o usar URL externa',
           ),
         ];
       case 'audio':
@@ -856,13 +863,14 @@ class _AddCardDialogState extends State<AddCardDialog> {
             decoration: const InputDecoration(labelText: 'Título'),
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _getCtrl('videoUrl'),
-            decoration: const InputDecoration(
-              labelText: 'URL de video',
-              hintText: 'https://...',
-            ),
-            validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
+          VideoUploadField(
+            label: 'Video',
+            initialUrl: _getCtrl('videoUrl').text,
+            required: true,
+            helperText: 'Sube un video desde PC/móvil o pega una URL directa',
+            onVideoChanged: (url) {
+              _getCtrl('videoUrl').text = url ?? '';
+            },
           ),
         ];
       case 'animation':
@@ -973,14 +981,13 @@ class _AddCardDialogState extends State<AddCardDialog> {
                     validator: (v) => v?.isEmpty ?? true ? 'Requerido' : null,
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _getCtrl('optionImage$i'),
-                    decoration: InputDecoration(
-                      labelText: 'URL Imagen (opcional)',
-                      hintText: 'https://... (opcional)',
-                      prefixIcon: const Icon(Icons.image, size: 20),
-                      isDense: true,
-                    ),
+                  ImageUploadField(
+                    label: 'Imagen opción ${i + 1} (opcional)',
+                    initialUrl: _getCtrl('optionImage$i').text,
+                    onImageChanged: (url) {
+                      _getCtrl('optionImage$i').text = url ?? '';
+                    },
+                    helperText: 'Sube imagen desde PC/móvil o pega una URL',
                   ),
                 ],
               ),

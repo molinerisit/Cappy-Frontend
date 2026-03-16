@@ -1,6 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../../../core/api_service.dart';
+import '../../../../core/models/learning_node.dart';
 import '../../../../widgets/image_upload_field.dart';
+import '../../../../widgets/video_upload_field.dart';
+import '../../../learning/screens/lesson_game_screen.dart';
 
 class NodeTreeEditorScreen extends StatefulWidget {
   final String? initialPathId;
@@ -47,6 +52,65 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
   String _nodeStatus = 'active';
   bool _nodeLockedByDefault = true;
   final ScrollController _treeScrollController = ScrollController();
+
+  static const List<Map<String, Object>> _previewDevices = [
+    {
+      'id': 'iphone-se',
+      'label': 'iPhone SE',
+      'size': '375 x 667',
+      'kind': 'phone',
+      'width': 375.0,
+      'height': 667.0,
+    },
+    {
+      'id': 'iphone-14-pro',
+      'label': 'iPhone 14 Pro',
+      'size': '393 x 852',
+      'kind': 'phone',
+      'width': 393.0,
+      'height': 852.0,
+    },
+    {
+      'id': 'pixel-7',
+      'label': 'Pixel 7',
+      'size': '412 x 915',
+      'kind': 'phone',
+      'width': 412.0,
+      'height': 915.0,
+    },
+    {
+      'id': 'galaxy-s20',
+      'label': 'Galaxy S20',
+      'size': '360 x 800',
+      'kind': 'phone',
+      'width': 360.0,
+      'height': 800.0,
+    },
+    {
+      'id': 'ipad-mini',
+      'label': 'iPad mini',
+      'size': '768 x 1024',
+      'kind': 'tablet',
+      'width': 768.0,
+      'height': 1024.0,
+    },
+    {
+      'id': 'ipad-pro-11',
+      'label': 'iPad Pro 11"',
+      'size': '834 x 1194',
+      'kind': 'tablet',
+      'width': 834.0,
+      'height': 1194.0,
+    },
+    {
+      'id': 'galaxy-tab-s8',
+      'label': 'Galaxy Tab S8',
+      'size': '800 x 1280',
+      'kind': 'tablet',
+      'width': 800.0,
+      'height': 1280.0,
+    },
+  ];
 
   @override
   void initState() {
@@ -560,6 +624,269 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     setState(() => _selectedCard = card);
   }
 
+  Future<void> _openNodePreviewDialog(Map<String, dynamic> node) async {
+    final rawSteps = node['steps'];
+    if (rawSteps is! List || rawSteps.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Este nodo no tiene pasos para previsualizar.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final previewNode = LearningNode.fromJson(Map<String, dynamic>.from(node));
+    if (previewNode.steps.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo construir la vista previa del nodo.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    String selectedDeviceId = (_previewDevices.first['id'] ?? 'iphone-14-pro')
+        .toString();
+    bool isLandscape = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final selectedDevice = _previewDevices.firstWhere(
+              (device) => (device['id'] ?? '').toString() == selectedDeviceId,
+              orElse: () => _previewDevices.first,
+            );
+            final baseWidth =
+                (selectedDevice['width'] as num?)?.toDouble() ?? 393.0;
+            final baseHeight =
+                (selectedDevice['height'] as num?)?.toDouble() ?? 852.0;
+            final isTablet =
+                (selectedDevice['kind'] ?? 'phone').toString() == 'tablet';
+            final viewportWidth = isLandscape ? baseHeight : baseWidth;
+            final viewportHeight = isLandscape ? baseWidth : baseHeight;
+            final ratio = viewportWidth / viewportHeight;
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 14,
+              ),
+              child: SizedBox(
+                width: math.min(MediaQuery.of(context).size.width * 0.92, 1080),
+                height: math.min(
+                  MediaQuery.of(context).size.height * 0.92,
+                  860,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey.shade200),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.remove_red_eye_outlined,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Vista previa del nodo: ${node['title'] ?? 'Sin titulo'}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Previsualizacion en formato de dispositivo',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: selectedDeviceId,
+                                    items: _previewDevices
+                                        .map(
+                                          (device) => DropdownMenuItem<String>(
+                                            value: (device['id'] ?? '')
+                                                .toString(),
+                                            child: Text(
+                                              '${device['label']} (${device['size']})',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setDialogState(
+                                        () => selectedDeviceId = value,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Cerrar',
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(),
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Portrait'),
+                                selected: !isLandscape,
+                                onSelected: (_) =>
+                                    setDialogState(() => isLandscape = false),
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('Landscape'),
+                                selected: isLandscape,
+                                onSelected: (_) =>
+                                    setDialogState(() => isLandscape = true),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isTablet
+                                      ? Colors.indigo.shade50
+                                      : Colors.teal.shade50,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: isTablet
+                                        ? Colors.indigo.shade200
+                                        : Colors.teal.shade200,
+                                  ),
+                                ),
+                                child: Text(
+                                  isTablet ? 'Tablet' : 'Celular',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isTablet
+                                        ? Colors.indigo.shade700
+                                        : Colors.teal.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxPhoneWidth = math.min(
+                            constraints.maxWidth - 36,
+                            (constraints.maxHeight - 12) * ratio,
+                          );
+                          final minDeviceWidth = isTablet ? 340.0 : 280.0;
+                          final maxDeviceWidth = isTablet ? 760.0 : 460.0;
+                          final phoneWidth = maxPhoneWidth
+                              .clamp(minDeviceWidth, maxDeviceWidth)
+                              .toDouble();
+                          final phoneHeight = (phoneWidth / ratio).toDouble();
+
+                          return Center(
+                            child: Container(
+                              width: phoneWidth + 20,
+                              height: phoneHeight + 20,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0B1220),
+                                borderRadius: BorderRadius.circular(
+                                  isTablet ? 20 : 28,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 16,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  isTablet ? 14 : 20,
+                                ),
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(
+                                    size: Size(viewportWidth, viewportHeight),
+                                  ),
+                                  child: SizedBox(
+                                    width: phoneWidth,
+                                    height: phoneHeight,
+                                    child: LessonGameScreen(
+                                      key: ValueKey(
+                                        '${node['_id'] ?? node['id']}-${selectedDeviceId}-${isLandscape ? 'land' : 'port'}',
+                                      ),
+                                      node: previewNode,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   int _inferFirstLevel(List<dynamic> nodes) {
     if (nodes.isEmpty) return 1;
     final levels =
@@ -736,44 +1063,66 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                     style: const TextStyle(fontSize: 10),
                   ),
                   onTap: () => _selectNode(node),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'addStep') {
-                        _selectNode(node);
-                        _openStepDialog();
-                      } else if (value == 'delete') {
-                        _deleteNode(node);
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: 'addStep',
-                        child: Row(
-                          children: [
-                            Icon(Icons.add, size: 14),
-                            SizedBox(width: 8),
-                            Text(
-                              'Agregar paso',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ],
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Vista previa',
+                        onPressed: () => _openNodePreviewDialog(node),
+                        icon: Icon(
+                          Icons.remove_red_eye_outlined,
+                          size: 16,
+                          color: Colors.blueGrey.shade700,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 24,
+                          minHeight: 24,
                         ),
                       ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 14, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text(
-                              'Eliminar',
-                              style: TextStyle(color: Colors.red, fontSize: 11),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'addStep') {
+                            _selectNode(node);
+                            _openStepDialog();
+                          } else if (value == 'delete') {
+                            _deleteNode(node);
+                          }
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: 'addStep',
+                            child: Row(
+                              children: [
+                                Icon(Icons.add, size: 14),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Agregar paso',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, size: 14, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: const Icon(Icons.more_vert, size: 16),
                       ),
                     ],
-                    child: const Icon(Icons.more_vert, size: 16),
                   ),
                 ),
               );
@@ -1416,6 +1765,65 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     }
   }
 
+  Future<void> _moveCardInStep({
+    required Map<String, dynamic> step,
+    required int fromIndex,
+    required int toIndex,
+  }) async {
+    if (_selectedNode == null) return;
+
+    final currentCards = _getStepCards(step);
+    if (fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= currentCards.length ||
+        toIndex >= currentCards.length ||
+        fromIndex == toIndex) {
+      return;
+    }
+
+    final reorderedCards = List<Map<String, dynamic>>.from(currentCards);
+    final movedCard = reorderedCards.removeAt(fromIndex);
+    reorderedCards.insert(toIndex, movedCard);
+
+    setState(() => _isSaving = true);
+
+    try {
+      final nodeId = (_selectedNode['_id'] ?? _selectedNode['id'])?.toString();
+      final stepId = (step['_id'] ?? step['id'])?.toString();
+      if (nodeId == null || stepId == null) {
+        throw Exception('No se pudo identificar nodo/paso para reordenar');
+      }
+
+      await ApiService.adminUpdateNodeStep(nodeId, stepId, {
+        'cards': reorderedCards,
+      });
+
+      if (_selectedPathId != null) {
+        _pendingSelectNodeId = nodeId;
+        await _loadContent(_selectedPathId!);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Orden de tarjetas actualizado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error reordenando tarjetas: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
   int _totalCardCount(List<Map<String, dynamic>> steps) {
     var total = 0;
     for (final step in steps) {
@@ -1496,6 +1904,8 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
         return '📝';
       case 'list':
         return '📋';
+      case 'checklist':
+        return '☑️';
       case 'image':
         return '🖼️';
       case 'video':
@@ -1522,6 +1932,9 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
       case 'list':
         final items = data['items'] as List? ?? [];
         return '${items.length} items';
+      case 'checklist':
+        final checklistItems = data['items'] as List? ?? [];
+        return '${checklistItems.length} items interactivos';
       case 'image':
       case 'video':
       case 'animation':
@@ -1542,8 +1955,10 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
   Widget _buildCardPreview(
     Map<String, dynamic> card,
     int index,
-    bool isSelected,
-  ) {
+    bool isSelected, {
+    VoidCallback? onMoveUp,
+    VoidCallback? onMoveDown,
+  }) {
     final type = card['type'] ?? 'unknown';
     final preview = _getCardPreviewContent(card);
     final icon = _getCardTypeIcon(type);
@@ -1629,29 +2044,66 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                 ),
                 const SizedBox(width: 8),
                 // Actions
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _openCardDialog(card: card);
-                    } else if (value == 'delete') {
-                      _deleteCard(card);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Editar')),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text(
-                        'Eliminar',
-                        style: TextStyle(color: Colors.red),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Subir',
+                      onPressed: onMoveUp,
+                      icon: Icon(
+                        Icons.arrow_upward,
+                        size: 16,
+                        color: onMoveUp == null
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade700,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Bajar',
+                      onPressed: onMoveDown,
+                      icon: Icon(
+                        Icons.arrow_downward,
+                        size: 16,
+                        color: onMoveDown == null
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade700,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openCardDialog(card: card);
+                        } else if (value == 'delete') {
+                          _deleteCard(card);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Editar')),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(
+                            'Eliminar',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 16,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ],
-                  child: Icon(
-                    Icons.more_vert,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
                 ),
               ],
             ),
@@ -2492,6 +2944,17 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                                       mainAxisSize: MainAxisSize.min,
                                                                                                       children: [
                                                                                                         IconButton(
+                                                                                                          tooltip: 'Vista previa del nodo',
+                                                                                                          icon: Icon(
+                                                                                                            Icons.remove_red_eye_outlined,
+                                                                                                            size: 16,
+                                                                                                            color: Colors.blueGrey.shade700,
+                                                                                                          ),
+                                                                                                          onPressed: () => _openNodePreviewDialog(
+                                                                                                            node,
+                                                                                                          ),
+                                                                                                        ),
+                                                                                                        IconButton(
                                                                                                           tooltip: isLockedByDefault
                                                                                                               ? 'Desactivar candado inicial'
                                                                                                               : 'Activar candado inicial',
@@ -2746,6 +3209,29 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                                                               1,
                                                                                                                           _selectedCard ==
                                                                                                                               card,
+                                                                                                                          onMoveUp:
+                                                                                                                              cardIdx >
+                                                                                                                                  0
+                                                                                                                              ? () => _moveCardInStep(
+                                                                                                                                  step: step,
+                                                                                                                                  fromIndex: cardIdx,
+                                                                                                                                  toIndex:
+                                                                                                                                      cardIdx -
+                                                                                                                                      1,
+                                                                                                                                )
+                                                                                                                              : null,
+                                                                                                                          onMoveDown:
+                                                                                                                              cardIdx <
+                                                                                                                                  stepCards.length -
+                                                                                                                                      1
+                                                                                                                              ? () => _moveCardInStep(
+                                                                                                                                  step: step,
+                                                                                                                                  fromIndex: cardIdx,
+                                                                                                                                  toIndex:
+                                                                                                                                      cardIdx +
+                                                                                                                                      1,
+                                                                                                                                )
+                                                                                                                              : null,
                                                                                                                         ),
                                                                                                                       );
                                                                                                                     },
@@ -3006,31 +3492,51 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                   )
                                                 else
                                                   Column(
-                                                    children: stepCards
-                                                        .asMap()
-                                                        .entries
-                                                        .map((cardEntry) {
-                                                          final cardIdx =
-                                                              cardEntry.key;
-                                                          final card =
-                                                              cardEntry.value;
-                                                          final isSelectedCard =
-                                                              _selectedCard ==
-                                                              card;
-                                                          return Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  bottom: 8,
-                                                                ),
-                                                            child:
-                                                                _buildCardPreview(
-                                                                  card,
-                                                                  cardIdx + 1,
-                                                                  isSelectedCard,
-                                                                ),
-                                                          );
-                                                        })
-                                                        .toList(),
+                                                    children: stepCards.asMap().entries.map((
+                                                      cardEntry,
+                                                    ) {
+                                                      final cardIdx =
+                                                          cardEntry.key;
+                                                      final card =
+                                                          cardEntry.value;
+                                                      final isSelectedCard =
+                                                          _selectedCard == card;
+                                                      return Padding(
+                                                        padding:
+                                                            const EdgeInsets.only(
+                                                              bottom: 8,
+                                                            ),
+                                                        child: _buildCardPreview(
+                                                          card,
+                                                          cardIdx + 1,
+                                                          isSelectedCard,
+                                                          onMoveUp: cardIdx > 0
+                                                              ? () => _moveCardInStep(
+                                                                  step: step,
+                                                                  fromIndex:
+                                                                      cardIdx,
+                                                                  toIndex:
+                                                                      cardIdx -
+                                                                      1,
+                                                                )
+                                                              : null,
+                                                          onMoveDown:
+                                                              cardIdx <
+                                                                  stepCards
+                                                                          .length -
+                                                                      1
+                                                              ? () => _moveCardInStep(
+                                                                  step: step,
+                                                                  fromIndex:
+                                                                      cardIdx,
+                                                                  toIndex:
+                                                                      cardIdx +
+                                                                      1,
+                                                                )
+                                                              : null,
+                                                        ),
+                                                      );
+                                                    }).toList(),
                                                   ),
                                               ],
                                             ),
@@ -3797,6 +4303,16 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
   String _objectAssetType = 'image';
   bool _allowRemove = false;
 
+  // Estado específico para list
+  String _listStyle = 'checks';
+
+  // Estado específico para magnifier_reveal
+  double _lensRadius = 64;
+  double _lensOpacity = 0.92;
+  double _lensGlowRadius = 8;
+  bool _allowBoundaryDrag = false;
+  bool _autoResetOnRelease = false;
+
   // Estado para formato de texto
   final Map<String, bool> _formatFlags = {};
 
@@ -3854,6 +4370,27 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         (value['offsetY'] ?? defaults['offsetY']) == defaults['offsetY'];
   }
 
+  double _toDoubleValue(dynamic value, {required double fallback}) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  bool _toBoolValue(dynamic value, {required bool fallback}) {
+    if (value is bool) {
+      return value;
+    }
+    final normalized = value?.toString().trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') {
+      return true;
+    }
+    if (normalized == 'false' || normalized == '0') {
+      return false;
+    }
+    return fallback;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -3883,6 +4420,21 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           option['imageDisplay'],
         );
       }
+
+      _formatFlags['videoLoop'] = _toBoolValue(
+        data['loop'] ?? data['videoLoop'],
+        fallback: false,
+      );
+      _formatFlags['videoMuted'] = _toBoolValue(
+        data['muted'] ?? data['videoMuted'],
+        fallback: false,
+      );
+    }
+
+    // Pre-cargar datos de list si existen
+    if (_cardType == 'list' && widget.card != null) {
+      final data = widget.card!['data'] as Map? ?? {};
+      _listStyle = data['listStyle']?.toString() ?? 'checks';
     }
 
     // Pre-cargar datos de animación si existen
@@ -3920,6 +4472,28 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       if (_animationType == 'add_remove_objects') {
         _objectAssetType = (data['objectAsset'] as Map?)?['type'] ?? 'image';
         _allowRemove = data['allowRemove'] ?? false;
+      } else if (_animationType == 'magnifier_reveal') {
+        final config = data['config'] as Map? ?? {};
+        _lensRadius = _toDoubleValue(
+          config['lensRadius'],
+          fallback: 64,
+        ).clamp(24, 140);
+        _lensOpacity = _toDoubleValue(
+          config['lensOpacity'],
+          fallback: 0.92,
+        ).clamp(0.2, 1.0);
+        _lensGlowRadius = _toDoubleValue(
+          config['lensGlowRadius'],
+          fallback: 8,
+        ).clamp(0, 30);
+        _allowBoundaryDrag = _toBoolValue(
+          config['allowBoundaryDrag'],
+          fallback: false,
+        );
+        _autoResetOnRelease = _toBoolValue(
+          config['autoResetOnRelease'],
+          fallback: false,
+        );
       }
     }
 
@@ -4007,7 +4581,13 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
                 : '';
             break;
           case 'url':
-            _controllers[key]!.text = (data['url'] ?? '').toString();
+            _controllers[key]!.text = (data['url'] ?? data['videoUrl'] ?? '')
+                .toString();
+            break;
+          case 'videoEndText':
+            _controllers[key]!.text =
+                (data['completionText'] ?? data['videoEndText'] ?? '')
+                    .toString();
             break;
           case 'question':
             _controllers[key]!.text = (data['question'] ?? '').toString();
@@ -4054,14 +4634,76 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             _controllers[key]!.text = (data['objectSize']?.toString() ?? '40')
                 .toString();
             break;
+          case 'anim_reveal_url':
+            _controllers[key]!.text =
+                ((data['revealAsset'] as Map?)?['url'] ?? '').toString();
+            break;
         }
       }
     }
     return _controllers[key]!;
   }
 
+  String? _validateAnimationRequiredFields() {
+    if (_cardType != 'animation') return null;
+
+    final initialAssetValue = _getCtrl('anim_initial_url').text.trim();
+    if (initialAssetValue.isEmpty) {
+      return _initialAssetType == 'text'
+          ? 'Requiere texto inicial'
+          : 'Requiere asset inicial';
+    }
+
+    if (_animationType == 'add_remove_objects') {
+      final objectValue = _getCtrl('anim_object_url').text.trim();
+      if (objectValue.isEmpty) {
+        return 'Requiere ${_objectAssetType == 'icon' ? 'ícono' : 'objeto'}';
+      }
+      return null;
+    }
+
+    if (_animationType == 'magnifier_reveal') {
+      if (_getCtrl('anim_reveal_url').text.trim().isEmpty) {
+        return 'Requiere imagen oculta';
+      }
+      return null;
+    }
+
+    if (_interactionAssets.isEmpty) {
+      return 'Agrega al menos un asset de interacción';
+    }
+
+    for (int i = 0; i < _interactionAssets.length; i++) {
+      final asset = _interactionAssets[i];
+      final type = (asset['type'] ?? 'image').toString();
+
+      if (type == 'text') {
+        final textValue = (asset['text'] ?? '').toString().trim();
+        if (textValue.isEmpty) {
+          return 'El texto del asset ${i + 1} es obligatorio';
+        }
+      } else {
+        final urlValue = (asset['url'] ?? '').toString().trim();
+        if (urlValue.isEmpty) {
+          return 'La URL del asset ${i + 1} es obligatoria';
+        }
+      }
+    }
+
+    return null;
+  }
+
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+
+    final animationValidationError = _validateAnimationRequiredFields();
+    if (animationValidationError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(animationValidationError)));
+      return;
+    }
+
     _formKey.currentState!.save();
 
     final data = <String, dynamic>{};
@@ -4092,13 +4734,41 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           .map((item) => item.trim())
           .where((item) => item.isNotEmpty)
           .toList();
-    } else if (_cardType == 'image' || _cardType == 'video') {
+      data['listStyle'] = _listStyle;
+    } else if (_cardType == 'checklist') {
+      data['items'] = _getCtrl('items').text
+          .split('\n')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    } else if (_cardType == 'image') {
       data['url'] = _getCtrl('url').text.trim();
-      if (_cardType == 'image' && data['url'].toString().isNotEmpty) {
+      if (data['url'].toString().isNotEmpty) {
         final display = _imageAdjustments['media.main'];
         if (display != null && !_isDefaultImageAdjustment(display)) {
           data['display'] = display;
         }
+      }
+    } else if (_cardType == 'video') {
+      final url = _getCtrl('url').text.trim();
+      if (url.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Requiere URL de video')));
+        return;
+      }
+
+      data['url'] = url;
+      data['videoUrl'] = url;
+      data['loop'] = _getCtrlBool('videoLoop');
+      data['videoLoop'] = _getCtrlBool('videoLoop');
+      data['muted'] = _getCtrlBool('videoMuted');
+      data['videoMuted'] = _getCtrlBool('videoMuted');
+
+      final completionText = _getCtrl('videoEndText').text.trim();
+      if (completionText.isNotEmpty) {
+        data['completionText'] = completionText;
+        data['videoEndText'] = completionText;
       }
     } else if (_cardType == 'animation') {
       // Construcción del objeto de animación interactiva
@@ -4121,6 +4791,19 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         data['allowRemove'] = _allowRemove;
         data['config'] = {
           'maxObjects': 50, // Límite de objetos que se pueden agregar
+        };
+      } else if (_animationType == 'magnifier_reveal') {
+        data['initialAsset'] = {'type': 'image', 'url': initialAssetValue};
+        data['revealAsset'] = {
+          'type': 'image',
+          'url': _getCtrl('anim_reveal_url').text.trim(),
+        };
+        data['config'] = {
+          'lensRadius': _lensRadius,
+          'lensOpacity': _lensOpacity,
+          'lensGlowRadius': _lensGlowRadius,
+          'allowBoundaryDrag': _allowBoundaryDrag,
+          'autoResetOnRelease': _autoResetOnRelease,
         };
       } else {
         // Configuración estándar para otros tipos de animación
@@ -4254,6 +4937,10 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
                           DropdownMenuItem(
                             value: 'list',
                             child: Text('📋 Lista'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'checklist',
+                            child: Text('☑️ Checklist'),
                           ),
                           DropdownMenuItem(
                             value: 'image',
@@ -4432,6 +5119,30 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         ];
       case 'list':
         return [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Estilo de lista',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'checks', label: Text('✅ Checks')),
+                  ButtonSegment(value: 'crosses', label: Text('❌ Cruces')),
+                  ButtonSegment(value: 'numbered', label: Text('🔢 Pasos')),
+                ],
+                selected: {_listStyle},
+                onSelectionChanged: (set) {
+                  if (set.isNotEmpty) {
+                    setState(() => _listStyle = set.first);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
           TextFormField(
             controller: _getCtrl('items'),
             decoration: InputDecoration(
@@ -4445,6 +5156,25 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             ),
             maxLines: 5,
             validator: (v) => v?.isEmpty ?? true ? 'Requiere items' : null,
+          ),
+        ];
+      case 'checklist':
+        return [
+          TextFormField(
+            controller: _getCtrl('items'),
+            decoration: InputDecoration(
+              labelText: 'Items del checklist (una línea por item) *',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              helperText:
+                  'El usuario debe marcar todos para continuar al siguiente paso',
+            ),
+            maxLines: 8,
+            validator: (v) =>
+                v?.trim().isEmpty ?? true ? 'Requiere al menos un item' : null,
           ),
         ];
       case 'image':
@@ -4467,19 +5197,71 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
               helperText: 'Sube una imagen o pega una URL externa',
             )
           else
-            TextFormField(
-              controller: _getCtrl('url'),
-              decoration: InputDecoration(
-                labelText: 'URL del Video *',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            Column(
+              children: [
+                VideoUploadField(
+                  label: 'Video',
+                  initialUrl: _getCtrl('url').text,
+                  required: true,
+                  helperText:
+                      'Sube un archivo desde tu PC a Cloudinary o usa una URL directa',
+                  onVideoChanged: (url) {
+                    _getCtrl('url').text = url ?? '';
+                  },
                 ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                hintText: 'https://youtube.com/... o URL directa',
-                prefixIcon: const Icon(Icons.video_library),
-              ),
-              validator: (v) => v?.isEmpty ?? true ? 'Requiere URL' : null,
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    border: Border.all(color: Colors.green.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Comportamiento del Video',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Activar loop'),
+                        dense: true,
+                        value: _getCtrlBool('videoLoop'),
+                        onChanged: (value) {
+                          setState(() => _setCtrlBool('videoLoop', value));
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Iniciar sin sonido'),
+                        dense: true,
+                        value: _getCtrlBool('videoMuted'),
+                        onChanged: (value) {
+                          setState(() => _setCtrlBool('videoMuted', value));
+                        },
+                      ),
+                      TextFormField(
+                        controller: _getCtrl('videoEndText'),
+                        decoration: InputDecoration(
+                          labelText: 'Texto personalizado al finalizar',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          hintText: 'Ej: ¡Perfecto! Ya dominaste esta técnica',
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ];
       case 'animation':
@@ -4680,13 +5462,19 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             value: 'add_remove_objects',
             child: Text('🎨 Agregar/Quitar Objetos'),
           ),
+          DropdownMenuItem(
+            value: 'magnifier_reveal',
+            child: Text('🔍 Lupa Reveladora'),
+          ),
         ],
         onChanged: (value) {
           if (value != null) {
             setState(() {
               _animationType = value;
-              if (_animationType == 'add_remove_objects' &&
-                  _initialAssetType == 'text') {
+              if ((_animationType == 'add_remove_objects' ||
+                      _animationType == 'magnifier_reveal') &&
+                  (_initialAssetType == 'text' ||
+                      _initialAssetType == 'video')) {
                 _initialAssetType = 'image';
               }
             });
@@ -4735,7 +5523,14 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _initialAssetType,
-              items: _animationType == 'add_remove_objects'
+              items: _animationType == 'magnifier_reveal'
+                  ? const [
+                      DropdownMenuItem(
+                        value: 'image',
+                        child: Text('🖼️ Imagen'),
+                      ),
+                    ]
+                  : _animationType == 'add_remove_objects'
                   ? const [
                       DropdownMenuItem(
                         value: 'image',
@@ -4766,31 +5561,48 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: _getCtrl('anim_initial_url'),
-              decoration: InputDecoration(
-                labelText: _initialAssetType == 'text'
-                    ? 'Texto Inicial *'
-                    : 'URL del Asset Inicial *',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            if (_initialAssetType == 'text')
+              TextFormField(
+                controller: _getCtrl('anim_initial_url'),
+                decoration: InputDecoration(
+                  labelText: 'Texto Inicial *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: 'Escribe el texto inicial...',
                 ),
-                filled: true,
-                fillColor: Colors.white,
-                hintText: _initialAssetType == 'text'
-                    ? 'Escribe el texto inicial...'
-                    : 'https://...',
+                maxLines: 3,
+                validator: (v) =>
+                    v?.trim().isEmpty ?? true ? 'Requiere texto inicial' : null,
+              )
+            else if (_initialAssetType == 'image')
+              ImageUploadField(
+                label: 'Imagen Inicial *',
+                initialUrl: _getCtrl('anim_initial_url').text,
+                onImageChanged: (url) {
+                  _getCtrl('anim_initial_url').text = url ?? '';
+                },
+                aspectRatio: 16 / 9,
+                required: true,
+                helperText: 'Sube una imagen o importa una URL externa',
+              )
+            else
+              TextFormField(
+                controller: _getCtrl('anim_initial_url'),
+                decoration: InputDecoration(
+                  labelText: 'URL del Video Inicial *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: 'https://...',
+                ),
+                validator: (v) =>
+                    v?.trim().isEmpty ?? true ? 'Requiere URL inicial' : null,
               ),
-              maxLines: _initialAssetType == 'text' ? 3 : 1,
-              validator: (v) {
-                if (v?.trim().isEmpty ?? true) {
-                  return _initialAssetType == 'text'
-                      ? 'Requiere texto inicial'
-                      : 'Requiere URL inicial';
-                }
-                return null;
-              },
-            ),
           ],
         ),
       ),
@@ -4799,6 +5611,8 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       // Campos específicos según tipo de animación
       if (_animationType == 'add_remove_objects')
         ..._buildAddRemoveObjectsFields()
+      else if (_animationType == 'magnifier_reveal')
+        ..._buildMagnifierRevealFields()
       else
         ..._buildStandardAnimationFields(),
     ];
@@ -4848,22 +5662,34 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: _getCtrl('anim_object_url'),
-              decoration: InputDecoration(
-                labelText: 'URL del Objeto *',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                hintText: 'https://... (imagen transparente PNG recomendado)',
+            if (_objectAssetType == 'image')
+              ImageUploadField(
+                label: 'Imagen del Objeto *',
+                initialUrl: _getCtrl('anim_object_url').text,
+                onImageChanged: (url) {
+                  _getCtrl('anim_object_url').text = url ?? '';
+                },
+                aspectRatio: 1.0,
+                required: true,
                 helperText:
                     'Usar imagen PNG con transparencia para mejor resultado',
+              )
+            else
+              TextFormField(
+                controller: _getCtrl('anim_object_url'),
+                decoration: InputDecoration(
+                  labelText: 'Nombre del Ícono *',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: 'circle',
+                  helperText: 'Referencia interna del ícono',
+                ),
+                validator: (v) =>
+                    v?.trim().isEmpty ?? true ? 'Requiere ícono' : null,
               ),
-              validator: (v) =>
-                  v?.isEmpty ?? true ? 'Requiere URL del objeto' : null,
-            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _getCtrl('anim_object_size'),
@@ -4915,6 +5741,158 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             Expanded(
               child: Text(
                 'El usuario verá la imagen/video de fondo. Al hacer click en cualquier parte, aparecerá el objeto configurado en esa posición.',
+                style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildMagnifierRevealFields() {
+    return [
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.teal.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.teal.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🔍 Capa Oculta (Revelada por Lupa)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Esta imagen solo se verá dentro del círculo de la lupa al arrastrarla.',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            ImageUploadField(
+              label: 'Imagen Oculta *',
+              initialUrl: _getCtrl('anim_reveal_url').text,
+              onImageChanged: (url) {
+                _getCtrl('anim_reveal_url').text = url ?? '';
+              },
+              aspectRatio: 16 / 9,
+              required: true,
+              helperText: 'Sube la capa que se revelará con la lupa',
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.blueGrey.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.blueGrey.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '⚙️ Configuración de Lupa',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Radio de lupa: ${_lensRadius.toStringAsFixed(0)} px',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Slider(
+              value: _lensRadius,
+              min: 24,
+              max: 140,
+              divisions: 58,
+              label: _lensRadius.toStringAsFixed(0),
+              onChanged: (value) {
+                setState(() => _lensRadius = value);
+              },
+            ),
+            Text(
+              'Opacidad del borde: ${_lensOpacity.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Slider(
+              value: _lensOpacity,
+              min: 0.2,
+              max: 1.0,
+              divisions: 16,
+              label: _lensOpacity.toStringAsFixed(2),
+              onChanged: (value) {
+                setState(() => _lensOpacity = value);
+              },
+            ),
+            Text(
+              'Brillo de borde: ${_lensGlowRadius.toStringAsFixed(0)}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Slider(
+              value: _lensGlowRadius,
+              min: 0,
+              max: 30,
+              divisions: 30,
+              label: _lensGlowRadius.toStringAsFixed(0),
+              onChanged: (value) {
+                setState(() => _lensGlowRadius = value);
+              },
+            ),
+            SwitchListTile(
+              value: _allowBoundaryDrag,
+              onChanged: (value) {
+                setState(() => _allowBoundaryDrag = value);
+              },
+              title: const Text(
+                'Permitir mover fuera de bordes',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Si está desactivado, la lupa se limita al área visible',
+                style: TextStyle(fontSize: 12),
+              ),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            SwitchListTile(
+              value: _autoResetOnRelease,
+              onChanged: (value) {
+                setState(() => _autoResetOnRelease = value);
+              },
+              title: const Text(
+                'Reset automático al soltar',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text(
+                'Regresa la lupa al centro cuando termina el drag',
+                style: TextStyle(fontSize: 12),
+              ),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Ejemplo: fondo = mano limpia, imagen oculta = gérmenes. Al arrastrar la lupa, se revelan solo dentro del círculo.',
                 style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
               ),
             ),
@@ -5100,41 +6078,65 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            key: ValueKey('interaction-$index-$assetType'),
-            initialValue: isText
-                ? (asset['text'] ?? '').toString()
-                : (asset['url'] ?? '').toString(),
-            onChanged: (value) {
-              if (isText) {
+          if (isText)
+            TextFormField(
+              key: ValueKey('interaction-$index-$assetType'),
+              initialValue: (asset['text'] ?? '').toString(),
+              onChanged: (value) {
                 _interactionAssets[index]['text'] = value;
-              } else {
+              },
+              decoration: InputDecoration(
+                labelText: 'Texto',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                hintText: 'Texto que aparecerá en esta interacción',
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              maxLines: 3,
+              validator: (v) =>
+                  v?.trim().isEmpty ?? true ? 'Requiere texto' : null,
+            )
+          else if (assetType == 'image')
+            ImageUploadField(
+              key: ValueKey('interaction-image-$index'),
+              label: 'Imagen',
+              initialUrl: (asset['url'] ?? '').toString(),
+              onImageChanged: (url) {
+                _interactionAssets[index]['url'] = url ?? '';
+              },
+              aspectRatio: 16 / 9,
+              required: true,
+              helperText: 'Sube una imagen o importa una URL externa',
+            )
+          else
+            TextFormField(
+              key: ValueKey('interaction-video-$index'),
+              initialValue: (asset['url'] ?? '').toString(),
+              onChanged: (value) {
                 _interactionAssets[index]['url'] = value;
-              }
-            },
-            decoration: InputDecoration(
-              labelText: isText ? 'Texto' : 'URL',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+              },
+              decoration: InputDecoration(
+                labelText: 'URL de Video',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                hintText: 'https://...',
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
-              hintText: isText
-                  ? 'Texto que aparecerá en esta interacción'
-                  : 'https://...',
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
+              validator: (v) =>
+                  v?.trim().isEmpty ?? true ? 'Requiere URL' : null,
             ),
-            maxLines: isText ? 3 : 1,
-            validator: (v) {
-              if (v?.trim().isEmpty ?? true) {
-                return isText ? 'Requiere texto' : 'Requiere URL';
-              }
-              return null;
-            },
-          ),
         ],
       ),
     );

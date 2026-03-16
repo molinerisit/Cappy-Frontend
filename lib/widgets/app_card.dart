@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/motion.dart';
 
 class AppCard extends StatefulWidget {
   final Widget child;
@@ -43,20 +44,25 @@ class _AppCardState extends State<AppCard> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        transform: _pressed
-            ? (Matrix4.identity()..translate(0.0, 2.0))
-            : Matrix4.identity(),
-        padding: widget.padding,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: shadow,
-          border: Border.all(color: AppColors.border),
+      child: AnimatedScale(
+        scale: _pressed ? AppMotionValues.pressedScale : 1.0,
+        duration: AppMotionDurations.quick,
+        curve: AppMotionCurves.tap,
+        child: AnimatedContainer(
+          duration: AppMotionDurations.quick,
+          curve: AppMotionCurves.feedback,
+          transform: _pressed
+              ? (Matrix4.identity()..translate(0.0, 2.0))
+              : Matrix4.identity(),
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: shadow,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     );
   }

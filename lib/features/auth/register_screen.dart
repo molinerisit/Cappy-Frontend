@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/motion.dart';
 import 'login_screen.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
@@ -30,22 +31,25 @@ class _RegisterScreenState extends State<RegisterScreen>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: AppMotionDurations.pageEntrance,
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.6, curve: AppMotionCurves.entranceSoft),
       ),
     );
 
     _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+        Tween<Offset>(
+          begin: const Offset(0, AppMotionValues.standardSlideOffset),
+          end: Offset.zero,
+        ).animate(
           CurvedAnimation(
             parent: _animationController,
-            curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+            curve: const Interval(0.2, 1.0, curve: AppMotionCurves.entrance),
           ),
         );
 
@@ -174,7 +178,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           // Logo con animación
                           TweenAnimationBuilder<double>(
                             tween: Tween(begin: 0.0, end: 1.0),
-                            duration: const Duration(milliseconds: 600),
+                            duration: AppMotionDurations.entrance,
                             builder: (context, value, child) {
                               return Transform.scale(
                                 scale: value,
@@ -453,4 +457,3 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
-
