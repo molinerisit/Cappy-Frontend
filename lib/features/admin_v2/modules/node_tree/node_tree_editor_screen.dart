@@ -1958,6 +1958,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
     bool isSelected, {
     VoidCallback? onMoveUp,
     VoidCallback? onMoveDown,
+    Map<String, dynamic>? step,
   }) {
     final type = card['type'] ?? 'unknown';
     final preview = _getCardPreviewContent(card);
@@ -2082,6 +2083,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                     PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'edit') {
+                          if (step != null) _selectStep(step);
                           _openCardDialog(card: card);
                         } else if (value == 'delete') {
                           _deleteCard(card);
@@ -3209,6 +3211,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                                                                                               1,
                                                                                                                           _selectedCard ==
                                                                                                                               card,
+                                                                                                                          step: step,
                                                                                                                           onMoveUp:
                                                                                                                               cardIdx >
                                                                                                                                   0
@@ -3510,6 +3513,7 @@ class _NodeTreeEditorScreenState extends State<NodeTreeEditorScreen> {
                                                           card,
                                                           cardIdx + 1,
                                                           isSelectedCard,
+                                                          step: step,
                                                           onMoveUp: cardIdx > 0
                                                               ? () => _moveCardInStep(
                                                                   step: step,
@@ -4307,11 +4311,16 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
   String _listStyle = 'checks';
 
   // Estado específico para magnifier_reveal
-  double _lensRadius = 64;
+  double _lensRadius = 24;
   double _lensOpacity = 0.92;
   double _lensGlowRadius = 8;
   bool _allowBoundaryDrag = false;
   bool _autoResetOnRelease = false;
+
+  // Estado específico para object_sweep
+  double _sweeperSize = 90.0;
+  List<Map<String, dynamic>> _sweepObjects = [];
+  int? _selectedSweepObjectIndex;
 
   // Estado para formato de texto
   final Map<String, bool> _formatFlags = {};
@@ -4476,7 +4485,7 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         final config = data['config'] as Map? ?? {};
         _lensRadius = _toDoubleValue(
           config['lensRadius'],
-          fallback: 64,
+          fallback: 24,
         ).clamp(24, 140);
         _lensOpacity = _toDoubleValue(
           config['lensOpacity'],
@@ -4494,6 +4503,21 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           config['autoResetOnRelease'],
           fallback: false,
         );
+      } else if (_animationType == 'object_sweep') {
+        final config = data['config'] as Map? ?? {};
+        _sweeperSize = _toDoubleValue(
+          config['sweeperSize'],
+          fallback: 90,
+        ).clamp(40, 200);
+        final rawObjects = config['sweepObjects'];
+        if (rawObjects is List) {
+          _sweepObjects = rawObjects
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList();
+        } else {
+          _sweepObjects = [];
+        }
       }
     }
 
@@ -4669,6 +4693,13 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
       return null;
     }
 
+    if (_animationType == 'object_sweep') {
+      if (_getCtrl('sweep_sweeper_url').text.trim().isEmpty) {
+        return 'Requiere imagen del objeto limpiador';
+      }
+      return null;
+    }
+
     if (_interactionAssets.isEmpty) {
       return 'Agrega al menos un asset de interacción';
     }
@@ -4804,6 +4835,16 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
           'lensGlowRadius': _lensGlowRadius,
           'allowBoundaryDrag': _allowBoundaryDrag,
           'autoResetOnRelease': _autoResetOnRelease,
+        };
+      } else if (_animationType == 'object_sweep') {
+        data['initialAsset'] = {'type': 'image', 'url': initialAssetValue};
+        data['sweeperAsset'] = {
+          'type': 'image',
+          'url': _getCtrl('sweep_sweeper_url').text.trim(),
+        };
+        data['config'] = {
+          'sweeperSize': _sweeperSize,
+          'sweepObjects': _sweepObjects,
         };
       } else {
         // Configuración estándar para otros tipos de animación
@@ -5466,13 +5507,18 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             value: 'magnifier_reveal',
             child: Text('🔍 Lupa Reveladora'),
           ),
+          DropdownMenuItem(
+            value: 'object_sweep',
+            child: Text('🧹 Limpiar con Objeto'),
+          ),
         ],
         onChanged: (value) {
           if (value != null) {
             setState(() {
               _animationType = value;
               if ((_animationType == 'add_remove_objects' ||
-                      _animationType == 'magnifier_reveal') &&
+                      _animationType == 'magnifier_reveal' ||
+                      _animationType == 'object_sweep') &&
                   (_initialAssetType == 'text' ||
                       _initialAssetType == 'video')) {
                 _initialAssetType = 'image';
@@ -5523,7 +5569,9 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _initialAssetType,
-              items: _animationType == 'magnifier_reveal'
+              items:
+                  (_animationType == 'magnifier_reveal' ||
+                      _animationType == 'object_sweep')
                   ? const [
                       DropdownMenuItem(
                         value: 'image',
@@ -5613,6 +5661,8 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
         ..._buildAddRemoveObjectsFields()
       else if (_animationType == 'magnifier_reveal')
         ..._buildMagnifierRevealFields()
+      else if (_animationType == 'object_sweep')
+        ..._buildObjectSweepFields()
       else
         ..._buildStandardAnimationFields(),
     ];
@@ -5893,6 +5943,448 @@ class _CardEditorDialogState extends State<_CardEditorDialog> {
             Expanded(
               child: Text(
                 'Ejemplo: fondo = mano limpia, imagen oculta = gérmenes. Al arrastrar la lupa, se revelan solo dentro del círculo.',
+                style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildSweepCanvasPreview() {
+    final bgUrl = _getCtrl('anim_initial_url').text.trim();
+    final isSelecting = _selectedSweepObjectIndex != null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final canvasW = constraints.maxWidth;
+        final canvasH = canvasW * 9 / 16;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelecting ? Colors.green.shade500 : Colors.grey.shade400,
+              width: isSelecting ? 2.5 : 1,
+            ),
+            color: Colors.grey.shade100,
+          ),
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.grid_on,
+                    size: 15,
+                    color: isSelecting
+                        ? Colors.green.shade700
+                        : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      isSelecting
+                          ? '🎯 Tocá el canvas para colocar el Objeto ${_selectedSweepObjectIndex! + 1}'
+                          : '📐 Canvas de posicionamiento',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        color: isSelecting
+                            ? Colors.green.shade700
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  if (isSelecting)
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () =>
+                          setState(() => _selectedSweepObjectIndex = null),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTapDown: (details) {
+                  if (_selectedSweepObjectIndex == null) return;
+                  final local = details.localPosition;
+                  setState(() {
+                    _sweepObjects[_selectedSweepObjectIndex!]['nx'] =
+                        (local.dx / canvasW).clamp(0.0, 1.0);
+                    _sweepObjects[_selectedSweepObjectIndex!]['ny'] =
+                        (local.dy / canvasH).clamp(0.0, 1.0);
+                    _selectedSweepObjectIndex = null;
+                  });
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    width: canvasW,
+                    height: canvasH,
+                    color: Colors.grey.shade300,
+                    child: Stack(
+                      children: [
+                        if (bgUrl.isNotEmpty)
+                          Image.network(
+                            bgUrl,
+                            width: canvasW,
+                            height: canvasH,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
+                          )
+                        else
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.image_outlined,
+                                  size: 36,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Agrega primero la imagen de fondo',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        for (int i = 0; i < _sweepObjects.length; i++)
+                          Positioned(
+                            left:
+                                ((_sweepObjects[i]['nx'] as double? ?? 0.5) *
+                                            canvasW -
+                                        14)
+                                    .clamp(0.0, canvasW - 28),
+                            top:
+                                ((_sweepObjects[i]['ny'] as double? ?? 0.5) *
+                                            canvasH -
+                                        14)
+                                    .clamp(0.0, canvasH - 28),
+                            child: GestureDetector(
+                              onTap: () => setState(
+                                () => _selectedSweepObjectIndex =
+                                    _selectedSweepObjectIndex == i ? null : i,
+                              ),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: _selectedSweepObjectIndex == i
+                                      ? Colors.green.shade500
+                                      : Colors.orange.shade600,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${i + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (isSelecting)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.6),
+                                    width: 3,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Toca un marcador para seleccionarlo, o usa «Posicionar» en cada objeto.',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildObjectSweepFields() {
+    return [
+      // -- Objeto limpiador --
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.deepPurple.shade200),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.deepPurple.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🧹 Objeto Limpiador',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Imagen que el usuario arrastrará por la pantalla (ej: jabón, esponja, trapo).',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            ImageUploadField(
+              label: 'Imagen del limpiador *',
+              initialUrl: _getCtrl('sweep_sweeper_url').text,
+              onImageChanged: (url) {
+                _getCtrl('sweep_sweeper_url').text = url ?? '';
+              },
+              aspectRatio: 1,
+              helperText: 'PNG con fondo transparente recomendado',
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Tamaño del limpiador: ${_sweeperSize.toStringAsFixed(0)} px',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Slider(
+              value: _sweeperSize,
+              min: 40,
+              max: 200,
+              divisions: 32,
+              label: _sweeperSize.toStringAsFixed(0),
+              onChanged: (v) => setState(() => _sweeperSize = v),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      // -- Objetos de suciedad --
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.brown.shade300),
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.brown.shade50,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '💧 Objetos de Suciedad',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _sweepObjects.add({
+                        'id': 'obj_${DateTime.now().millisecondsSinceEpoch}',
+                        'url': '',
+                        'nx': 0.5,
+                        'ny': 0.5,
+                        'size': 60.0,
+                      });
+                      _selectedSweepObjectIndex = _sweepObjects.length - 1;
+                    });
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Agregar'),
+                ),
+              ],
+            ),
+            const Text(
+              'Cada objeto tiene posición (X/Y en %) y tamaño. Al pasar el limpiador encima, desaparece.',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            _buildSweepCanvasPreview(),
+            const SizedBox(height: 8),
+            if (_sweepObjects.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Sin objetos. Presiona «Agregar» para añadir suciedad.',
+                  style: TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _sweepObjects.length,
+                separatorBuilder: (_, __) => const Divider(height: 16),
+                itemBuilder: (context, i) {
+                  final obj = _sweepObjects[i];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Objeto ${i + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: () => setState(() {
+                              _selectedSweepObjectIndex =
+                                  _selectedSweepObjectIndex == i ? null : i;
+                            }),
+                            icon: Icon(
+                              Icons.my_location,
+                              size: 16,
+                              color: _selectedSweepObjectIndex == i
+                                  ? Colors.green.shade700
+                                  : Colors.blueGrey,
+                            ),
+                            label: Text(
+                              _selectedSweepObjectIndex == i
+                                  ? 'Tocá el canvas ↑'
+                                  : 'Posicionar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _selectedSweepObjectIndex == i
+                                    ? Colors.green.shade700
+                                    : Colors.blueGrey,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            tooltip: 'Eliminar',
+                            onPressed: () {
+                              setState(() {
+                                if (_selectedSweepObjectIndex == i) {
+                                  _selectedSweepObjectIndex = null;
+                                }
+                                _sweepObjects.removeAt(i);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      ImageUploadField(
+                        label: 'Imagen de suciedad',
+                        initialUrl: obj['url']?.toString() ?? '',
+                        onImageChanged: (url) {
+                          setState(() => _sweepObjects[i]['url'] = url ?? '');
+                        },
+                        aspectRatio: 1,
+                        helperText: 'PNG con fondo transparente recomendado',
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Pos. horizontal: ${((obj['nx'] as double? ?? 0.5) * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Slider(
+                        value: (obj['nx'] as double? ?? 0.5).clamp(0.0, 1.0),
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 100,
+                        label:
+                            '${((obj['nx'] as double? ?? 0.5) * 100).toStringAsFixed(0)}%',
+                        onChanged: (v) {
+                          setState(() => _sweepObjects[i]['nx'] = v);
+                        },
+                      ),
+                      Text(
+                        'Pos. vertical: ${((obj['ny'] as double? ?? 0.5) * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Slider(
+                        value: (obj['ny'] as double? ?? 0.5).clamp(0.0, 1.0),
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 100,
+                        label:
+                            '${((obj['ny'] as double? ?? 0.5) * 100).toStringAsFixed(0)}%',
+                        onChanged: (v) {
+                          setState(() => _sweepObjects[i]['ny'] = v);
+                        },
+                      ),
+                      Text(
+                        'Tamaño: ${(obj['size'] as double? ?? 60.0).toStringAsFixed(0)} px',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Slider(
+                        value: (obj['size'] as double? ?? 60.0).clamp(
+                          20.0,
+                          200.0,
+                        ),
+                        min: 20,
+                        max: 200,
+                        divisions: 36,
+                        label: (obj['size'] as double? ?? 60.0).toStringAsFixed(
+                          0,
+                        ),
+                        onChanged: (v) {
+                          setState(() => _sweepObjects[i]['size'] = v);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber.shade300),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Ejemplo: fondo = mano sucia, limpiador = jabón, suciedad = gotas de barro. Al pasar el jabón, la mugre desaparece.',
                 style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
               ),
             ),

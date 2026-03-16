@@ -55,6 +55,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   double _currentDragX = 0.0;
   bool _isDragging = false;
   bool _isLensDragging = false;
+  late AnimationController _magnifierIdleController;
+
+  // object_sweep state
+  bool _isSweeper = false;
+  final Set<String> _sweepRemovedIds = {};
+  late ValueNotifier<Offset?> _sweepCenterNotifier;
+  final List<Offset> _sweepTrailPoints = [];
 
   // Constantes configurables
   static const double _activationThreshold = 0.4;
@@ -97,6 +104,12 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
     _dragProgressNotifier = ValueNotifier<double>(0.0);
     _lensCenterNotifier = ValueNotifier<Offset?>(null);
+    _sweepCenterNotifier = ValueNotifier<Offset?>(null);
+
+    _magnifierIdleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -109,6 +122,8 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     _dragProgressNotifier.dispose();
     _lensCenterNotifier.dispose();
     _sparkleController.dispose();
+    _magnifierIdleController.dispose();
+    _sweepCenterNotifier.dispose();
     for (var controller in _objectAnimations.values) {
       controller.dispose();
     }
@@ -244,8 +259,32 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   double get _lensRadius {
     return _toDouble(
       _animationConfig['lensRadius'],
-      fallback: 64,
+      fallback: 42,
     ).clamp(24, 140).toDouble();
+  }
+
+  // ---- object_sweep getters ----
+  List<Map<String, dynamic>> get _sweepObjects {
+    final raw = _animationConfig['sweepObjects'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> get _sweeperAsset {
+    final raw = _animationPayload['sweeperAsset'];
+    return _normalizeAsset(raw);
+  }
+
+  double get _sweeperSizeResolved {
+    return _toDouble(
+      _animationConfig['sweeperSize'],
+      fallback: 90,
+    ).clamp(40.0, 200.0);
   }
 
   double get _lensOpacity {
@@ -593,30 +632,41 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     final safeWidth = size.width <= 0 ? 1.0 : size.width;
     final safeHeight = size.height <= 0 ? 1.0 : size.height;
     final minSide = math.min(safeWidth, safeHeight);
-    // Keep a visible border of base image so reveal layer never covers all.
-    final maxAllowed = math.max(18.0, (minSide / 2) - 6.0);
-    return _lensRadius.clamp(24.0, maxAllowed).toDouble();
+    // 18% of the shortest side → looks like a real magnifying glass on any screen
+    return (minSide * 0.18).clamp(44.0, 72.0);
   }
 
-  void _handleMagnifierPanStart(DragStartDetails details, Size size) {
-    if (_animationType != 'magnifier_reveal') return;
-
-    setState(() {
-      _isLensDragging = true;
-      _showingInteraction = true;
-    });
-
-    _lensCenterNotifier.value = _clampLensPosition(details.localPosition, size);
+  Offset _resolveLensTouchTarget(Offset localPosition, Size size) {
+    // Position the lens to the upper-left so the handle points toward the finger.
+    final lensR = _resolveLensRadius(size);
+    const handleLength = 38.0;
+    const angle = math.pi / 4; // 45°
+    final offset = lensR + handleLength;
+    return _clampLensPosition(
+      Offset(
+        localPosition.dx - offset * math.cos(angle),
+        localPosition.dy - offset * math.sin(angle),
+      ),
+      size,
+    );
   }
 
-  void _handleMagnifierPanUpdate(DragUpdateDetails details, Size size) {
+  void _activateMagnifierAtPosition(Offset localPosition, Size size) {
     if (_animationType != 'magnifier_reveal') return;
 
-    _lensCenterNotifier.value = _clampLensPosition(details.localPosition, size);
+    if (!_isLensDragging || !_showingInteraction) {
+      setState(() {
+        _isLensDragging = true;
+        _showingInteraction = true;
+      });
+    }
+
+    _lensCenterNotifier.value = _resolveLensTouchTarget(localPosition, size);
   }
 
-  void _handleMagnifierPanEnd(Size size) {
+  void _deactivateMagnifier(Size size) {
     if (_animationType != 'magnifier_reveal') return;
+    if (!_isLensDragging && !_showingInteraction) return;
 
     setState(() {
       _isLensDragging = false;
@@ -626,6 +676,249 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_autoResetOnRelease) {
       _lensCenterNotifier.value = Offset(size.width / 2, size.height / 2);
     }
+  }
+
+  // ---- object_sweep methods ----
+  void _handleSweepActivate(Offset pos, Size canvasSize) {
+    if (_animationType != 'object_sweep') return;
+    if (!_isSweeper) setState(() => _isSweeper = true);
+    _appendSweepTrailPoint(pos);
+    _sweepCenterNotifier.value = pos;
+    _checkSweepCollisions(pos, canvasSize);
+  }
+
+  void _handleSweepMove(Offset pos, Size canvasSize) {
+    if (_animationType != 'object_sweep') return;
+    if (!_isSweeper) setState(() => _isSweeper = true);
+    _appendSweepTrailPoint(pos);
+    _sweepCenterNotifier.value = pos;
+    _checkSweepCollisions(pos, canvasSize);
+  }
+
+  void _deactivateSweep() {
+    if (!_isSweeper) return;
+    setState(() {
+      _isSweeper = false;
+      _sweepTrailPoints.clear();
+    });
+    _sweepCenterNotifier.value = null;
+  }
+
+  void _appendSweepTrailPoint(Offset pos) {
+    if (_sweepTrailPoints.isNotEmpty) {
+      final last = _sweepTrailPoints.last;
+      if ((last - pos).distance < 8) {
+        return;
+      }
+    }
+
+    setState(() {
+      _sweepTrailPoints.add(pos);
+      if (_sweepTrailPoints.length > 26) {
+        _sweepTrailPoints.removeAt(0);
+      }
+    });
+  }
+
+  void _checkSweepCollisions(Offset sweepCenter, Size canvasSize) {
+    final sweeperR = _sweeperSizeResolved / 2;
+    bool changed = false;
+    Offset? lastHitPosition;
+    for (final obj in _sweepObjects) {
+      final id = obj['id']?.toString() ?? '';
+      if (id.isEmpty || _sweepRemovedIds.contains(id)) continue;
+      final nx = _toDouble(obj['nx'], fallback: 0.5).clamp(0.0, 1.0);
+      final ny = _toDouble(obj['ny'], fallback: 0.5).clamp(0.0, 1.0);
+      final objSize = _toDouble(obj['size'], fallback: 50.0);
+      final cx = nx * canvasSize.width;
+      final cy = ny * canvasSize.height;
+      final dist = (sweepCenter - Offset(cx, cy)).distance;
+      if (dist < sweeperR + objSize * 0.38) {
+        _sweepRemovedIds.add(id);
+        lastHitPosition = Offset(cx, cy);
+        changed = true;
+      }
+    }
+    if (changed) {
+      AudioFeedbackService().playRemoveObject();
+      setState(() {
+        _sparklePosition = lastHitPosition;
+      });
+      _sparkleController.forward(from: 0.0);
+    }
+  }
+
+  Widget _buildSweepTrailEffect(Size canvasSize) {
+    if (_sweepTrailPoints.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final points = List<Offset>.from(_sweepTrailPoints);
+    final total = points.length;
+
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          for (int i = 0; i < points.length; i++)
+            () {
+              final p = points[i];
+              final t = (i + 1) / total;
+              final size = 12.0 + (t * 20.0);
+              final opacity = 0.05 + (t * 0.14);
+              final left = (p.dx - size / 2).clamp(
+                0.0,
+                canvasSize.width - size,
+              );
+              final top = (p.dy - size / 2).clamp(
+                0.0,
+                canvasSize.height - size,
+              );
+              return Positioned(
+                left: left.toDouble(),
+                top: top.toDouble(),
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: opacity),
+                        Colors.lightBlueAccent.withValues(
+                          alpha: opacity * 0.55,
+                        ),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.62, 1.0],
+                    ),
+                  ),
+                ),
+              );
+            }(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSweepObjectItem(Map<String, dynamic> obj, Size canvasSize) {
+    final id = obj['id']?.toString() ?? '';
+    final nx = _toDouble(obj['nx'], fallback: 0.5).clamp(0.0, 1.0);
+    final ny = _toDouble(obj['ny'], fallback: 0.5).clamp(0.0, 1.0);
+    final size = _toDouble(obj['size'], fallback: 50.0).clamp(20.0, 200.0);
+    final cx = nx * canvasSize.width;
+    final cy = ny * canvasSize.height;
+    final removed = _sweepRemovedIds.contains(id);
+    return Positioned(
+      left: cx - size / 2,
+      top: cy - size / 2,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: removed ? 0.0 : 1.0,
+          duration: const Duration(milliseconds: 400),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: _buildAsset({
+              'type': 'image',
+              'url': obj['url']?.toString() ?? '',
+              'text': '',
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildObjectSweepMode() {
+    final backgroundAsset = _magnifierBaseAsset;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final canvasSize = Size(constraints.maxWidth, 300);
+            final sweeperSize = _sweeperSizeResolved;
+            final objects = _sweepObjects;
+            final sweeperAsset = _sweeperAsset;
+            return MouseRegion(
+              onHover: (event) =>
+                  _handleSweepMove(event.localPosition, canvasSize),
+              onExit: (_) => _deactivateSweep(),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _handleSweepActivate(event.localPosition, canvasSize),
+                onPointerMove: (event) =>
+                    _handleSweepMove(event.localPosition, canvasSize),
+                onPointerUp: (_) => _deactivateSweep(),
+                onPointerCancel: (_) => _deactivateSweep(),
+                child: SizedBox(
+                  height: 300,
+                  child: Stack(
+                    children: [
+                      _buildAsset(backgroundAsset),
+                      // Dirt/stain objects at their configured positions
+                      ...objects.map(
+                        (obj) => _buildSweepObjectItem(obj, canvasSize),
+                      ),
+                      // Visual trail while sweeping
+                      _buildSweepTrailEffect(canvasSize),
+                      // Impact sparkle when an object is removed
+                      _buildSparkleEffect(),
+                      // Sweeper image follows the touch/pointer
+                      ValueListenableBuilder<Offset?>(
+                        valueListenable: _sweepCenterNotifier,
+                        builder: (context, center, _) {
+                          if (center == null || !_isSweeper) {
+                            return const SizedBox.shrink();
+                          }
+                          final left = (center.dx - sweeperSize / 2).clamp(
+                            0.0,
+                            math.max(0, canvasSize.width - sweeperSize),
+                          );
+                          final top = (center.dy - sweeperSize / 2).clamp(
+                            0.0,
+                            math.max(0, canvasSize.height - sweeperSize),
+                          );
+                          return Positioned(
+                            left: left.toDouble(),
+                            top: top.toDouble(),
+                            child: IgnorePointer(
+                              child: SizedBox(
+                                width: sweeperSize,
+                                height: sweeperSize,
+                                child: _buildAsset(sweeperAsset),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      if (!_isSweeper) _buildInstructionOverlay(),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _handleMagnifierPointerDown(PointerDownEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
+  }
+
+  void _handleMagnifierPointerMove(PointerMoveEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
+  }
+
+  void _handleMagnifierPointerHover(PointerEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
   }
 
   void _completeSwipeAnimation() {
@@ -1241,84 +1534,115 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
             final canvasSize = Size(constraints.maxWidth, 300);
             final lensRadius = _resolveLensRadius(canvasSize);
             final defaultCenter = Offset(
-              canvasSize.width / 2,
-              canvasSize.height / 2,
+              canvasSize.width * 0.25,
+              canvasSize.height * 0.5,
             );
             final baseLayer = _buildAsset(backgroundAsset);
             final revealLayer = _buildAsset(revealAsset);
 
-            return GestureDetector(
-              onPanStart: (details) =>
-                  _handleMagnifierPanStart(details, canvasSize),
-              onPanUpdate: (details) =>
-                  _handleMagnifierPanUpdate(details, canvasSize),
-              onPanEnd: (_) => _handleMagnifierPanEnd(canvasSize),
-              child: Stack(
-                children: [
-                  baseLayer,
-                  ValueListenableBuilder<Offset?>(
-                    valueListenable: _lensCenterNotifier,
-                    child: revealLayer,
-                    builder: (context, lensCenter, child) {
-                      final center = _clampLensPosition(
-                        lensCenter ?? defaultCenter,
-                        canvasSize,
-                      );
+            // Idle scan: lens sweeps left→right with gentle sine vertical movement
+            Offset getIdleCenter(double t) {
+              final cx = lensRadius + (canvasSize.width - 2 * lensRadius) * t;
+              final cy =
+                  canvasSize.height * 0.5 +
+                  math.sin(t * math.pi * 2) * canvasSize.height * 0.14;
+              return Offset(cx, cy);
+            }
 
-                      return ClipPath(
-                        clipper: _CircularRevealClipper(
-                          center: center,
-                          radius: lensRadius,
-                        ),
-                        child: child,
-                      );
-                    },
-                  ),
-                  ValueListenableBuilder<Offset?>(
-                    valueListenable: _lensCenterNotifier,
-                    builder: (context, lensCenter, _) {
-                      final center = _clampLensPosition(
-                        lensCenter ?? defaultCenter,
-                        canvasSize,
-                      );
+            // Extra canvas space needed by the handle (45°, 38px, 9px stroke)
+            final handleExtra = 38.0 * math.cos(math.pi / 4) + 10.0; // ≈ 37px
 
-                      return Positioned(
-                        left: center.dx - lensRadius,
-                        top: center.dy - lensRadius,
-                        child: IgnorePointer(
-                          child: Container(
-                            width: lensRadius * 2,
-                            height: lensRadius * 2,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(
-                                  alpha: _lensOpacity,
+            return MouseRegion(
+              onHover: (event) =>
+                  _handleMagnifierPointerHover(event, canvasSize),
+              onExit: (_) => _deactivateMagnifier(canvasSize),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _handleMagnifierPointerDown(event, canvasSize),
+                onPointerMove: (event) =>
+                    _handleMagnifierPointerMove(event, canvasSize),
+                onPointerUp: (_) => _deactivateMagnifier(canvasSize),
+                onPointerCancel: (_) => _deactivateMagnifier(canvasSize),
+                child: Stack(
+                  children: [
+                    baseLayer,
+                    // Reveal layer — idle scan when not touching, follows touch when active
+                    AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _lensCenterNotifier,
+                        _magnifierIdleController,
+                      ]),
+                      child: revealLayer,
+                      builder: (context, child) {
+                        final center = _isLensDragging
+                            ? _clampLensPosition(
+                                _lensCenterNotifier.value ?? defaultCenter,
+                                canvasSize,
+                              )
+                            : getIdleCenter(_magnifierIdleController.value);
+                        return ClipPath(
+                          clipper: _CircularRevealClipper(
+                            center: center,
+                            radius: lensRadius,
+                          ),
+                          child: child,
+                        );
+                      },
+                    ),
+                    // Magnifier ring + handle — pulses when idle, solid when active
+                    AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _lensCenterNotifier,
+                        _magnifierIdleController,
+                        _pulseController,
+                      ]),
+                      builder: (context, _) {
+                        final Offset center;
+                        final double widgetOpacity;
+                        if (_isLensDragging) {
+                          center = _clampLensPosition(
+                            _lensCenterNotifier.value ?? defaultCenter,
+                            canvasSize,
+                          );
+                          widgetOpacity = 1.0;
+                        } else {
+                          center = getIdleCenter(
+                            _magnifierIdleController.value,
+                          );
+                          widgetOpacity = (0.38 + _pulseController.value * 0.52)
+                              .clamp(0.0, 1.0);
+                        }
+                        return Positioned(
+                          left: center.dx - lensRadius,
+                          top: center.dy - lensRadius,
+                          child: IgnorePointer(
+                            child: Opacity(
+                              opacity: widgetOpacity,
+                              child: CustomPaint(
+                                size: Size(
+                                  lensRadius * 2 + handleExtra,
+                                  lensRadius * 2 + handleExtra,
                                 ),
-                                width: 3,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  blurRadius: _lensGlowRadius,
-                                  spreadRadius: 1,
+                                painter: _MagnifierWithHandlePainter(
+                                  radius: lensRadius,
+                                  ringColor: Colors.white.withValues(
+                                    alpha: _lensOpacity,
+                                  ),
+                                  handleColor: Colors.white.withValues(
+                                    alpha: _lensOpacity,
+                                  ),
+                                  glowRadius: _lensGlowRadius,
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.search,
-                                size: 20,
-                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  if (!_isLensDragging) _buildInstructionOverlay(),
-                ],
+                        );
+                      },
+                    ),
+                    if (!_isLensDragging) _buildInstructionOverlay(),
+                  ],
+                ),
               ),
             );
           },
@@ -1336,6 +1660,10 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
     if (_animationType == 'magnifier_reveal') {
       return _buildMagnifierRevealMode();
+    }
+
+    if (_animationType == 'object_sweep') {
+      return _buildObjectSweepMode();
     }
 
     // Modo estándar para otros tipos de animación
@@ -1528,4 +1856,72 @@ class _CircularRevealClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant _CircularRevealClipper oldClipper) {
     return oldClipper.center != center || oldClipper.radius != radius;
   }
+}
+
+/// Paints a magnifying glass: circular ring + diagonal handle toward bottom-right.
+class _MagnifierWithHandlePainter extends CustomPainter {
+  final double radius;
+  final Color ringColor;
+  final Color handleColor;
+  final double glowRadius;
+
+  _MagnifierWithHandlePainter({
+    required this.radius,
+    required this.ringColor,
+    required this.handleColor,
+    required this.glowRadius,
+  });
+
+  static const double _handleLength = 38.0;
+  static const double _handleAngle = math.pi / 4; // 45° → lower-right
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Lens circle is centered at (radius, radius) leaving room for the handle
+    final center = Offset(radius, radius);
+    final ringRadius = radius - 2.0;
+
+    // Soft shadow behind the lens
+    if (glowRadius > 0) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.28)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius),
+      );
+    }
+
+    // Ring
+    canvas.drawCircle(
+      center,
+      ringRadius,
+      Paint()
+        ..color = ringColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.5,
+    );
+
+    // Handle — extends from the bottom-right edge of the ring at 45°
+    final edgeX = center.dx + ringRadius * math.cos(_handleAngle);
+    final edgeY = center.dy + ringRadius * math.sin(_handleAngle);
+    final endX = edgeX + _handleLength * math.cos(_handleAngle);
+    final endY = edgeY + _handleLength * math.sin(_handleAngle);
+
+    canvas.drawLine(
+      Offset(edgeX, edgeY),
+      Offset(endX, endY),
+      Paint()
+        ..color = handleColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 9.0
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MagnifierWithHandlePainter old) =>
+      old.radius != radius ||
+      old.ringColor != ringColor ||
+      old.glowRadius != glowRadius;
 }
