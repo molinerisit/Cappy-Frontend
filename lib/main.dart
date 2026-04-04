@@ -18,7 +18,6 @@ import 'features/learning/screens/recipes_list_screen.dart';
 import 'features/lessons/lesson_detail_screen.dart';
 import 'features/pantry/pantry_screen.dart';
 import 'features/profile/profile_screen.dart';
-import 'features/admin_v2/layout/admin_shell_modern.dart';
 import 'core/image_optimize_service.dart';
 import 'core/audio_feedback_service.dart';
 import 'providers/auth_provider.dart';
@@ -261,20 +260,6 @@ Route<dynamic> _onGenerateRoute(RouteSettings settings) {
 
       if (name == "/pantry") return const PantryScreen();
       if (name == "/profile") return const ProfileScreen();
-      if (name == "/admin" || name == "/admin-v2") {
-        if (!authState.isAdmin) {
-          return const MainExperienceScreen();
-        }
-
-        final args = settings.arguments is Map
-            ? settings.arguments as Map
-            : const {};
-        return AdminShellModern(
-          initialPathId: args['pathId']?.toString(),
-          initialNodeId: args['nodeId']?.toString(),
-        );
-      }
-
       // Dynamic routes
       if (name.startsWith("/experience/country/")) {
         final countryId = name.split('/').last;

@@ -73,6 +73,7 @@ flutter:
 
   assets:
     - assets/logo_cappy.png
+    - assets/Choia.png
     - assets/sounds/
 
   # To add assets to your application, add an assets section, like this:

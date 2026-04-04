@@ -1,0 +1,2235 @@
+[
+  {
+    "id": "TC001",
+    "title": "Register a new user and enter onboarding",
+    "description": "Verifies a user can submit registration and is redirected into the onboarding intro screen.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/register"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the onboarding introduction screen"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Registration shows error for invalid email format",
+    "description": "Verifies registration blocks submission and shows a validation error when the email format is invalid.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/register"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill invalid-email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an email validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the registration screen"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Registration requires name",
+    "description": "Verifies registration cannot be completed when the name field is left empty.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/register"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a valid password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a required field validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the registration screen"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Registration requires password",
+    "description": "Verifies registration cannot be completed when the password field is left empty.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/register"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a required field validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the registration screen"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Registration rejects too-short password",
+    "description": "Verifies registration shows a password validation error when an invalid password is provided.",
+    "category": "User Registration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/register"
+      },
+      {
+        "type": "action",
+        "description": "Fill Test User into the name field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a unique email into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill a too-short password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a password validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the registration screen"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Login succeeds and redirects to main experience",
+    "description": "Verifies a user can log in with valid credentials and reaches the main experience screen.",
+    "category": "User Login",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the main experience screen"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Login shows error on incorrect credentials",
+    "description": "Verifies login fails with invalid credentials and an error is displayed while staying on the login screen.",
+    "category": "User Login",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill invalid.user@example.com into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill wrong-password into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an invalid credentials error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the login screen"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Login requires email",
+    "description": "Verifies login cannot be submitted without providing an email.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a required field validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the login screen"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Login requires password",
+    "description": "Verifies login cannot be submitted without providing a password.",
+    "category": "User Login",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a required field validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the login screen"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Complete onboarding selections and reach main experience",
+    "description": "Verifies a user can progress through onboarding screens, make required selections, complete onboarding, and reach the main experience.",
+    "category": "Onboarding Flow",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/onboarding/intro"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step"
+      },
+      {
+        "type": "action",
+        "description": "Select a learning mode"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step"
+      },
+      {
+        "type": "action",
+        "description": "Select one or more learning goals"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step"
+      },
+      {
+        "type": "action",
+        "description": "Select an initial country or cuisine"
+      },
+      {
+        "type": "action",
+        "description": "Complete onboarding"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the main experience screen"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Onboarding blocks progress when mode is not selected",
+    "description": "Verifies the onboarding flow enforces selecting a learning mode before proceeding.",
+    "category": "Onboarding Flow",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/onboarding/mode"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step without selecting a learning mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error prompting a required selection is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the learning mode selection screen"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Onboarding blocks progress when no goals are selected",
+    "description": "Verifies the onboarding flow enforces selecting at least one goal before proceeding.",
+    "category": "Onboarding Flow",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/onboarding/goals"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step without selecting any goals"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error prompting a required selection is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the goals selection screen"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Onboarding blocks completion when no country is selected",
+    "description": "Verifies the onboarding flow enforces selecting a country/cuisine before completion.",
+    "category": "Onboarding Flow",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/onboarding/countries"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to complete onboarding without selecting a country or cuisine"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error prompting a required selection is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user remains on the country selection screen"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Onboarding intro page loads primary content",
+    "description": "Verifies the onboarding introduction screen renders its primary content and allows starting onboarding navigation.",
+    "category": "Onboarding Flow",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/onboarding/intro"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the onboarding introduction content"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify onboarding introduction content is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Proceed to the next onboarding step"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the learning mode selection screen is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "User Profile: View stats and update avatar + username",
+    "description": "Verifies a user can view profile stats and successfully change avatar and username with changes reflected on the profile screen.",
+    "category": "User Profile",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "action",
+        "description": "Open avatar selection"
+      },
+      {
+        "type": "action",
+        "description": "Choose an avatar"
+      },
+      {
+        "type": "action",
+        "description": "Fill ProfileUser_TC001 into the username field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated username ProfileUser_TC001 is displayed on the profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile shows XP, level, and streak stats"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "User Profile: Invalid username shows validation and does not update",
+    "description": "Verifies entering an invalid/empty username prevents saving and shows a validation error with no profile update.",
+    "category": "User Profile",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "action",
+        "description": "Fill an empty value into the username field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a username validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the username is not updated to an empty value"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "User Profile: Profile page loads primary content",
+    "description": "Verifies the profile screen loads and displays the primary user identity and stats content.",
+    "category": "User Profile",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user profile identity section is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile shows XP, level, and streak stats"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "User Profile: Change username only and persist on screen",
+    "description": "Verifies saving a valid username change updates the displayed username on the profile screen.",
+    "category": "User Profile",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "action",
+        "description": "Fill ProfileUser_TC004 into the username field"
+      },
+      {
+        "type": "action",
+        "description": "Save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated username ProfileUser_TC004 is displayed on the profile"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "User Profile: Open avatar selection and cancel without changing",
+    "description": "Verifies the avatar selection can be opened and dismissed without applying changes.",
+    "category": "User Profile",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "action",
+        "description": "Open avatar selection"
+      },
+      {
+        "type": "action",
+        "description": "Dismiss avatar selection"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profile screen remains displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "User Profile: Logout signs the user out",
+    "description": "Verifies a user can log out from the profile screen and is returned to an unauthenticated entry screen.",
+    "category": "User Profile",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/profile"
+      },
+      {
+        "type": "action",
+        "description": "Tap Logout to sign out"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the login screen"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Learning Path Roadmap: Complete available node and see progress effects",
+    "description": "Verifies selecting an available roadmap node lets the user start and complete a lesson, and the roadmap reflects completion with XP awarded/unlocks.",
+    "category": "Learning Path Roadmap",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Select an available node to view its lesson details"
+      },
+      {
+        "type": "action",
+        "description": "Start lesson"
+      },
+      {
+        "type": "action",
+        "description": "Progress through the lesson until completion using valid interactions"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an XP earned confirmation is visible at lesson completion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the completed node is marked completed and at least one next node is unlocked"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Learning Path Roadmap: Attempt to access locked node shows locked message and stays on roadmap",
+    "description": "Verifies tapping a locked node shows a locked requirement message and does not navigate away from the roadmap flow.",
+    "category": "Learning Path Roadmap",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the path progression to find a locked node"
+      },
+      {
+        "type": "action",
+        "description": "Tap a locked node"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a locked-node message with an unlocking requirement is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the roadmap view remains displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Learning Path Roadmap: Roadmap loads and displays connected nodes",
+    "description": "Verifies the main roadmap screen loads and shows the connected node progression for the current path.",
+    "category": "Learning Path Roadmap",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the connected node roadmap for the current learning path is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Learning Path Roadmap: Open node details from an available node",
+    "description": "Verifies an available node can be selected and lesson details are shown.",
+    "category": "Learning Path Roadmap",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Select an available node to view its lesson details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify lesson details for the selected node are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Learning Path Roadmap: Scroll through progression to later nodes",
+    "description": "Verifies the roadmap supports scrolling to browse nodes across the path progression.",
+    "category": "Learning Path Roadmap",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the path progression"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify additional roadmap nodes are displayed after scrolling"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Interactive Lesson Game: Complete lesson with correct answers and see XP + celebration",
+    "description": "Verifies a user can complete a lesson by answering cards, receive correct feedback during play, and see XP plus celebration on completion.",
+    "category": "Interactive Lesson Game",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Open a lesson card"
+      },
+      {
+        "type": "action",
+        "description": "Select an answer option"
+      },
+      {
+        "type": "action",
+        "description": "Progress through all lesson cards by selecting answer options until the lesson completes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an XP earned confirmation is visible at lesson completion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a completion celebration is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Interactive Lesson Game: Incorrect answer triggers feedback and life loss indicator updates",
+    "description": "Verifies selecting an incorrect answer produces incorrect feedback and a visible indication that a life was lost.",
+    "category": "Interactive Lesson Game",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Open a lesson card"
+      },
+      {
+        "type": "action",
+        "description": "Select an incorrect answer option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify incorrect feedback is displayed for the selected answer"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the lives indicator shows a decrease in available lives"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Interactive Lesson Game: Lesson card content renders for a started lesson",
+    "description": "Verifies lesson content is displayed after opening a lesson card (e.g., prompt and answer options/media).",
+    "category": "Interactive Lesson Game",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Open a lesson card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify lesson card content is displayed with at least one actionable response option"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Interactive Lesson Game: Correct answer triggers correct feedback",
+    "description": "Verifies selecting a correct answer option produces correct visual feedback during the lesson.",
+    "category": "Interactive Lesson Game",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Open a lesson card"
+      },
+      {
+        "type": "action",
+        "description": "Select a correct answer option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify correct feedback is displayed for the selected answer"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Interactive Lesson Game: No-lives blocking state prevents lesson start when applicable",
+    "description": "Verifies that if the user has no lives, attempting to start a lesson results in a blocking no-lives state preventing the lesson from starting.",
+    "category": "Interactive Lesson Game",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/main"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to open a lesson card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify either the lesson starts with lesson card content displayed or a blocking no-lives state is displayed preventing lesson start"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Country exploration: browse countries, open a hub, then open recipes list",
+    "description": "Verifies a user can browse countries, open a country hub, and navigate to the recipes list showing recipe items.",
+    "category": "Country Selection and Exploration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the list of countries/cuisines"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to view the country’s recipes list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a list of recipe items is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Country selection page loads and shows browseable country list",
+    "description": "Verifies the country selection screen loads and displays countries/cuisines that can be browsed.",
+    "category": "Country Selection and Exploration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a list of countries/cuisines is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Open a country hub and see hub content sections",
+    "description": "Verifies selecting a country opens a hub that surfaces recipes and cultural content areas.",
+    "category": "Country Selection and Exploration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify country hub content is displayed including recipes and cultural content"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Country hub shows user progress for the selected country",
+    "description": "Verifies the country hub displays progress information for the selected country.",
+    "category": "Country Selection and Exploration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user’s progress for this country is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Navigate from a country hub to recipes list and verify recipes load",
+    "description": "Verifies that from a country hub the user can open the recipes list and see recipe items rendered.",
+    "category": "Country Selection and Exploration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to view the country’s recipes list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify recipe items for the selected country are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Country selection supports switching between two different countries",
+    "description": "Verifies the user can open one country hub, then switch to another country and see the hub update accordingly.",
+    "category": "Country Selection and Exploration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation control to return to the countries list"
+      },
+      {
+        "type": "action",
+        "description": "Click a different country to view its hub"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the hub content updates to the newly selected country"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Country selection and hub handle empty content states gracefully",
+    "description": "Verifies the UI shows an empty state when a country hub has no content available to display.",
+    "category": "Country Selection and Exploration",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the hub content area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is visible if no hub content is available"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Country recipes list supports scrolling through multiple items",
+    "description": "Verifies the recipes list screen allows scrolling and continues to display recipe items.",
+    "category": "Country Selection and Exploration",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/experience/countries"
+      },
+      {
+        "type": "action",
+        "description": "Click a country to view its hub"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to view the country’s recipes list"
+      },
+      {
+        "type": "action",
+        "description": "Scroll down the recipes list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify recipe items remain visible while scrolling"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Pantry: view ingredients and add a new ingredient successfully",
+    "description": "Verifies a user can view their pantry and add a new ingredient that appears in the list.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to add a new ingredient"
+      },
+      {
+        "type": "action",
+        "description": "Fill Tomato Test Ingredient into the ingredient name field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the ingredient form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Tomato Test Ingredient is displayed in the pantry list"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "Pantry page loads and shows current pantry state",
+    "description": "Verifies the pantry screen loads and displays either ingredients or an empty state.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify pantry ingredients are displayed or an empty state message is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "Pantry: validation prevents adding an ingredient with missing information",
+    "description": "Verifies submitting the add-ingredient form with missing required data shows validation and does not add an item.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to add a new ingredient"
+      },
+      {
+        "type": "action",
+        "description": "Submit the ingredient form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error is visible and the ingredient is not added"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "Pantry: add and then remove the same ingredient",
+    "description": "Verifies a user can add a new ingredient and then remove it from the pantry list.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to add a new ingredient"
+      },
+      {
+        "type": "action",
+        "description": "Fill Remove Me Ingredient into the ingredient name field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the ingredient form"
+      },
+      {
+        "type": "action",
+        "description": "Remove Remove Me Ingredient from the pantry list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Remove Me Ingredient is not displayed in the pantry list"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "Pantry: cancel out of add ingredient without creating an item",
+    "description": "Verifies that exiting the add-ingredient flow without submitting does not add a new pantry item.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to add a new ingredient"
+      },
+      {
+        "type": "action",
+        "description": "Fill Cancelled Ingredient into the ingredient name field"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to cancel and return to the pantry list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Cancelled Ingredient is not displayed in the pantry list"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "Pantry: prevent adding a clearly invalid ingredient name",
+    "description": "Verifies the pantry add flow rejects an invalid ingredient name format and does not add it.",
+    "category": "Pantry / Ingredient Inventory",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/pantry"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to add a new ingredient"
+      },
+      {
+        "type": "action",
+        "description": "Fill a clearly invalid value into the ingredient name field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the ingredient form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error is visible and the ingredient is not added"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Leaderboard: view top users and see own position",
+    "description": "Verifies the leaderboard shows ranked users and includes the current user’s position.",
+    "category": "Global Leaderboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/leaderboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a ranked list of users is displayed with username, avatar, and XP, and the current user’s position is shown"
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "Leaderboard page loads and displays rankings list",
+    "description": "Verifies the leaderboard screen loads its primary content showing ranked users.",
+    "category": "Global Leaderboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/leaderboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify leaderboard rankings are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC047",
+    "title": "Leaderboard supports scrolling through the rankings",
+    "description": "Verifies the user can scroll the leaderboard and continue to see ranked entries.",
+    "category": "Global Leaderboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/leaderboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll down the leaderboard list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify ranked user entries remain visible while scrolling"
+      }
+    ]
+  },
+  {
+    "id": "TC048",
+    "title": "Leaderboard shows empty state when no rankings are available",
+    "description": "Verifies the UI displays an empty state if the leaderboard has no entries to show.",
+    "category": "Global Leaderboard",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/leaderboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state message is visible if no leaderboard entries are available"
+      }
+    ]
+  },
+  {
+    "id": "TC049",
+    "title": "Leaderboard displays user profile details per entry",
+    "description": "Verifies each leaderboard entry surfaces basic profile details needed for the rankings.",
+    "category": "Global Leaderboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/leaderboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify multiple leaderboard entries display username, avatar, and XP"
+      }
+    ]
+  },
+  {
+    "id": "TC050",
+    "title": "Admin can access admin dashboard and see primary content",
+    "description": "Verifies an authenticated admin can reach the admin area and see the dashboard content statistics.",
+    "category": "Admin Content Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is displayed with content statistics"
+      }
+    ]
+  },
+  {
+    "id": "TC051",
+    "title": "Admin can create a new learning node and see it in the library",
+    "description": "Verifies creating a learning node from the admin interface results in the node appearing in the admin library list.",
+    "category": "Admin Content Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the learning nodes library module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test Node A\" into the node title field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid content into the node body or description field"
+      },
+      {
+        "type": "action",
+        "description": "Save the new learning node"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the learning nodes library list includes \"Test Node A\""
+      }
+    ]
+  },
+  {
+    "id": "TC052",
+    "title": "Admin can edit an existing learning node and see updates reflected",
+    "description": "Verifies an admin can edit a node created in-session and see the updated title in the library list.",
+    "category": "Admin Content Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the learning nodes library module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test Node Edit\" into the node title field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid content into the node body or description field"
+      },
+      {
+        "type": "action",
+        "description": "Save the new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Open the node details for \"Test Node Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Enter edit mode for the node"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test Node Edited\" into the node title field"
+      },
+      {
+        "type": "action",
+        "description": "Save the node changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the learning nodes library list includes \"Test Node Edited\""
+      }
+    ]
+  },
+  {
+    "id": "TC053",
+    "title": "Admin can delete a learning node and it is removed from the library",
+    "description": "Verifies deleting a node created in-session removes it from the admin library list.",
+    "category": "Admin Content Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the learning nodes library module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test Node Delete\" into the node title field"
+      },
+      {
+        "type": "action",
+        "description": "Fill valid content into the node body or description field"
+      },
+      {
+        "type": "action",
+        "description": "Save the new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Open the node details for \"Test Node Delete\""
+      },
+      {
+        "type": "action",
+        "description": "Delete the node"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion in the app confirmation UI"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the learning nodes library list does not include \"Test Node Delete\""
+      }
+    ]
+  },
+  {
+    "id": "TC054",
+    "title": "Non-admin or unauthenticated user cannot access admin route",
+    "description": "Verifies attempting to access the admin route without authentication results in a redirect to login or an access denied view.",
+    "category": "Admin Content Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is redirected to the login screen or an access denied view is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC055",
+    "title": "Create learning node requires mandatory fields",
+    "description": "Verifies the node creation form blocks saving when required fields are empty.",
+    "category": "Admin Content Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the learning nodes library module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new learning node"
+      },
+      {
+        "type": "action",
+        "description": "Clear the node title field"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to save the new learning node"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a form validation error is visible and the node is not saved"
+      }
+    ]
+  },
+  {
+    "id": "TC056",
+    "title": "Admin can manage countries by creating a new country entry",
+    "description": "Verifies creating a new country/cuisine entry from the admin countries module results in it appearing in the countries list.",
+    "category": "Admin Content Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the countries management module"
+      },
+      {
+        "type": "action",
+        "description": "Start creating a new country or cuisine"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Testland\" into the country name field"
+      },
+      {
+        "type": "action",
+        "description": "Save the country or cuisine"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the countries list includes \"Testland\""
+      }
+    ]
+  },
+  {
+    "id": "TC057",
+    "title": "Admin navigation between admin modules keeps admin shell accessible",
+    "description": "Verifies the admin can move between modules and the admin shell remains usable for content management tasks.",
+    "category": "Admin Content Management",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /#/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /#/admin"
+      },
+      {
+        "type": "action",
+        "description": "Open the learning nodes library module"
+      },
+      {
+        "type": "action",
+        "description": "Open the countries management module"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the countries management view is displayed within the admin dashboard shell"
+      }
+    ]
+  }
+]

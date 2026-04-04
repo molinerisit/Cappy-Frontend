@@ -133,53 +133,51 @@ class _LoginScreenState extends State<LoginScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Logo con animación
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: AppMotionDurations.entrance,
-                        builder: (context, value, child) {
-                          return Transform.scale(scale: value, child: child);
-                        },
-                        child: const Text(
-                          "🍳",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 100),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Título
-                      Text(
-                        "Cappy",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                          letterSpacing: 1,
-                        ),
+                      // Logo
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Center(
+                              child: Text('🍳', style: TextStyle(fontSize: 24)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Cappy',
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1F2937),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
-
-                      // Subtítulo
                       Text(
-                        "Cocina feliz",
+                        'Bienvenido de nuevo',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
                           color: const Color(0xFF6B7280),
-                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 56),
+                      const SizedBox(height: 32),
 
                       // Card con formulario
                       Container(
-                        padding: const EdgeInsets.all(28),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.05),
@@ -206,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
 
                             // Password
                             AuthTextField(
@@ -221,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 20),
 
                             // Error message
                             if (_errorMessage != null)
@@ -264,67 +262,11 @@ class _LoginScreenState extends State<LoginScreen>
                               onPressed: _isLoading ? null : _handleLogin,
                               isLoading: _isLoading,
                             ),
-
-                            const SizedBox(height: 24),
-
-                            // Divider con texto
-                            Row(
-                              children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    'O continúa con',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: const Color(0xFF9CA3AF),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Botón de Google
-                            OutlinedButton.icon(
-                              onPressed: _isLoading ? null : _handleGoogleLogin,
-                              icon: const Icon(
-                                Icons.login,
-                                size: 22,
-                                color: Color(0xFF1F2937),
-                              ),
-                              label: Text(
-                                'Continuar con Google',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1F2937),
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                side: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                backgroundColor: Colors.white,
-                              ),
-                            ),
                           ],
                         ),
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
 
                       // Link de registro
                       TextButton(

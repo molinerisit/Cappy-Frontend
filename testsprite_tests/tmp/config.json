@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:63475/#/",
+  "loginUser": "admin@cooklevel.com",
+  "loginPassword": "@MyDream+1",
+  "executionArgs": {
+    "projectName": "cooklevel-frontend",
+    "projectPath": "C:/Users/Julian/Desktop/Proyectos/Bara - The first mobile app to learn to cook as if it were a game/cooklevel-frontend",
+    "testIds": [],
+    "additionalInstruction": "",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-ZSsDC4L0PS_EnuyNZ7pwxrc2zI3GrpQMAF9H2-2TCSM9Pkv6gb5sTiQ65HkAtx6FPeGDo_nFKR_uOmzZ73vH61OWd1IbIfrgawQHoMerXP3ODVPPZrVtKLh-Eg5CeOBeWR0"
+    }
+  },
+  "serverPort": 63772,
+  "proxy": "http://bda9fbc5-f96e-4db3-93fc-d2a10cc3a896:Jzig1Y5muN5sltpatDpgs5TWgqUW9vfy@tun.testsprite.com:8080"
+}

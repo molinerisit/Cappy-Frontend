@@ -188,15 +188,17 @@ class ApiService {
     String email,
     String password,
   ) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/auth/register"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-        "confirmPassword": password,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse("$baseUrl/auth/register"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "email": email,
+            "password": password,
+            "confirmPassword": password,
+          }),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -210,11 +212,13 @@ class ApiService {
     String email,
     String password,
   ) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/auth/login"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "password": password}),
-    );
+    final response = await http
+        .post(
+          Uri.parse("$baseUrl/auth/login"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"email": email, "password": password}),
+        )
+        .timeout(_timeout);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

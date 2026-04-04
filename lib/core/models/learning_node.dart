@@ -12,6 +12,8 @@ class NodeStep {
   final String? question;
   final List<String>? options;
   final String? correctAnswer;
+  final bool multiSelect;
+  final List<int>? correctIndices;
   final List<Map<String, dynamic>>? checklist;
   final Map<String, dynamic>? validationLogic;
   final String? feedback;
@@ -41,6 +43,8 @@ class NodeStep {
     this.tips,
     this.media,
     this.cards,
+    this.multiSelect = false,
+    this.correctIndices,
   });
 
   factory NodeStep.fromJson(Map<String, dynamic> json) {
@@ -87,6 +91,26 @@ class NodeStep {
     final cards = json['cards'] != null
         ? List<Map<String, dynamic>>.from(json['cards'])
         : null;
+    final bool multiSelect =
+        json['multiSelect'] == true || json['multiSelect'] == 'true';
+
+    List<int>? correctIndices;
+    if (cards != null) {
+      for (final card in cards) {
+        if (card['type']?.toString() == 'quiz_checklist') {
+          final content =
+              (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+          final raw = content['correctIndices'];
+          if (raw is List) {
+            correctIndices = raw
+                .map((e) => int.tryParse(e.toString()) ?? -1)
+                .where((i) => i >= 0)
+                .toList();
+          }
+          break;
+        }
+      }
+    }
     final description = json['description']?.toString();
     String instruction = firstNonEmpty([
       json['instruction'],
@@ -193,6 +217,8 @@ class NodeStep {
           .toList(),
       media: json['media'],
       cards: cards,
+      multiSelect: multiSelect,
+      correctIndices: correctIndices,
     );
   }
 
@@ -218,6 +244,8 @@ class NodeStep {
       'tips': tips,
       'media': media,
       'cards': cards,
+      'multiSelect': multiSelect,
+      'correctIndices': correctIndices,
     };
   }
 }

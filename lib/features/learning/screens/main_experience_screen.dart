@@ -290,23 +290,23 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
           }
 
           return Dialog(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.surface,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Tus Vidas',
-                    style: AppTypography.title.copyWith(
+                    'Vidas',
+                    style: AppTypography.cardTitle.copyWith(
                       color: AppColors.textStrong,
+                      fontSize: 17,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: 16),
                   GestureDetector(
                     onTap: isAdmin
                         ? () => setDialogState(() {
@@ -314,71 +314,64 @@ class _MainExperienceScreenState extends State<MainExperienceScreen>
                           })
                         : null,
                     child: Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFFFF1F2),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '$_currentLives',
-                                style: AppTypography.title.copyWith(
-                                  color: Colors.red,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            children: List.generate(_maxLives, (i) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(
+                                i < _currentLives
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: i < _currentLives
+                                    ? const Color(0xFFEF4444)
+                                    : const Color(0xFFE2E8F0),
+                                size: 28,
                               ),
-                              const SizedBox(width: AppSpacing.sm),
-                              const Icon(
-                                Icons.favorite_rounded,
-                                color: Colors.red,
-                                size: 32,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                '/ $_maxLives',
-                                style: AppTypography.body.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
+                            )),
                           ),
-                          if (!isAtMaxLives && _nextRefillAt != null) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            _NextLifeRefillCountdown(
-                              nextRefillAt: _nextRefillAt!,
-                            ),
-                          ],
-                          if (isAtMaxLives) ...[
-                            const SizedBox(height: AppSpacing.sm),
+                          const SizedBox(height: 8),
+                          if (!isAtMaxLives && _nextRefillAt != null)
+                            _NextLifeRefillCountdown(nextRefillAt: _nextRefillAt!),
+                          if (isAtMaxLives)
                             Text(
-                              'Tus vidas están completas',
+                              'Vidas completas',
                               style: AppTypography.badge.copyWith(
-                                color: AppColors.textSecondary,
+                                color: const Color(0xFF16A34A),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
                           if (isAdmin && showAdminActions) ...[
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: 12),
                             AppButton(
-                              label: 'Recargar vidas (Admin)',
+                              label: 'Recargar (Admin)',
                               onPressed: handleAdminRefill,
                             ),
                           ],
-                          const SizedBox(height: AppSpacing.md),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AppButton(
-                    label: 'Cerrar',
-                    onPressed: () => Navigator.pop(dialogContext),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: Text(
+                        'Cerrar',
+                        style: AppTypography.badge.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

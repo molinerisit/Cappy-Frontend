@@ -161,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 // Main Statistics
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
                     child: _buildMainStats(
                       currentStreak: auth.streak,
                       totalXP: totalXP,
@@ -179,9 +179,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Text(
                           'Métricas de aprendizaje',
                           style: GoogleFonts.poppins(
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
+                            letterSpacing: 0.1,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -199,15 +200,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                 // Achievements Section
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                     child: Column(
                       children: [
                         Text(
                           'Logros',
                           style: GoogleFonts.poppins(
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
+                            letterSpacing: 0.1,
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -223,16 +225,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 // Actions Section
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Acciones',
                           style: GoogleFonts.poppins(
-                            fontSize: 20,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
+                            letterSpacing: 0.1,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -292,81 +295,70 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         child: Column(
           children: [
-            // Avatar
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+            // Avatar + name row (horizontal on smaller height)
+            Row(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  displayedAvatar,
-                  style: const TextStyle(fontSize: 60),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Name/Role
-            Text(
-              displayedNickname,
-              style: GoogleFonts.poppins(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Level Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  width: 2.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('⭐', style: TextStyle(fontSize: 20)),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Nivel $level',
-                    style: GoogleFonts.poppins(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+                  child: Center(
+                    child: Text(
+                      displayedAvatar,
+                      style: const TextStyle(fontSize: 36),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayedNickname,
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Nivel $level',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // XP Progress Bar
             Column(
@@ -375,43 +367,34 @@ class _ProfileScreenState extends State<ProfileScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '$xpInLevel XP',
+                      '$xpInLevel / $xpForNextLevel XP',
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                     Text(
-                      '$xpForNextLevel XP',
+                      'Siguiente nivel',
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 AnimatedBuilder(
                   animation: _progressAnimation,
                   builder: (context, child) {
-                    return Container(
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: LinearProgressIndicator(
-                          value: progressPercent * _progressAnimation.value,
-                          backgroundColor: Colors.transparent,
-                          valueColor: const AlwaysStoppedAnimation(
-                            Colors.white,
-                          ),
-                          minHeight: 14,
-                        ),
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: progressPercent * _progressAnimation.value,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        valueColor: const AlwaysStoppedAnimation(Colors.white),
+                        minHeight: 8,
                       ),
                     );
                   },
