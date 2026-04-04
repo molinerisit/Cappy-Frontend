@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/app_colors.dart';
+import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import 'widgets/game_header.dart';
 import 'widgets/continue_card.dart';

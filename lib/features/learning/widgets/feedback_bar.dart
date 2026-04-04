@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../theme/colors.dart';
 import '../../../theme/motion.dart';
+import '../../../theme/typography.dart';
 
-/// Estados del feedback
 enum FeedbackType { correct, incorrect, neutral }
 
-/// Barra flotante de feedback tipo Duolingo
-/// Aparece desde abajo con animación suave
-/// Muestra feedback positivo/negativo y permite continuar
+/// Barra flotante de feedback tipo Duolingo.
+/// Aparece desde abajo con animación suave.
 class FeedbackBar extends StatefulWidget {
   final FeedbackType type;
   final String message;
@@ -42,17 +42,15 @@ class _FeedbackBarState extends State<FeedbackBar>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-        .animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _slideController,
             curve: AppMotionCurves.feedback,
           ),
         );
 
-    if (widget.show) {
-      _slideController.forward();
-    }
+    if (widget.show) _slideController.forward();
   }
 
   @override
@@ -71,96 +69,124 @@ class _FeedbackBarState extends State<FeedbackBar>
     super.dispose();
   }
 
-  Color _getBackgroundColor() {
+  _FeedbackTheme get _theme {
     switch (widget.type) {
       case FeedbackType.correct:
-        return const Color(0xFF27AE60);
+        return _FeedbackTheme(
+          background: AppColors.successDark,
+          surface: const Color(0xFF166534),
+          ctaBackground: Colors.white,
+          ctaForeground: AppColors.successDark,
+          icon: Icons.check_circle_rounded,
+        );
       case FeedbackType.incorrect:
-        return const Color(0xFFDC3545);
+        return _FeedbackTheme(
+          background: const Color(0xFFDC2626),
+          surface: const Color(0xFF991B1B),
+          ctaBackground: Colors.white,
+          ctaForeground: const Color(0xFFDC2626),
+          icon: Icons.cancel_rounded,
+        );
       case FeedbackType.neutral:
-        return const Color(0xFF3B82F6);
-    }
-  }
-
-  IconData _getIcon() {
-    switch (widget.type) {
-      case FeedbackType.correct:
-        return Icons.check_circle;
-      case FeedbackType.incorrect:
-        return Icons.info;
-      case FeedbackType.neutral:
-        return Icons.lightbulb;
+        return _FeedbackTheme(
+          background: const Color(0xFF2563EB),
+          surface: const Color(0xFF1D4ED8),
+          ctaBackground: Colors.white,
+          ctaForeground: const Color(0xFF2563EB),
+          icon: Icons.lightbulb_rounded,
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = _theme;
+
     return SlideTransition(
       position: _slideAnimation,
       child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         decoration: BoxDecoration(
-          color: _getBackgroundColor(),
+          color: t.background,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: _getBackgroundColor().withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: t.background.withValues(alpha: 0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icono + Mensaje
-            Row(
-              children: [
-                Icon(_getIcon(), color: Colors.white, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon + Message
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(t.icon, color: Colors.white, size: 26),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.message,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // CTA Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onCTA,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: t.ctaBackground,
+                    foregroundColor: t.ctaForeground,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
                   child: Text(
-                    widget.message,
-                    style: GoogleFonts.poppins(
+                    widget.ctaText,
+                    style: AppTypography.button.copyWith(
+                      color: t.ctaForeground,
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      height: 1.4,
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // CTA Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: widget.onCTA,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _getBackgroundColor(),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  widget.ctaText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _FeedbackTheme {
+  final Color background;
+  final Color surface;
+  final Color ctaBackground;
+  final Color ctaForeground;
+  final IconData icon;
+
+  const _FeedbackTheme({
+    required this.background,
+    required this.surface,
+    required this.ctaBackground,
+    required this.ctaForeground,
+    required this.icon,
+  });
 }

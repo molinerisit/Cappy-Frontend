@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import 'login_screen.dart';
 import 'widgets/auth_text_field.dart';
@@ -175,46 +176,43 @@ class _RegisterScreenState extends State<RegisterScreen>
                         children: [
                           const SizedBox(height: 20),
 
-                          // Logo con animación
-                          TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            duration: AppMotionDurations.entrance,
-                            builder: (context, value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: child,
-                              );
-                            },
-                            child: const Text(
-                              "🍳",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 90),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Título
-                          Text(
-                            "Únete a Cappy",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 34,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2937),
-                              letterSpacing: 0.5,
-                            ),
+                          // Logo
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22C55E),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Center(
+                                  child: Text('🍳', style: TextStyle(fontSize: 24)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Cappy',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1F2937),
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
 
                           // Subtítulo
                           Text(
-                            "Comienza tu aventura culinaria",
+                            "Crea tu cuenta gratis",
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
                               color: const Color(0xFF6B7280),
-                              letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(height: 48),
@@ -372,16 +370,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 // Google Sign-In Button
                                 SizedBox(
                                   width: double.infinity,
-                                  height: 56,
+                                  height: 52,
                                   child: OutlinedButton(
                                     onPressed: _isLoading
                                         ? null
                                         : _handleGoogleSignIn,
                                     style: OutlinedButton.styleFrom(
                                       side: const BorderSide(
-                                        color: Color(0xFFE5E7EB),
-                                        width: 2,
+                                        color: Color(0xFFE2E8F0),
+                                        width: 1.5,
                                       ),
+                                      backgroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -390,17 +389,18 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        const Text(
-                                          '🔐',
-                                          style: TextStyle(fontSize: 20),
+                                        const Icon(
+                                          Icons.g_mobiledata_rounded,
+                                          size: 26,
+                                          color: Color(0xFF4285F4),
                                         ),
-                                        const SizedBox(width: 10),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          "Registrarse con Google",
+                                          "Continuar con Google",
                                           style: GoogleFonts.poppins(
-                                            fontSize: 15,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: const Color(0xFF1F2937),
+                                            color: const Color(0xFF374151),
                                           ),
                                         ),
                                       ],
@@ -437,7 +437,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     text: "Inicia sesión",
                                     style: GoogleFonts.poppins(
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF27AE60),
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                 ],
