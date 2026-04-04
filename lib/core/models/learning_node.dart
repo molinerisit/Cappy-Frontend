@@ -5,10 +5,15 @@ class NodeStep {
   final String type; // text, image, video, quiz, interactive, checklist
   final String? image;
   final String? video;
+  final bool? videoLoop;
+  final bool? videoMuted;
+  final String? videoEndText;
   final String? animationUrl;
   final String? question;
   final List<String>? options;
   final String? correctAnswer;
+  final bool multiSelect;
+  final List<int>? correctIndices;
   final List<Map<String, dynamic>>? checklist;
   final Map<String, dynamic>? validationLogic;
   final String? feedback;
@@ -24,6 +29,9 @@ class NodeStep {
     required this.type,
     this.image,
     this.video,
+    this.videoLoop,
+    this.videoMuted,
+    this.videoEndText,
     this.animationUrl,
     this.question,
     this.options,
@@ -35,6 +43,8 @@ class NodeStep {
     this.tips,
     this.media,
     this.cards,
+    this.multiSelect = false,
+    this.correctIndices,
   });
 
   factory NodeStep.fromJson(Map<String, dynamic> json) {
@@ -81,6 +91,26 @@ class NodeStep {
     final cards = json['cards'] != null
         ? List<Map<String, dynamic>>.from(json['cards'])
         : null;
+    final bool multiSelect =
+        json['multiSelect'] == true || json['multiSelect'] == 'true';
+
+    List<int>? correctIndices;
+    if (cards != null) {
+      for (final card in cards) {
+        if (card['type']?.toString() == 'quiz_checklist') {
+          final content =
+              (card['data'] as Map?) ?? (card['content'] as Map?) ?? {};
+          final raw = content['correctIndices'];
+          if (raw is List) {
+            correctIndices = raw
+                .map((e) => int.tryParse(e.toString()) ?? -1)
+                .where((i) => i >= 0)
+                .toList();
+          }
+          break;
+        }
+      }
+    }
     final description = json['description']?.toString();
     String instruction = firstNonEmpty([
       json['instruction'],
@@ -169,6 +199,9 @@ class NodeStep {
       type: json['type'] ?? 'text',
       image: json['image'],
       video: json['video'],
+      videoLoop: json['videoLoop'] ?? json['loop'],
+      videoMuted: json['videoMuted'] ?? json['muted'],
+      videoEndText: json['videoEndText'] ?? json['completionText'],
       animationUrl: json['animationUrl'],
       question: question?.toString(),
       options: options,
@@ -184,6 +217,8 @@ class NodeStep {
           .toList(),
       media: json['media'],
       cards: cards,
+      multiSelect: multiSelect,
+      correctIndices: correctIndices,
     );
   }
 
@@ -195,6 +230,9 @@ class NodeStep {
       'type': type,
       'image': image,
       'video': video,
+      'videoLoop': videoLoop,
+      'videoMuted': videoMuted,
+      'videoEndText': videoEndText,
       'animationUrl': animationUrl,
       'question': question,
       'options': options,
@@ -206,6 +244,8 @@ class NodeStep {
       'tips': tips,
       'media': media,
       'cards': cards,
+      'multiSelect': multiSelect,
+      'correctIndices': correctIndices,
     };
   }
 }

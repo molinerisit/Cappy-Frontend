@@ -1,0 +1,301 @@
+version: "2"
+type: frontend
+tech_stack:
+  - language: Dart 3.8.1+
+  - framework: Flutter (web, hash-based routing via /#/route)
+  - state_management: Provider ^6.1.2
+  - ui_library: Material Design 3, Google Fonts ^6.1.0
+  - networking: HTTP ^1.2.0, Dio ^5.4.0
+  - storage: Flutter Secure Storage ^9.2.2
+  - other: Confetti ^0.8.0, AudioPlayers ^6.1.0, VideoPlayer ^2.9.2, CachedNetworkImage ^3.4.1
+
+routes:
+  - path: /#/welcome
+    file: lib/features/auth/welcome_screen.dart
+    auth_required: false
+    description: App entry point with options to login or register
+  - path: /#/login
+    file: lib/features/auth/login_screen.dart
+    auth_required: false
+    description: User login screen with email and password
+  - path: /#/register
+    file: lib/features/auth/register_screen.dart
+    auth_required: false
+    description: User registration screen
+  - path: /#/onboarding/intro
+    file: lib/features/auth/onboarding_intro_screen.dart
+    auth_required: false
+    description: Onboarding introduction screen
+  - path: /#/onboarding/mode
+    file: lib/features/auth/onboarding_mode_selection_screen.dart
+    auth_required: false
+    description: Select learning mode (explore or challenge)
+  - path: /#/onboarding/goals
+    file: lib/features/auth/onboarding_goals_screen.dart
+    auth_required: false
+    description: Select learning goals during onboarding
+  - path: /#/onboarding/countries
+    file: lib/features/auth/onboarding_countries_screen.dart
+    auth_required: false
+    description: Select initial country/cuisine during onboarding
+  - path: /#/main
+    file: lib/features/learning/screens/main_experience_screen.dart
+    auth_required: true
+    description: Main hub with tabbed navigation (roadmap and goals)
+  - path: /#/experience
+    file: lib/features/learning/screens/main_experience_screen.dart
+    auth_required: true
+    description: Alias for main experience screen
+  - path: /#/experience/countries
+    file: lib/features/learning/screens/country_selection_screen.dart
+    auth_required: true
+    description: Browse and select countries/cuisines to learn
+  - path: /#/experience/recipes
+    file: lib/features/learning/screens/recipes_list_screen.dart
+    auth_required: true
+    description: List of recipes for a selected country or path
+  - path: /#/goals
+    file: lib/features/learning/screens/follow_goals_screen.dart
+    auth_required: true
+    description: Browse and select learning paths/goals
+  - path: /#/pantry
+    file: lib/features/pantry/pantry_screen.dart
+    auth_required: true
+    description: Manage personal ingredient inventory
+  - path: /#/profile
+    file: lib/features/profile/profile_screen.dart
+    auth_required: true
+    description: User profile with XP, level, streak, and avatar
+  - path: /#/admin
+    file: lib/features/admin_v2/layout/admin_shell_modern.dart
+    auth_required: true
+    description: Admin dashboard for content management
+  - path: /#/leaderboard
+    file: lib/screens/global_leaderboard_screen.dart
+    auth_required: true
+    description: Global user rankings by XP
+
+features:
+  - name: User Registration
+    description: Create a new account with name, email, and password
+    files:
+      - lib/features/auth/register_screen.dart
+      - lib/core/api_service.dart
+      - lib/providers/auth_provider.dart
+    entry_route: /#/register
+    user_interactions:
+      - Fill in name input field
+      - Fill in email input field
+      - Fill in password input field
+      - Click Register button
+      - See error message on invalid data or existing email
+      - Get redirected to onboarding on success
+    api_calls:
+      - method: POST
+        endpoint: /auth/register
+    auth_required: false
+
+  - name: User Login
+    description: Login with email and password credentials, JWT token stored securely
+    files:
+      - lib/features/auth/login_screen.dart
+      - lib/core/api_service.dart
+      - lib/providers/auth_provider.dart
+    entry_route: /#/login
+    user_interactions:
+      - Fill email input field
+      - Fill password input field
+      - Click Login button
+      - See error message on invalid credentials
+      - Get redirected to main experience on success
+    api_calls:
+      - method: POST
+        endpoint: /auth/login
+    auth_required: false
+
+  - name: Onboarding Flow
+    description: Multi-step onboarding to select learning mode, goals, and initial country
+    files:
+      - lib/features/auth/onboarding_intro_screen.dart
+      - lib/features/auth/onboarding_mode_selection_screen.dart
+      - lib/features/auth/onboarding_goals_screen.dart
+      - lib/features/auth/onboarding_countries_screen.dart
+    entry_route: /#/onboarding/intro
+    user_interactions:
+      - Read intro information and click Next
+      - Select learning mode (explore or challenge)
+      - Select one or more learning goals
+      - Select initial country/cuisine
+      - Complete onboarding to reach main experience
+    api_calls:
+      - method: POST
+        endpoint: /auth/change-path
+      - method: GET
+        endpoint: /goals
+      - method: GET
+        endpoint: /countries
+    auth_required: false
+
+  - name: User Profile
+    description: View and edit user profile including username, avatar, XP, level, and streak
+    files:
+      - lib/features/profile/profile_screen.dart
+      - lib/core/api_service.dart
+      - lib/providers/auth_provider.dart
+    entry_route: /#/profile
+    user_interactions:
+      - View current XP, level, and streak
+      - Tap avatar to open avatar selection
+      - Edit username
+      - Tap Save to persist changes
+      - Tap Logout to sign out
+    api_calls:
+      - method: GET
+        endpoint: /auth/profile
+      - method: PATCH
+        endpoint: /auth/profile
+    auth_required: true
+
+  - name: Learning Path Roadmap
+    description: Visual roadmap of learning path with connected nodes showing progress
+    files:
+      - lib/features/learning/screens/path_progression_screen.dart
+      - lib/providers/progress_provider.dart
+    entry_route: /#/main
+    user_interactions:
+      - View connected node roadmap for current path
+      - Tap a node to see lesson details
+      - See completed vs pending nodes
+      - Scroll through the path progression
+    api_calls:
+      - method: GET
+        endpoint: /learning-paths/:pathId
+      - method: GET
+        endpoint: /paths/:pathId/progress
+    auth_required: true
+
+  - name: Interactive Lesson Game
+    description: Duolingo-style gamified lesson with multiple choice, checkboxes, video cards, lives system, XP rewards, and confetti celebration
+    files:
+      - lib/features/learning/screens/lesson_game_screen.dart
+      - lib/core/lives_service.dart
+      - lib/core/audio_feedback_service.dart
+    entry_route: /#/main
+    user_interactions:
+      - View lesson card (multiple choice, checklist, or video)
+      - Select an answer option
+      - Receive correct/incorrect audio and visual feedback
+      - Lose a life on wrong answer
+      - Progress through all lesson cards
+      - See XP earned at completion
+      - Celebrate with confetti on lesson completion
+    api_calls:
+      - method: POST
+        endpoint: /nodes/complete
+      - method: GET
+        endpoint: /lives/status
+      - method: POST
+        endpoint: /lives/lose
+      - method: GET
+        endpoint: /lives/can-start-lesson
+    auth_required: true
+
+  - name: Country Selection and Exploration
+    description: Browse world cuisines by country, view country hubs with recipes and cultural content
+    files:
+      - lib/features/learning/screens/country_selection_screen.dart
+      - lib/features/learning/screens/country_hub_screen.dart
+      - lib/core/countries_service.dart
+    entry_route: /#/experience/countries
+    user_interactions:
+      - Browse list of countries/cuisines
+      - Tap a country to view its hub
+      - See country-specific recipes and cultural content
+      - View user progress per country
+    api_calls:
+      - method: GET
+        endpoint: /countries
+      - method: GET
+        endpoint: /countries/:countryId/hub
+      - method: GET
+        endpoint: /countries/:countryId/recipes
+    auth_required: true
+
+  - name: Pantry / Ingredient Inventory
+    description: Manage a personal pantry of available ingredients
+    files:
+      - lib/features/pantry/pantry_screen.dart
+      - lib/core/api_service.dart
+    entry_route: /#/pantry
+    user_interactions:
+      - View current pantry ingredients
+      - Add new ingredients
+      - Remove ingredients from pantry
+    api_calls:
+      - method: GET
+        endpoint: /pantry
+      - method: POST
+        endpoint: /pantry
+      - method: DELETE
+        endpoint: /pantry/:ingredientId
+    auth_required: true
+
+  - name: Global Leaderboard
+    description: View top ranked users globally by XP
+    files:
+      - lib/screens/global_leaderboard_screen.dart
+      - lib/core/leaderboard_service.dart
+    entry_route: /#/leaderboard
+    user_interactions:
+      - View list of top 50 users ranked by XP
+      - See own position in leaderboard
+      - See username, avatar, and XP for each ranked user
+    api_calls:
+      - method: GET
+        endpoint: /ranking?limit=50
+    auth_required: true
+
+  - name: Admin Content Management
+    description: Admin panel to create, edit, and delete learning content
+    files:
+      - lib/features/admin_v2/layout/admin_shell_modern.dart
+      - lib/features/admin_v2/modules/node_library/node_library_screen.dart
+      - lib/features/admin_v2/modules/countries/countries_management_screen.dart
+    entry_route: /#/admin
+    user_interactions:
+      - View admin dashboard with content statistics
+      - Create, edit, and delete learning nodes
+      - Create, edit, and delete learning paths
+      - Manage countries and cuisines
+      - Manage recipes and cultural content
+    api_calls:
+      - method: GET
+        endpoint: /admin/learning-nodes
+      - method: POST
+        endpoint: /admin/learning-nodes
+      - method: PUT
+        endpoint: /admin/learning-nodes/:nodeId
+      - method: DELETE
+        endpoint: /admin/learning-nodes/:nodeId
+      - method: GET
+        endpoint: /admin/learning-paths
+      - method: POST
+        endpoint: /admin/countries
+    auth_required: true
+
+known_limitations:
+  - issue: Flutter web uses hash-based routing — all routes must be prefixed with /#/ (e.g. /#/login, /#/main)
+    location: lib/main.dart
+    impact: Navigation to /login without hash will not work; always use /#/login pattern
+  - issue: No offline caching strategy; all data fetched live from API
+    location: lib/core/api_service.dart
+    impact: App non-functional without network connection
+  - issue: No refresh token mechanism; JWT may become stale
+    location: lib/core/api_service.dart
+    impact: Users may get logged out unexpectedly
+  - issue: lesson_game_screen.dart is 2000+ lines
+    location: lib/features/learning/screens/lesson_game_screen.dart
+    impact: Hard to maintain and test in isolation
+  - issue: Dual admin interfaces (legacy features/admin/ and modern features/admin_v2/)
+    location: lib/features/admin/ and lib/features/admin_v2/
+    impact: Maintenance overhead

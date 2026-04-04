@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/app_colors.dart';
+import '../../../theme/motion.dart';
 
 /// Card para explorar modos (usada en lista horizontal)
 class ExploreCard extends StatefulWidget {
@@ -32,13 +33,13 @@ class _ExploreCardState extends State<ExploreCard>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: AppMotionDurations.quick,
       vsync: this,
     );
     _scaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      end: AppMotionValues.pressedStrongScale,
+    ).animate(CurvedAnimation(parent: _controller, curve: AppMotionCurves.tap));
   }
 
   @override

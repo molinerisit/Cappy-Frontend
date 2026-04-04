@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../providers/onboarding_selection_provider.dart';
+import '../../../theme/motion.dart';
 
 /// Card destacada principal para continuar con la última experiencia
 class ContinueCard extends StatefulWidget {
@@ -21,13 +22,17 @@ class _ContinueCardState extends State<ContinueCard>
   void initState() {
     super.initState();
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: AppMotionDurations.pulse,
       vsync: this,
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: AppMotionValues.pulseScale)
+        .animate(
+          CurvedAnimation(
+            parent: _pulseController,
+            curve: AppMotionCurves.pulse,
+          ),
+        );
   }
 
   @override

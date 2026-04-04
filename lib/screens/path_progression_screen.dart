@@ -142,7 +142,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.pathTitle),
-        backgroundColor: const Color(0xFFFF6B35),
+        backgroundColor: const Color(0xFF22C55E),
         elevation: 0,
         actions: [
           Padding(
@@ -162,7 +162,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+              child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             );
           } else if (snapshot.hasError) {
             return Center(
@@ -172,7 +172,7 @@ class _PathProgressionScreenState extends State<PathProgressionScreen> {
                   const Icon(
                     Icons.error_outline,
                     size: 48,
-                    color: Color(0xFFFF6B35),
+                    color: Color(0xFF22C55E),
                   ),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}'),
@@ -311,7 +311,7 @@ class _NodeCard extends StatelessWidget {
   Color _getNodeColor() {
     if (isCompleted) return const Color(0xFF4CAF50);
     if (isLocked) return Colors.grey;
-    return const Color(0xFFFF6B35);
+    return const Color(0xFF22C55E);
   }
 
   @override
@@ -438,7 +438,7 @@ class _LineConnectorPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFFF6B35)
+      ..color = const Color(0xFF22C55E)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -499,3 +499,4 @@ class _GroupSeparator extends StatelessWidget {
     );
   }
 }
+

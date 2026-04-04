@@ -37,7 +37,7 @@ class LessonFlowScreenDuolingo extends StatefulWidget {
 class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
     with TickerProviderStateMixin {
   late int _currentStepIndex;
-  int? _selectedAnswerIndex;
+  List<int> _selectedAnswerIndices = [];
   bool? _isAnswerCorrect;
   late AnimationController _shakeController;
   LessonState _state = LessonState.answering;
@@ -61,34 +61,19 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
   /// Maneja la selección de una opción
   /// - Verifica inmediatamente si es correcta
   /// - Muestra feedback visual
-  void _handleOptionSelected(int answerIndex) {
-    if (_state != LessonState.answering || _selectedAnswerIndex != null) {
+  void _handleOptionSelected(int answerIndex, bool multiSelect) {
+    if (_state != LessonState.answering) {
       return;
     }
-
     setState(() {
-      _selectedAnswerIndex = answerIndex;
-    });
-
-    // Simular verificación (en producción, este sería server-side)
-    final step = widget.node.steps[_currentStepIndex];
-    final selectedOption = (step.options ?? [])[answerIndex];
-    final isCorrect = selectedOption == step.correctAnswer;
-
-    if (!isCorrect) {
-      // Si es incorrecto, hacer shake animation
-      _shakeController.forward().then((_) {
-        _shakeController.reset();
-      });
-    }
-
-    // Esperar un poco antes de mostrar feedback
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        setState(() {
-          _isAnswerCorrect = isCorrect;
-          _state = LessonState.showingFeedback;
-        });
+      if (multiSelect) {
+        if (_selectedAnswerIndices.contains(answerIndex)) {
+          _selectedAnswerIndices.remove(answerIndex);
+        } else {
+          _selectedAnswerIndices.add(answerIndex);
+        }
+      } else {
+        _selectedAnswerIndices = [answerIndex];
       }
     });
   }
@@ -96,18 +81,52 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
   /// Continua al siguiente paso o completa la lección
   void _handleContinue() {
     final isLastStep = _currentStepIndex == widget.node.steps.length - 1;
-
-    if (isLastStep) {
-      _completeLessonNode();
+    final step = widget.node.steps[_currentStepIndex];
+    final multiSelect = step.multiSelect;
+    final options = step.options ?? [];
+    // Validación multi-select
+    bool isCorrect = false;
+    if (multiSelect) {
+      final correctIndices = <int>[];
+      for (int i = 0; i < options.length; i++) {
+        // Suponemos que las opciones correctas están marcadas en el backend
+        if ((step.cards != null &&
+                step.cards!.isNotEmpty &&
+                step.cards![0]['options'] is List &&
+                (step.cards![0]['options'][i]['correct'] == true)) ||
+            (step.validationLogic != null &&
+                step.validationLogic!['correctOptions'] is List &&
+                step.validationLogic!['correctOptions'].contains(i))) {
+          correctIndices.add(i);
+        }
+      }
+      isCorrect =
+          _selectedAnswerIndices.toSet().containsAll(correctIndices) &&
+          correctIndices.toSet().containsAll(_selectedAnswerIndices);
     } else {
-      // Transición al siguiente paso
-      setState(() {
-        _currentStepIndex++;
-        _selectedAnswerIndex = null;
-        _isAnswerCorrect = null;
-        _state = LessonState.answering;
-      });
+      final selectedOption =
+          (step.options ?? [])[(_selectedAnswerIndices.isNotEmpty
+              ? _selectedAnswerIndices.first
+              : -1)];
+      isCorrect = selectedOption == step.correctAnswer;
     }
+    _isAnswerCorrect = isCorrect;
+    _state = LessonState.showingFeedback;
+    // Siguiente paso
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        if (isLastStep) {
+          _completeLessonNode();
+        } else {
+          setState(() {
+            _currentStepIndex++;
+            _selectedAnswerIndices = [];
+            _isAnswerCorrect = null;
+            _state = LessonState.answering;
+          });
+        }
+      }
+    });
   }
 
   String _firstNonEmpty(List<String?> values, String fallback) {
@@ -228,7 +247,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF6B35),
+                          color: Color(0xFF22C55E),
                         ),
                       ),
                       Text(
@@ -236,7 +255,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         style: GoogleFonts.poppins(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFF6B35),
+                          color: const Color(0xFF22C55E),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -303,6 +322,7 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
     final step = widget.node.steps[_currentStepIndex];
     final options = _sanitizeOptions(step.options);
     final isQuizStep = options.length >= 2;
+    final multiSelect = step.multiSelect;
     final questionText = _firstNonEmpty([
       step.question,
       step.title,
@@ -405,44 +425,58 @@ class _LessonFlowScreenDuolingoState extends State<LessonFlowScreenDuolingo>
                         childAspectRatio: 0.85,
                         children: List.generate(options.length, (index) {
                           final option = options[index];
-                          final isSelected = _selectedAnswerIndex == index;
+                          final isSelected = _selectedAnswerIndices.contains(
+                            index,
+                          );
                           final isCorrectAnswer = option == step.correctAnswer;
 
-                          // Determinar estado de la opción
                           OptionState optionState;
                           if (_state == LessonState.answering) {
                             optionState = isSelected
                                 ? OptionState.selected
                                 : OptionState.idle;
                           } else if (_state == LessonState.showingFeedback) {
-                            if (isCorrectAnswer) {
-                              optionState = OptionState.correct;
-                            } else if (isSelected &&
-                                _isAnswerCorrect == false) {
-                              optionState = OptionState.incorrect;
+                            if (multiSelect) {
+                              // Para multi-select, marcar correctas
+                              // Suponemos que la opción correcta está en cards/options
+                              bool isCorrect = false;
+                              if (step.cards != null &&
+                                  step.cards!.isNotEmpty &&
+                                  step.cards![0]['options'] is List &&
+                                  (step.cards![0]['options'][index]['correct'] ==
+                                      true)) {
+                                isCorrect = true;
+                              }
+                              optionState = isCorrect
+                                  ? OptionState.correct
+                                  : (isSelected
+                                        ? OptionState.incorrect
+                                        : OptionState.disabled);
                             } else {
-                              optionState = OptionState.disabled;
+                              if (isCorrectAnswer) {
+                                optionState = OptionState.correct;
+                              } else if (isSelected &&
+                                  _isAnswerCorrect == false) {
+                                optionState = OptionState.incorrect;
+                              } else {
+                                optionState = OptionState.disabled;
+                              }
                             }
                           } else {
                             optionState = OptionState.disabled;
                           }
 
-                          // Aplicar shake si es incorrecta y seleccionada
                           Widget optionCardWidget = OptionCard(
                             text: option,
                             isSelected: isSelected,
                             state: optionState,
-                            onTap:
-                                _state == LessonState.answering &&
-                                    _selectedAnswerIndex == null
-                                ? () => _handleOptionSelected(index)
+                            onTap: _state == LessonState.answering
+                                ? () =>
+                                      _handleOptionSelected(index, multiSelect)
                                 : null,
-                            isEnabled:
-                                _state == LessonState.answering &&
-                                _selectedAnswerIndex == null,
+                            isEnabled: _state == LessonState.answering,
                           );
 
-                          // Envolver con shake si es incorrecta
                           if (isSelected && _isAnswerCorrect == false) {
                             optionCardWidget = _ShakeWidget(
                               controller: _shakeController,

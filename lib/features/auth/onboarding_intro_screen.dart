@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../theme/colors.dart';
+import '../../../theme/motion.dart';
 import 'onboarding_mode_selection_screen.dart';
 
 class OnboardingIntroScreen extends StatefulWidget {
@@ -19,16 +21,23 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: AppMotionDurations.pageEntrance,
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
-    );
+    _scaleAnimation =
+        Tween<double>(begin: AppMotionValues.introScaleStart, end: 1.0).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: AppMotionCurves.bounce,
+          ),
+        );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+      CurvedAnimation(
+        parent: _animationController,
+        curve: AppMotionCurves.entranceSoft,
+      ),
     );
 
     _animationController.forward();
@@ -51,7 +60,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -63,7 +72,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back_ios, size: 20),
-                    color: const Color(0xFF333333),
+                    color: AppColors.textStrong,
                   ),
                   const Spacer(),
                   Text(
@@ -71,7 +80,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF666666),
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -90,7 +99,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                       width: 140,
                       height: 140,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                        color: AppColors.primarySoft,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -115,7 +124,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                           style: GoogleFonts.poppins(
                             fontSize: 36,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF333333),
+                            color: AppColors.textStrong,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -127,7 +136,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF666666),
+                              color: AppColors.textSecondary,
                               height: 1.6,
                             ),
                             textAlign: TextAlign.center,
@@ -149,12 +158,12 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                 child: ElevatedButton(
                   onPressed: _handleNext,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 4,
-                    shadowColor: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+                    shadowColor: AppColors.primaryGlow,
                   ),
                   child: Text(
                     'CONTINUAR',

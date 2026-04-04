@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:math' as math;
+
 import '../core/audio_feedback_service.dart';
+import '../theme/motion.dart';
 
 /// Componente para renderizar animaciones interactivas en las lecciones.
 /// Soporta múltiples tipos de interacción: click, swipe, drag, hold, etc.
@@ -14,16 +17,26 @@ class InteractiveAnimationCard extends StatefulWidget {
       _InteractiveAnimationCardState();
 }
 
+class _InteractiveObjectPlacement {
+  const _InteractiveObjectPlacement({required this.id, required this.position});
+
+  final int id;
+  final Offset position;
+}
+
 class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     with TickerProviderStateMixin {
   bool _showingInteraction = false;
   int _interactionSequenceIndex = -1;
   double _dragPosition = 0.0;
   Timer? _holdTimer;
+  Timer? _autoHideTimer;
+  Timer? _swipeResetTimer;
   late AnimationController _pulseController;
 
   // Estado para add_remove_objects
-  final List<Offset> _addedObjects = [];
+  final List<_InteractiveObjectPlacement> _addedObjects = [];
+  int _nextObjectId = 0;
 
   // ---- NUEVAS VARIABLES PARA FEEDBACK MULTISENSORIAL ----
   late AnimationController _sparkleController;
@@ -36,11 +49,20 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   // ---- NUEVAS VARIABLES PARA SWIPE RESPONSIVE ----
   late AnimationController _swipeAnimationController;
   late ValueNotifier<double> _dragProgressNotifier;
-  
+  late ValueNotifier<Offset?> _lensCenterNotifier;
+
   double _dragStartX = 0.0;
   double _currentDragX = 0.0;
   bool _isDragging = false;
-  
+  bool _isLensDragging = false;
+  late AnimationController _magnifierIdleController;
+
+  // object_sweep state
+  bool _isSweeper = false;
+  final Set<String> _sweepRemovedIds = {};
+  late ValueNotifier<Offset?> _sweepCenterNotifier;
+  final List<Offset> _sweepTrailPoints = [];
+
   // Constantes configurables
   static const double _activationThreshold = 0.4;
   static const double _deadZone = 20.0;
@@ -50,40 +72,58 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: AppMotionDurations.shimmer,
     )..repeat(reverse: true);
 
     // ---- NUEVO: Sparkle Controller para feedback visual ----
     _sparkleController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: AppMotionDurations.short,
       vsync: this,
     );
-    
+
     _sparkleOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _sparkleController, curve: Curves.easeOut),
+      CurvedAnimation(
+        parent: _sparkleController,
+        curve: AppMotionCurves.feedback,
+      ),
     );
-    
+
     _sparkleScale = Tween<double>(begin: 0.3, end: 1.8).animate(
-      CurvedAnimation(parent: _sparkleController, curve: Curves.easeOut),
+      CurvedAnimation(
+        parent: _sparkleController,
+        curve: AppMotionCurves.feedback,
+      ),
     );
     // ---- FIN NUEVO: Sparkle Controller ----
 
     // ---- NUEVO: Swipe/Drag Controller ----
     _swipeAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: AppMotionDurations.emphasis,
       vsync: this,
     );
-    
+
     _dragProgressNotifier = ValueNotifier<double>(0.0);
+    _lensCenterNotifier = ValueNotifier<Offset?>(null);
+    _sweepCenterNotifier = ValueNotifier<Offset?>(null);
+
+    _magnifierIdleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _holdTimer?.cancel();
+    _autoHideTimer?.cancel();
+    _swipeResetTimer?.cancel();
     _pulseController.dispose();
     _swipeAnimationController.dispose();
     _dragProgressNotifier.dispose();
+    _lensCenterNotifier.dispose();
     _sparkleController.dispose();
+    _magnifierIdleController.dispose();
+    _sweepCenterNotifier.dispose();
     for (var controller in _objectAnimations.values) {
       controller.dispose();
     }
@@ -143,6 +183,130 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     final config = _animationPayload['config'] as Map?;
     final loop = config?['loop'];
     return loop is bool ? loop : true;
+  }
+
+  Map<String, dynamic> get _animationConfig {
+    final raw = _animationPayload['config'];
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  Map<String, dynamic> get _revealAsset {
+    final payload = _animationPayload;
+    final raw =
+        payload['revealAsset'] ??
+        payload['hiddenAsset'] ??
+        payload['overlayAsset'];
+    return _normalizeAsset(raw);
+  }
+
+  Map<String, dynamic> get _magnifierBaseAsset {
+    final payload = _animationPayload;
+    final baseCandidates = [
+      payload['initialAsset'],
+      payload['baseAsset'],
+      payload['backgroundAsset'],
+      payload['background'],
+      {
+        'type': payload['initialAssetType'] ?? 'image',
+        'url':
+            payload['initialUrl'] ??
+            payload['baseUrl'] ??
+            payload['backgroundUrl'],
+        'text': payload['initialText'] ?? '',
+      },
+    ];
+
+    for (final candidate in baseCandidates) {
+      final normalized = _normalizeAsset(candidate);
+      if (!_isAssetEmpty(normalized)) {
+        return normalized;
+      }
+    }
+
+    return _initialAsset;
+  }
+
+  Map<String, dynamic> get _magnifierRevealAsset {
+    final payload = _animationPayload;
+    final revealCandidates = [
+      payload['revealAsset'],
+      payload['hiddenAsset'],
+      payload['overlayAsset'],
+      payload['maskAsset'],
+      payload['ocultaAsset'],
+      {
+        'type': 'image',
+        'url':
+            payload['revealUrl'] ??
+            payload['hiddenUrl'] ??
+            payload['overlayUrl'],
+      },
+    ];
+
+    for (final candidate in revealCandidates) {
+      final normalized = _normalizeAsset(candidate);
+      if (!_isAssetEmpty(normalized)) {
+        return normalized;
+      }
+    }
+
+    return _revealAsset;
+  }
+
+  double get _lensRadius {
+    return _toDouble(
+      _animationConfig['lensRadius'],
+      fallback: 42,
+    ).clamp(24, 140).toDouble();
+  }
+
+  // ---- object_sweep getters ----
+  List<Map<String, dynamic>> get _sweepObjects {
+    final raw = _animationConfig['sweepObjects'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> get _sweeperAsset {
+    final raw = _animationPayload['sweeperAsset'];
+    return _normalizeAsset(raw);
+  }
+
+  double get _sweeperSizeResolved {
+    return _toDouble(
+      _animationConfig['sweeperSize'],
+      fallback: 90,
+    ).clamp(40.0, 200.0);
+  }
+
+  double get _lensOpacity {
+    return _toDouble(
+      _animationConfig['lensOpacity'],
+      fallback: 0.92,
+    ).clamp(0.2, 1.0).toDouble();
+  }
+
+  double get _lensGlowRadius {
+    return _toDouble(
+      _animationConfig['lensGlowRadius'],
+      fallback: 8,
+    ).clamp(0, 30).toDouble();
+  }
+
+  bool get _allowBoundaryDrag {
+    return _toBool(_animationConfig['allowBoundaryDrag'], fallback: false);
+  }
+
+  bool get _autoResetOnRelease {
+    return _toBool(_animationConfig['autoResetOnRelease'], fallback: false);
   }
 
   Map<String, dynamic>? get _currentInteractionAsset {
@@ -348,7 +512,8 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
   void _handleLongPressStart() {
     if (_animationType == 'hold') {
-      _holdTimer = Timer(const Duration(milliseconds: 500), () {
+      _holdTimer?.cancel();
+      _holdTimer = Timer(AppMotionDurations.hold, () {
         _showInteraction(autoHide: false, advanceSequence: true);
       });
     }
@@ -368,13 +533,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
       return;
     }
-    
+
     setState(() {
       _isDragging = true;
       _dragStartX = details.localPosition.dx;
       _currentDragX = _dragStartX;
     });
-    
+
     // Reset animation controller si estaba en progreso
     _swipeAnimationController.reset();
   }
@@ -383,27 +548,30 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
       return;
     }
-    
+
     if (!_isDragging) return;
-    
+
     final screenWidth = MediaQuery.of(context).size.width;
     final dragRange = screenWidth * 0.75; // 75% del ancho como rango efectivo
-    
+
     _currentDragX = details.localPosition.dx;
     final dragDistance = (_currentDragX - _dragStartX).abs();
-    
+
     // Aplicar dead zone
     if (dragDistance < _deadZone) {
       _dragProgressNotifier.value = 0.0;
       return;
     }
-    
+
     // Normalizar progreso: (distancia - deadZone) / rango
-    final normalizedProgress = ((dragDistance - _deadZone) / dragRange).clamp(0.0, 1.0);
-    
+    final normalizedProgress = ((dragDistance - _deadZone) / dragRange).clamp(
+      0.0,
+      1.0,
+    );
+
     // Actualizar notifier (no usa setState - MÁS EFICIENTE)
     _dragProgressNotifier.value = normalizedProgress;
-    
+
     // Actualizar si mostrar interacción (soft threshold)
     if (normalizedProgress > 0.15 && !_showingInteraction) {
       setState(() => _showingInteraction = true);
@@ -416,13 +584,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
       return;
     }
-    
+
     if (!_isDragging) return;
-    
+
     final currentProgress = _dragProgressNotifier.value;
-    
+
     setState(() => _isDragging = false);
-    
+
     // UMBRAL DE ACTIVACIÓN: 40%
     if (currentProgress >= _activationThreshold) {
       // ✅ Usuario deslizó suficiente → COMPLETAR ANIMACIÓN
@@ -433,41 +601,361 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     }
   }
 
+  Offset _clampLensPosition(Offset target, Size size) {
+    final lensRadius = _resolveLensRadius(size);
+    final safeWidth = size.width <= 0 ? 1.0 : size.width;
+    final safeHeight = size.height <= 0 ? 1.0 : size.height;
+
+    if (_allowBoundaryDrag) {
+      return Offset(
+        target.dx.clamp(0.0, safeWidth).toDouble(),
+        target.dy.clamp(0.0, safeHeight).toDouble(),
+      );
+    }
+
+    final minX = lensRadius;
+    final minY = lensRadius;
+    final maxX = safeWidth - lensRadius;
+    final maxY = safeHeight - lensRadius;
+
+    if (maxX <= minX || maxY <= minY) {
+      return Offset(safeWidth / 2, safeHeight / 2);
+    }
+
+    return Offset(
+      target.dx.clamp(minX, maxX).toDouble(),
+      target.dy.clamp(minY, maxY).toDouble(),
+    );
+  }
+
+  double _resolveLensRadius(Size size) {
+    final safeWidth = size.width <= 0 ? 1.0 : size.width;
+    final safeHeight = size.height <= 0 ? 1.0 : size.height;
+    final minSide = math.min(safeWidth, safeHeight);
+    // 18% of the shortest side → looks like a real magnifying glass on any screen
+    return (minSide * 0.18).clamp(44.0, 72.0);
+  }
+
+  Offset _resolveLensTouchTarget(Offset localPosition, Size size) {
+    // Position the lens to the upper-left so the handle points toward the finger.
+    final lensR = _resolveLensRadius(size);
+    const handleLength = 38.0;
+    const angle = math.pi / 4; // 45°
+    final offset = lensR + handleLength;
+    return _clampLensPosition(
+      Offset(
+        localPosition.dx - offset * math.cos(angle),
+        localPosition.dy - offset * math.sin(angle),
+      ),
+      size,
+    );
+  }
+
+  void _activateMagnifierAtPosition(Offset localPosition, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+
+    if (!_isLensDragging || !_showingInteraction) {
+      setState(() {
+        _isLensDragging = true;
+        _showingInteraction = true;
+      });
+    }
+
+    _lensCenterNotifier.value = _resolveLensTouchTarget(localPosition, size);
+  }
+
+  void _deactivateMagnifier(Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    if (!_isLensDragging && !_showingInteraction) return;
+
+    setState(() {
+      _isLensDragging = false;
+      _showingInteraction = false;
+    });
+
+    if (_autoResetOnRelease) {
+      _lensCenterNotifier.value = Offset(size.width / 2, size.height / 2);
+    }
+  }
+
+  // ---- object_sweep methods ----
+  void _handleSweepActivate(Offset pos, Size canvasSize) {
+    if (_animationType != 'object_sweep') return;
+    if (!_isSweeper) setState(() => _isSweeper = true);
+    _appendSweepTrailPoint(pos);
+    _sweepCenterNotifier.value = pos;
+    _checkSweepCollisions(pos, canvasSize);
+  }
+
+  void _handleSweepMove(Offset pos, Size canvasSize) {
+    if (_animationType != 'object_sweep') return;
+    if (!_isSweeper) setState(() => _isSweeper = true);
+    _appendSweepTrailPoint(pos);
+    _sweepCenterNotifier.value = pos;
+    _checkSweepCollisions(pos, canvasSize);
+  }
+
+  void _deactivateSweep() {
+    if (!_isSweeper) return;
+    setState(() {
+      _isSweeper = false;
+      _sweepTrailPoints.clear();
+    });
+    _sweepCenterNotifier.value = null;
+  }
+
+  void _appendSweepTrailPoint(Offset pos) {
+    if (_sweepTrailPoints.isNotEmpty) {
+      final last = _sweepTrailPoints.last;
+      if ((last - pos).distance < 8) {
+        return;
+      }
+    }
+
+    setState(() {
+      _sweepTrailPoints.add(pos);
+      if (_sweepTrailPoints.length > 26) {
+        _sweepTrailPoints.removeAt(0);
+      }
+    });
+  }
+
+  void _checkSweepCollisions(Offset sweepCenter, Size canvasSize) {
+    final sweeperR = _sweeperSizeResolved / 2;
+    bool changed = false;
+    Offset? lastHitPosition;
+    for (final obj in _sweepObjects) {
+      final id = obj['id']?.toString() ?? '';
+      if (id.isEmpty || _sweepRemovedIds.contains(id)) continue;
+      final nx = _toDouble(obj['nx'], fallback: 0.5).clamp(0.0, 1.0);
+      final ny = _toDouble(obj['ny'], fallback: 0.5).clamp(0.0, 1.0);
+      final objSize = _toDouble(obj['size'], fallback: 50.0);
+      final cx = nx * canvasSize.width;
+      final cy = ny * canvasSize.height;
+      final dist = (sweepCenter - Offset(cx, cy)).distance;
+      if (dist < sweeperR + objSize * 0.38) {
+        _sweepRemovedIds.add(id);
+        lastHitPosition = Offset(cx, cy);
+        changed = true;
+      }
+    }
+    if (changed) {
+      AudioFeedbackService().playRemoveObject();
+      setState(() {
+        _sparklePosition = lastHitPosition;
+      });
+      _sparkleController.forward(from: 0.0);
+    }
+  }
+
+  Widget _buildSweepTrailEffect(Size canvasSize) {
+    if (_sweepTrailPoints.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final points = List<Offset>.from(_sweepTrailPoints);
+    final total = points.length;
+
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          for (int i = 0; i < points.length; i++)
+            () {
+              final p = points[i];
+              final t = (i + 1) / total;
+              final size = 12.0 + (t * 20.0);
+              final opacity = 0.05 + (t * 0.14);
+              final left = (p.dx - size / 2).clamp(
+                0.0,
+                canvasSize.width - size,
+              );
+              final top = (p.dy - size / 2).clamp(
+                0.0,
+                canvasSize.height - size,
+              );
+              return Positioned(
+                left: left.toDouble(),
+                top: top.toDouble(),
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: opacity),
+                        Colors.lightBlueAccent.withValues(
+                          alpha: opacity * 0.55,
+                        ),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.62, 1.0],
+                    ),
+                  ),
+                ),
+              );
+            }(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSweepObjectItem(Map<String, dynamic> obj, Size canvasSize) {
+    final id = obj['id']?.toString() ?? '';
+    final nx = _toDouble(obj['nx'], fallback: 0.5).clamp(0.0, 1.0);
+    final ny = _toDouble(obj['ny'], fallback: 0.5).clamp(0.0, 1.0);
+    final size = _toDouble(obj['size'], fallback: 50.0).clamp(20.0, 200.0);
+    final cx = nx * canvasSize.width;
+    final cy = ny * canvasSize.height;
+    final removed = _sweepRemovedIds.contains(id);
+    return Positioned(
+      left: cx - size / 2,
+      top: cy - size / 2,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: removed ? 0.0 : 1.0,
+          duration: const Duration(milliseconds: 400),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: _buildAsset({
+              'type': 'image',
+              'url': obj['url']?.toString() ?? '',
+              'text': '',
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildObjectSweepMode() {
+    final backgroundAsset = _magnifierBaseAsset;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final canvasSize = Size(constraints.maxWidth, 300);
+            final sweeperSize = _sweeperSizeResolved;
+            final objects = _sweepObjects;
+            final sweeperAsset = _sweeperAsset;
+            return MouseRegion(
+              onHover: (event) =>
+                  _handleSweepMove(event.localPosition, canvasSize),
+              onExit: (_) => _deactivateSweep(),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _handleSweepActivate(event.localPosition, canvasSize),
+                onPointerMove: (event) =>
+                    _handleSweepMove(event.localPosition, canvasSize),
+                onPointerUp: (_) => _deactivateSweep(),
+                onPointerCancel: (_) => _deactivateSweep(),
+                child: SizedBox(
+                  height: 300,
+                  child: Stack(
+                    children: [
+                      _buildAsset(backgroundAsset),
+                      // Dirt/stain objects at their configured positions
+                      ...objects.map(
+                        (obj) => _buildSweepObjectItem(obj, canvasSize),
+                      ),
+                      // Visual trail while sweeping
+                      _buildSweepTrailEffect(canvasSize),
+                      // Impact sparkle when an object is removed
+                      _buildSparkleEffect(),
+                      // Sweeper image follows the touch/pointer
+                      ValueListenableBuilder<Offset?>(
+                        valueListenable: _sweepCenterNotifier,
+                        builder: (context, center, _) {
+                          if (center == null || !_isSweeper) {
+                            return const SizedBox.shrink();
+                          }
+                          final left = (center.dx - sweeperSize / 2).clamp(
+                            0.0,
+                            math.max(0, canvasSize.width - sweeperSize),
+                          );
+                          final top = (center.dy - sweeperSize / 2).clamp(
+                            0.0,
+                            math.max(0, canvasSize.height - sweeperSize),
+                          );
+                          return Positioned(
+                            left: left.toDouble(),
+                            top: top.toDouble(),
+                            child: IgnorePointer(
+                              child: SizedBox(
+                                width: sweeperSize,
+                                height: sweeperSize,
+                                child: _buildAsset(sweeperAsset),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      if (!_isSweeper) _buildInstructionOverlay(),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _handleMagnifierPointerDown(PointerDownEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
+  }
+
+  void _handleMagnifierPointerMove(PointerMoveEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
+  }
+
+  void _handleMagnifierPointerHover(PointerEvent event, Size size) {
+    if (_animationType != 'magnifier_reveal') return;
+    _activateMagnifierAtPosition(event.localPosition, size);
+  }
+
   void _completeSwipeAnimation() {
     // Animar _dragProgressNotifier desde su valor actual hasta 1.0
     final startValue = _dragProgressNotifier.value;
-    
+
     _swipeAnimationController.reset();
-    
+
     // Crear tween desde el progreso actual hasta 1.0
     final tween = Tween<double>(begin: startValue, end: 1.0);
     final animation = tween.animate(_swipeAnimationController);
-    
+
     // Listener para actualizar _dragProgressNotifier en tiempo real
     void listener() {
       _dragProgressNotifier.value = animation.value;
     }
-    
+
     animation.addListener(listener);
-    
+
     _swipeAnimationController.forward().then((_) {
       animation.removeListener(listener);
       _dragProgressNotifier.value = 1.0; // Asegurar estado final
       _showInteraction(autoHide: false, advanceSequence: true);
-      
-      // Auto-reset después de 2 segundos
-      Future.delayed(const Duration(seconds: 2), () {
+
+      _swipeResetTimer?.cancel();
+      _swipeResetTimer = Timer(AppMotionDurations.interactionPreview, () {
         if (mounted) {
           _swipeAnimationController.reset();
-          
+
           // Animar desde 1.0 hasta 0.0
           final resetTween = Tween<double>(begin: 1.0, end: 0.0);
           final resetAnimation = resetTween.animate(_swipeAnimationController);
-          
+
           void resetListener() {
             _dragProgressNotifier.value = resetAnimation.value;
           }
-          
+
           resetAnimation.addListener(resetListener);
           _swipeAnimationController.forward().then((_) {
             resetAnimation.removeListener(resetListener);
@@ -484,20 +972,20 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   void _cancelSwipeAnimation() {
     // Animar _dragProgressNotifier desde su valor actual hasta 0.0 (rebote)
     final startValue = _dragProgressNotifier.value;
-    
+
     _swipeAnimationController.reset();
-    
+
     // Crear tween desde el progreso actual hasta 0.0
     final tween = Tween<double>(begin: startValue, end: 0.0);
     final animation = tween.animate(_swipeAnimationController);
-    
+
     // Listener para actualizar _dragProgressNotifier en tiempo real
     void listener() {
       _dragProgressNotifier.value = animation.value;
     }
-    
+
     animation.addListener(listener);
-    
+
     _swipeAnimationController.forward().then((_) {
       animation.removeListener(listener);
       if (mounted) {
@@ -508,6 +996,8 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   }
 
   void _showInteraction({bool autoHide = true, bool advanceSequence = false}) {
+    _autoHideTimer?.cancel();
+
     setState(() {
       if (advanceSequence && _interactionAssets.isNotEmpty) {
         if (_interactionLoop) {
@@ -527,8 +1017,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
       return;
     }
 
-    // Auto-return después de 2 segundos
-    Future.delayed(const Duration(seconds: 2), () {
+    _autoHideTimer = Timer(AppMotionDurations.interactionPreview, () {
       if (mounted) {
         setState(() {
           _showingInteraction = false;
@@ -549,34 +1038,40 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     // Verificar si el tap está cerca de un objeto existente
     if (allowRemove) {
       for (int i = _addedObjects.length - 1; i >= 0; i--) {
-        final objPos = _addedObjects[i];
+        final objectPlacement = _addedObjects[i];
+        final objPos = objectPlacement.position;
         final distance = (objPos - position).distance;
         final objectSize = _toDouble(payload['objectSize'], fallback: 40);
 
         if (distance < objectSize / 2) {
           // ---- NUEVO: Feedback multisensorial al REMOVER ----
           AudioFeedbackService().playRemoveObject();
-          
+
           // Disparar destello en posición del objeto
           setState(() {
             _sparklePosition = objPos;
           });
           _sparkleController.forward(from: 0.0);
-          
+
           // Animar salida del objeto
-          final controller = _objectAnimations[i];
+          final controller = _objectAnimations[objectPlacement.id];
           if (controller != null) {
             controller.reverse().then((_) {
               if (mounted) {
+                controller.dispose();
                 setState(() {
-                  _addedObjects.removeAt(i);
-                  _objectAnimations.remove(i);
+                  _addedObjects.removeWhere(
+                    (entry) => entry.id == objectPlacement.id,
+                  );
+                  _objectAnimations.remove(objectPlacement.id);
                 });
               }
             });
           } else {
             setState(() {
-              _addedObjects.removeAt(i);
+              _addedObjects.removeWhere(
+                (entry) => entry.id == objectPlacement.id,
+              );
             });
           }
           // ---- FIN NUEVO ----
@@ -589,11 +1084,13 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_addedObjects.length < maxObjects) {
       // ---- NUEVO: Feedback multisensorial al AGREGAR ----
       AudioFeedbackService().playAddObject();
-      
+
       // Disparar destello en posición del tap
       setState(() {
         _sparklePosition = position;
-        _addedObjects.add(position);
+        _addedObjects.add(
+          _InteractiveObjectPlacement(id: _nextObjectId++, position: position),
+        );
       });
       _sparkleController.forward(from: 0.0);
       // ---- FIN NUEVO ----
@@ -796,6 +1293,9 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
       case 'pinch_zoom':
         icon = Icons.zoom_out_map;
         break;
+      case 'magnifier_reveal':
+        icon = Icons.search;
+        break;
       default:
         icon = Icons.touch_app;
     }
@@ -819,7 +1319,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
         // - Asset 1 (initial) sale completamente para cuando progress = 1.0
         // - Asset 2 (new) entra mientras Asset 1 sale
         // - Sin zona de superposición
-        
+
         return Stack(
           children: [
             // ============================================================
@@ -832,7 +1332,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
                 child: _buildAsset(_initialAsset),
               ),
             ),
-            
+
             // ============================================================
             // ASSET NUEVO - Entra desde la DERECHA (carrusél style)
             // ============================================================
@@ -855,23 +1355,23 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_animationType != 'swipe_right' && _animationType != 'swipe_left') {
       return const SizedBox.shrink();
     }
-    
+
     return ValueListenableBuilder<double>(
       valueListenable: _dragProgressNotifier,
       builder: (context, progress, _) {
         if (progress == 0.0 && !_isDragging) return const SizedBox.shrink();
-        
+
         final activationColor = progress >= _activationThreshold
             ? Colors.green
             : Colors.blue;
-        
+
         return Positioned(
           bottom: 16,
           left: 16,
           right: 16,
           child: AnimatedOpacity(
             opacity: _isDragging ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 150),
+            duration: AppMotionDurations.quick,
             child: Container(
               height: 6,
               decoration: BoxDecoration(
@@ -912,7 +1412,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     if (_sparklePosition == null || !_sparkleController.isAnimating) {
       return const SizedBox.shrink();
     }
-    
+
     return AnimatedBuilder(
       animation: _sparkleController,
       builder: (context, child) {
@@ -957,28 +1457,28 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
   // ---- NUEVO: Widget de objeto con animación de escala ----
   Widget _buildAnimatedObject({
     required Offset position,
-    required int objectIndex,
+    required int objectId,
     required double objectSize,
     required String objectType,
     required String objectUrl,
   }) {
     // Crear controller si no existe
-    if (!_objectAnimations.containsKey(objectIndex)) {
+    if (!_objectAnimations.containsKey(objectId)) {
       final controller = AnimationController(
-        duration: const Duration(milliseconds: 300),
+        duration: AppMotionDurations.medium,
         vsync: this,
       );
-      _objectAnimations[objectIndex] = controller;
-      
+      _objectAnimations[objectId] = controller;
+
       // Trigger animación de entrada
       controller.forward();
     }
-    
-    final controller = _objectAnimations[objectIndex]!;
+
+    final controller = _objectAnimations[objectId]!;
     final scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: controller, curve: Curves.elasticOut),
+      CurvedAnimation(parent: controller, curve: AppMotionCurves.bounce),
     );
-    
+
     return AnimatedBuilder(
       animation: scaleAnimation,
       builder: (context, child) {
@@ -1009,11 +1509,161 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
     );
   }
 
+  Widget _buildMagnifierRevealMode() {
+    final backgroundAsset = _magnifierBaseAsset;
+    final revealAsset = _magnifierRevealAsset;
+
+    if (_isAssetEmpty(backgroundAsset) || _isAssetEmpty(revealAsset)) {
+      return Container(
+        height: 300,
+        color: Colors.grey.shade200,
+        alignment: Alignment.center,
+        child: const Text(
+          'Configuración incompleta: falta imagen base o imagen oculta',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final canvasSize = Size(constraints.maxWidth, 300);
+            final lensRadius = _resolveLensRadius(canvasSize);
+            final defaultCenter = Offset(
+              canvasSize.width * 0.25,
+              canvasSize.height * 0.5,
+            );
+            final baseLayer = _buildAsset(backgroundAsset);
+            final revealLayer = _buildAsset(revealAsset);
+
+            // Idle scan: lens sweeps left→right with gentle sine vertical movement
+            Offset getIdleCenter(double t) {
+              final cx = lensRadius + (canvasSize.width - 2 * lensRadius) * t;
+              final cy =
+                  canvasSize.height * 0.5 +
+                  math.sin(t * math.pi * 2) * canvasSize.height * 0.14;
+              return Offset(cx, cy);
+            }
+
+            // Extra canvas space needed by the handle (45°, 38px, 9px stroke)
+            final handleExtra = 38.0 * math.cos(math.pi / 4) + 10.0; // ≈ 37px
+
+            return MouseRegion(
+              onHover: (event) =>
+                  _handleMagnifierPointerHover(event, canvasSize),
+              onExit: (_) => _deactivateMagnifier(canvasSize),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _handleMagnifierPointerDown(event, canvasSize),
+                onPointerMove: (event) =>
+                    _handleMagnifierPointerMove(event, canvasSize),
+                onPointerUp: (_) => _deactivateMagnifier(canvasSize),
+                onPointerCancel: (_) => _deactivateMagnifier(canvasSize),
+                child: Stack(
+                  children: [
+                    baseLayer,
+                    // Reveal layer — idle scan when not touching, follows touch when active
+                    AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _lensCenterNotifier,
+                        _magnifierIdleController,
+                      ]),
+                      child: revealLayer,
+                      builder: (context, child) {
+                        final center = _isLensDragging
+                            ? _clampLensPosition(
+                                _lensCenterNotifier.value ?? defaultCenter,
+                                canvasSize,
+                              )
+                            : getIdleCenter(_magnifierIdleController.value);
+                        return ClipPath(
+                          clipper: _CircularRevealClipper(
+                            center: center,
+                            radius: lensRadius,
+                          ),
+                          child: child,
+                        );
+                      },
+                    ),
+                    // Magnifier ring + handle — pulses when idle, solid when active
+                    AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _lensCenterNotifier,
+                        _magnifierIdleController,
+                        _pulseController,
+                      ]),
+                      builder: (context, _) {
+                        final Offset center;
+                        final double widgetOpacity;
+                        if (_isLensDragging) {
+                          center = _clampLensPosition(
+                            _lensCenterNotifier.value ?? defaultCenter,
+                            canvasSize,
+                          );
+                          widgetOpacity = 1.0;
+                        } else {
+                          center = getIdleCenter(
+                            _magnifierIdleController.value,
+                          );
+                          widgetOpacity = (0.38 + _pulseController.value * 0.52)
+                              .clamp(0.0, 1.0);
+                        }
+                        return Positioned(
+                          left: center.dx - lensRadius,
+                          top: center.dy - lensRadius,
+                          child: IgnorePointer(
+                            child: Opacity(
+                              opacity: widgetOpacity,
+                              child: CustomPaint(
+                                size: Size(
+                                  lensRadius * 2 + handleExtra,
+                                  lensRadius * 2 + handleExtra,
+                                ),
+                                painter: _MagnifierWithHandlePainter(
+                                  radius: lensRadius,
+                                  ringColor: Colors.white.withValues(
+                                    alpha: _lensOpacity,
+                                  ),
+                                  handleColor: Colors.white.withValues(
+                                    alpha: _lensOpacity,
+                                  ),
+                                  glowRadius: _lensGlowRadius,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    if (!_isLensDragging) _buildInstructionOverlay(),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Modo especial para add_remove_objects
     if (_animationType == 'add_remove_objects') {
       return _buildAddRemoveMode();
+    }
+
+    if (_animationType == 'magnifier_reveal') {
+      return _buildMagnifierRevealMode();
+    }
+
+    if (_animationType == 'object_sweep') {
+      return _buildObjectSweepMode();
     }
 
     // Modo estándar para otros tipos de animación
@@ -1035,23 +1685,31 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
             GestureDetector(
               onTap: _animationType == 'click' ? _handleClick : null,
               onDoubleTap: _animationType == 'double_tap' ? _handleClick : null,
-              
+
               // ---- NUEVO: Pan gestures para swipe responsive ----
-              onPanStart: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+              onPanStart:
+                  (_animationType == 'swipe_left' ||
+                      _animationType == 'swipe_right')
                   ? _handlePanStart
                   : null,
-              onPanUpdate: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+              onPanUpdate:
+                  (_animationType == 'swipe_left' ||
+                      _animationType == 'swipe_right')
                   ? _handlePanUpdate
                   : null,
-              onPanEnd: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+              onPanEnd:
+                  (_animationType == 'swipe_left' ||
+                      _animationType == 'swipe_right')
                   ? _handlePanEnd
                   : null,
-              
+
               // Mantener swipe vertical (up/down) con lógica antigua
-              onVerticalDragEnd: (_animationType == 'swipe_up' || _animationType == 'swipe_down')
+              onVerticalDragEnd:
+                  (_animationType == 'swipe_up' ||
+                      _animationType == 'swipe_down')
                   ? _handleSwipe
                   : null,
-              
+
               // Mantener drag horizontal/vertical para otros tipos
               onHorizontalDragUpdate: _animationType == 'drag_horizontal'
                   ? _handleDragUpdate
@@ -1059,7 +1717,7 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
               onVerticalDragUpdate: _animationType == 'drag_vertical'
                   ? _handleDragUpdate
                   : null,
-              
+
               // Long press mantener igual
               onLongPressStart: _animationType == 'hold'
                   ? (_) => _handleLongPressStart()
@@ -1067,15 +1725,17 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
               onLongPressEnd: _animationType == 'hold'
                   ? (_) => _handleLongPressEnd()
                   : null,
-              
-              child: (_animationType == 'swipe_left' || _animationType == 'swipe_right')
+
+              child:
+                  (_animationType == 'swipe_left' ||
+                      _animationType == 'swipe_right')
                   ? _buildInteractiveAsset(currentAsset)
                   : _buildAsset(currentAsset),
             ),
 
             // Overlay de instrucciones
             if (!_showingInteraction) _buildInstructionOverlay(),
-            
+
             // ---- NUEVO: Progress indicator ----
             _buildSwipeProgressIndicator(),
 
@@ -1135,11 +1795,11 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
 
             // ---- NUEVO: Objetos colocados con animación ----
             ..._addedObjects.asMap().entries.map((entry) {
-              final index = entry.key;
-              final position = entry.value;
+              final position = entry.value.position;
+              final objectId = entry.value.id;
               return _buildAnimatedObject(
                 position: position,
-                objectIndex: index,
+                objectId: objectId,
                 objectSize: objectSize,
                 objectType: objectType,
                 objectUrl: objectUrl,
@@ -1179,4 +1839,89 @@ class _InteractiveAnimationCardState extends State<InteractiveAnimationCard>
       ),
     );
   }
+}
+
+class _CircularRevealClipper extends CustomClipper<Path> {
+  _CircularRevealClipper({required this.center, required this.radius});
+
+  final Offset center;
+  final double radius;
+
+  @override
+  Path getClip(Size size) {
+    return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+  }
+
+  @override
+  bool shouldReclip(covariant _CircularRevealClipper oldClipper) {
+    return oldClipper.center != center || oldClipper.radius != radius;
+  }
+}
+
+/// Paints a magnifying glass: circular ring + diagonal handle toward bottom-right.
+class _MagnifierWithHandlePainter extends CustomPainter {
+  final double radius;
+  final Color ringColor;
+  final Color handleColor;
+  final double glowRadius;
+
+  _MagnifierWithHandlePainter({
+    required this.radius,
+    required this.ringColor,
+    required this.handleColor,
+    required this.glowRadius,
+  });
+
+  static const double _handleLength = 38.0;
+  static const double _handleAngle = math.pi / 4; // 45° → lower-right
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Lens circle is centered at (radius, radius) leaving room for the handle
+    final center = Offset(radius, radius);
+    final ringRadius = radius - 2.0;
+
+    // Soft shadow behind the lens
+    if (glowRadius > 0) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.28)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowRadius),
+      );
+    }
+
+    // Ring
+    canvas.drawCircle(
+      center,
+      ringRadius,
+      Paint()
+        ..color = ringColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.5,
+    );
+
+    // Handle — extends from the bottom-right edge of the ring at 45°
+    final edgeX = center.dx + ringRadius * math.cos(_handleAngle);
+    final edgeY = center.dy + ringRadius * math.sin(_handleAngle);
+    final endX = edgeX + _handleLength * math.cos(_handleAngle);
+    final endY = edgeY + _handleLength * math.sin(_handleAngle);
+
+    canvas.drawLine(
+      Offset(edgeX, edgeY),
+      Offset(endX, endY),
+      Paint()
+        ..color = handleColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 9.0
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MagnifierWithHandlePainter old) =>
+      old.radius != radius ||
+      old.ringColor != ringColor ||
+      old.glowRadius != glowRadius;
 }

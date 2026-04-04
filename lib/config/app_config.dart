@@ -12,7 +12,9 @@ class AppConfig {
   /// Configuración por ambiente
   static final Map<AppEnvironment, _EnvironmentConfig> _configs = {
     AppEnvironment.dev: _EnvironmentConfig(
-      apiBaseUrl: 'http://localhost:3000/api',
+      // Use your machine's LAN IP so physical devices on the same WiFi can reach the backend.
+      // To find it: run `ipconfig` (Windows) or `ifconfig` (Mac/Linux) and look for IPv4.
+      apiBaseUrl: 'http://192.168.100.12:3000/api',
       apiTimeout: Duration(seconds: 30),
       enableLogging: true,
       name: 'Development',

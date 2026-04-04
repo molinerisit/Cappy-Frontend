@@ -17,7 +17,7 @@ class _CulinaryExperienceScreenState extends State<CulinaryExperienceScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.explore, size: 96, color: Color(0xFFFF6B35)),
+            const Icon(Icons.explore, size: 96, color: Color(0xFF22C55E)),
             const SizedBox(height: 24),
             const Text(
               'Experiencia Culinaria',
@@ -42,7 +42,7 @@ class _CulinaryExperienceScreenState extends State<CulinaryExperienceScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B35),
+                backgroundColor: const Color(0xFF22C55E),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 48,
                   vertical: 16,
@@ -66,3 +66,4 @@ class _CulinaryExperienceScreenState extends State<CulinaryExperienceScreen> {
     );
   }
 }
+

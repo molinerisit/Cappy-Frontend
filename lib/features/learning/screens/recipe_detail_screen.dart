@@ -3,6 +3,7 @@ import '../../../core/api_service.dart';
 import '../../../screens/cooking_mode_screen.dart';
 import '../widgets/learning_empty_view.dart';
 import '../widgets/learning_error_view.dart';
+import '../../cho/cho_assistant.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final String recipeId;
@@ -89,6 +90,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: ChoAssistantButton(
+        recipeId:        widget.recipeId,
+        recipeName:      widget.recipeTitle,
+        stepIndex:       currentStep,
+        stepDescription: '',   // updated below once recipe loads
+        elapsedSeconds:  0,
+      ),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -163,8 +171,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFFF6B35).withValues(alpha: 0.1),
-                        const Color(0xFFFFA500).withValues(alpha: 0.1),
+                        const Color(0xFF22C55E).withValues(alpha: 0.1),
+                        const Color(0xFF4ADE80).withValues(alpha: 0.1),
                       ],
                     ),
                   ),
@@ -564,3 +572,4 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+

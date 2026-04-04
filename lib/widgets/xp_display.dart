@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../theme/colors.dart';
+import '../theme/motion.dart';
 
 class XPDisplay extends StatelessWidget {
   final int currentXp;
@@ -14,22 +17,12 @@ class XPDisplay extends StatelessWidget {
     this.streak = 0,
   });
 
-  // Calculate level from XP (100 XP per level)
-  static int calculateLevel(int xp) {
-    return (xp / 100).floor() + 1;
-  }
+  static int calculateLevel(int xp) => (xp / 100).floor() + 1;
+  static int xpForLevel(int level) => level * 100;
 
-  // Calculate XP needed for next level
-  static int xpForLevel(int level) {
-    return level * 100;
-  }
-
-  // Calculate progress percentage for current level
   double get progressPercentage {
     final prevLevelXp = (level - 1) * 100;
-    final currentLevelProgress = currentXp - prevLevelXp;
-    final xpNeededForLevel = 100;
-    return (currentLevelProgress / xpNeededForLevel).clamp(0.0, 1.0);
+    return ((currentXp - prevLevelXp) / 100).clamp(0.0, 1.0);
   }
 
   @override
@@ -37,17 +30,17 @@ class XPDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade600, Colors.green.shade800],
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(51),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: AppColors.primaryGlow,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -56,24 +49,32 @@ class XPDisplay extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Level indicator
+              // Badge de nivel
               Row(
                 children: [
                   Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.amber,
+                      color: AppColors.xpGold,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
+                      border: Border.all(color: Colors.white, width: 2.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.xpGold.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Text(
-                        "$level",
-                        style: const TextStyle(
+                        '$level',
+                        style: GoogleFonts.poppins(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           color: Colors.white,
+                          height: 1,
                         ),
                       ),
                     ),
@@ -82,16 +83,20 @@ class XPDisplay extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Nivel",
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      Text(
+                        'Nivel',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white60,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       Text(
-                        "Chef $level",
-                        style: const TextStyle(
+                        'Chef $level',
+                        style: GoogleFonts.poppins(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -100,28 +105,11 @@ class XPDisplay extends StatelessWidget {
               ),
               // Streak
               if (streak > 0)
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      color: Colors.orange,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "$streak",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                _StreakBadge(streak: streak),
             ],
           ),
-          const SizedBox(height: 16),
-          // XP Progress bar
+          const SizedBox(height: 14),
+          // Barra de XP
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -129,28 +117,54 @@ class XPDisplay extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "$currentXp XP",
-                    style: const TextStyle(
+                    '$currentXp XP',
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   Text(
-                    "$xpForNextLevel XP",
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    '$xpForNextLevel XP',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: progressPercentage,
-                  minHeight: 12,
-                  backgroundColor: Colors.white30,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
-                ),
+              const SizedBox(height: 6),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 12,
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: AnimatedFractionallySizedBox(
+                      widthFactor: progressPercentage,
+                      duration: AppMotionDurations.xpCount,
+                      curve: AppMotionCurves.entranceSoft,
+                      child: Container(
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: AppColors.xpGold,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.xpGold.withValues(alpha: 0.5),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -160,7 +174,43 @@ class XPDisplay extends StatelessWidget {
   }
 }
 
-// Compact version for AppBar
+class _StreakBadge extends StatelessWidget {
+  final int streak;
+  const _StreakBadge({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.local_fire_department_rounded,
+            color: AppColors.secondaryAccent,
+            size: 22,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$streak',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Versión compacta para AppBar ──────────────────────────────────────────────
 class CompactXPDisplay extends StatelessWidget {
   final int currentXp;
   final int level;
@@ -174,37 +224,44 @@ class CompactXPDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.amber,
+        color: AppColors.xpGold,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.xpGold.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star, color: Colors.white, size: 18),
+          const Icon(Icons.star_rounded, color: Colors.white, size: 16),
           const SizedBox(width: 4),
           Text(
-            "$currentXp XP",
-            style: const TextStyle(
+            '$currentXp XP',
+            style: GoogleFonts.poppins(
               color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              "Lv $level",
-              style: TextStyle(
-                color: Colors.amber.shade700,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+              'Lv $level',
+              style: GoogleFonts.poppins(
+                color: AppColors.xpGold,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
               ),
             ),
           ),

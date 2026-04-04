@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/audio_feedback_service.dart';
+import '../../../theme/motion.dart';
 
 /// Estados posibles para una opción de respuesta
 enum OptionState { idle, selected, correct, incorrect, disabled }
@@ -39,13 +40,14 @@ class _OptionCardState extends State<OptionCard>
   void initState() {
     super.initState();
     _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: AppMotionDurations.quick,
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
-    );
+    _scaleAnimation =
+        Tween<double>(begin: 1.0, end: AppMotionValues.pressedScale).animate(
+          CurvedAnimation(parent: _scaleController, curve: AppMotionCurves.tap),
+        );
   }
 
   @override
@@ -150,7 +152,7 @@ class _OptionCardState extends State<OptionCard>
         onTapUp: (_) => _handleTapUp(),
         onTapCancel: _handleTapCancel,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: AppMotionDurations.short,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _getBackgroundColor(),
@@ -168,7 +170,7 @@ class _OptionCardState extends State<OptionCard>
               if (_getIcon() != null)
                 AnimatedScale(
                   scale: widget.state != OptionState.idle ? 1.1 : 1.0,
-                  duration: const Duration(milliseconds: 300),
+                  duration: AppMotionDurations.medium,
                   child: Icon(_getIcon(), color: _getIconColor(), size: 28),
                 )
               else
@@ -189,17 +191,20 @@ class _OptionCardState extends State<OptionCard>
               const SizedBox(height: 8),
 
               // Texto de opción centrado
-              Flexible(
-                child: Text(
-                  widget.text,
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: _getTextColor(),
-                    height: 1.3,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    widget.text,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _getTextColor(),
+                      height: 1.3,
+                    ),
                   ),
                 ),
               ),

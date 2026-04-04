@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../core/api_service.dart';
 import '../core/audio_feedback_service.dart';
 import '../core/lives_service.dart';
+import '../theme/colors.dart';
 import '../widgets/lives_widget.dart';
+import '../widgets/video_card_player.dart';
 import 'no_lives_screen.dart';
 
 class LearningNodeViewerScreen extends StatefulWidget {
@@ -149,19 +151,21 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
 
     _isNoLivesScreenOpen = true;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => NoLivesScreen(
-          token: token,
-          baseUrl: ApiService.baseUrl,
-          onLivesRestored: () {
-            _loadLives();
-          },
-        ),
-      ),
-    ).whenComplete(() {
-      _isNoLivesScreenOpen = false;
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => NoLivesScreen(
+              token: token,
+              baseUrl: ApiService.baseUrl,
+              onLivesRestored: () {
+                _loadLives();
+              },
+            ),
+          ),
+        )
+        .whenComplete(() {
+          _isNoLivesScreenOpen = false;
+        });
   }
 
   Future<Map<String, dynamic>> _loadNode() async {
@@ -231,7 +235,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: Colors.orange.shade700,
+        backgroundColor: AppColors.primary,
         toolbarHeight: 64,
         elevation: 0,
         leading: IconButton(
@@ -310,9 +314,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
               LinearProgressIndicator(
                 value: currentCardNumber / totalCards,
                 backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.green.shade600,
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
               // Step indicator
               Container(
@@ -383,12 +385,12 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                           onPressed: _previousCard,
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: Colors.orange.shade700),
+                            side: const BorderSide(color: AppColors.primary),
                           ),
                           child: Text(
                             'Anterior',
-                            style: TextStyle(
-                              color: Colors.orange.shade700,
+                            style: const TextStyle(
+                              color: AppColors.primary,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -402,7 +404,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                         onPressed: () => _nextCard(steps),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.green.shade600,
+                          backgroundColor: AppColors.primary,
                         ),
                         child: Text(
                           (_currentCardIndex == cards.length - 1 &&
@@ -719,7 +721,7 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                   // Wrong answer - lose a life
                   // Reproducir sonido de error al instante
                   AudioFeedbackService().playFail();
-                  
+
                   await _loseLive();
                   if (!mounted) return;
 
@@ -766,15 +768,15 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
+                            color: AppColors.primarySoft,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               String.fromCharCode(65 + index), // A, B, C, D
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.orange.shade700,
+                                color: AppColors.primary,
                               ),
                             ),
                           ),
@@ -841,19 +843,23 @@ class _LearningNodeViewerScreenState extends State<LearningNodeViewerScreen> {
   }
 
   Widget _buildVideoCard(Map<String, dynamic> data) {
-    final videoUrl = data['videoUrl'] ?? '';
+    final videoUrl = (data['url'] ?? data['videoUrl'] ?? '').toString();
+    final loopEnabled = data['loop'] == true || data['videoLoop'] == true;
+    final muted = data['muted'] == true || data['videoMuted'] == true;
+    final completionText =
+        (data['completionText'] ?? data['videoEndText'] ?? '').toString();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        children: [
-          const Icon(Icons.play_circle_outline, size: 64, color: Colors.grey),
-          const SizedBox(height: 12),
-          Text('Video: $videoUrl'),
-        ],
+      child: VideoCardPlayer(
+        videoUrl: videoUrl,
+        initialLooping: loopEnabled,
+        initialMuted: muted,
+        completionText: completionText,
       ),
     );
   }

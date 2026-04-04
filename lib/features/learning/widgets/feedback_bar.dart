@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../theme/motion.dart';
+
 /// Estados del feedback
 enum FeedbackType { correct, incorrect, neutral }
 
@@ -36,14 +38,17 @@ class _FeedbackBarState extends State<FeedbackBar>
   void initState() {
     super.initState();
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: AppMotionDurations.emphasis,
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: AppMotionCurves.feedback,
+          ),
+        );
 
     if (widget.show) {
       _slideController.forward();

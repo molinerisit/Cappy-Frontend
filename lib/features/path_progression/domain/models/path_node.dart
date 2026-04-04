@@ -31,7 +31,7 @@ class PathNode {
       title: json['title']?.toString() ?? '',
       groupId: _extractId(json['groupId']),
       groupTitle: json['groupTitle']?.toString(),
-      level: json['level'] as int? ?? 1,
+      level: (json['order'] as int?) ?? (json['level'] as int?) ?? 1,
       positionIndex: json['positionIndex'] as int? ?? 0,
       order: json['order'] as int? ?? 0,
       xpReward: json['xpReward'] as int? ?? 0,

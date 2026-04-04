@@ -16,18 +16,14 @@ class AppBottomNav extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 14,
-            offset: Offset(0, -4),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 74,
+          height: 60,
           child: BottomNavigationBar(
             currentIndex: currentIndex,
             onTap: onTap,
@@ -35,42 +31,30 @@ class AppBottomNav extends StatelessWidget {
             elevation: 0,
             backgroundColor: AppColors.surface,
             selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.textSecondary,
-            selectedFontSize: 12,
+            unselectedItemColor: const Color(0xFFCBD5E1),
+            selectedFontSize: 11,
             unselectedFontSize: 11,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textStrong,
-            ),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400),
             items: const [
               BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded),
-                activeIcon: Icon(Icons.home_rounded, color: AppColors.primary),
+                icon: Icon(Icons.home_outlined, size: 22),
+                activeIcon: Icon(Icons.home_rounded, size: 22, color: AppColors.primary),
                 label: 'Inicio',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.local_library_rounded),
-                activeIcon: Icon(
-                  Icons.local_library_rounded,
-                  color: AppColors.primary,
-                ),
+                icon: Icon(Icons.local_library_outlined, size: 22),
+                activeIcon: Icon(Icons.local_library_rounded, size: 22, color: AppColors.primary),
                 label: 'Cultura',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.emoji_events_rounded),
-                activeIcon: Icon(
-                  Icons.emoji_events_rounded,
-                  color: AppColors.primary,
-                ),
+                icon: Icon(Icons.emoji_events_outlined, size: 22),
+                activeIcon: Icon(Icons.emoji_events_rounded, size: 22, color: AppColors.primary),
                 label: 'Ranking',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded),
-                activeIcon: Icon(
-                  Icons.person_rounded,
-                  color: AppColors.primary,
-                ),
+                icon: Icon(Icons.person_outline_rounded, size: 22),
+                activeIcon: Icon(Icons.person_rounded, size: 22, color: AppColors.primary),
                 label: 'Perfil',
               ),
             ],
