@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../theme/colors.dart';
 import '../../../theme/motion.dart';
+import '../../../theme/typography.dart';
 
 class PrimaryButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final double? height;
 
   const PrimaryButton({
     super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
+    this.height,
   });
 
   @override
@@ -44,19 +46,14 @@ class _PrimaryButtonState extends State<PrimaryButton>
     super.dispose();
   }
 
-  void _handleTapDown(TapDownDetails details) {
-    if (widget.onPressed != null && !widget.isLoading) {
-      _controller.forward();
-    }
+  bool get _isDisabled => widget.onPressed == null || widget.isLoading;
+
+  void _handleTapDown(TapDownDetails _) {
+    if (!_isDisabled) _controller.forward();
   }
 
-  void _handleTapUp(TapUpDetails details) {
-    _controller.reverse();
-  }
-
-  void _handleTapCancel() {
-    _controller.reverse();
-  }
+  void _handleTapUp(TapUpDetails _) => _controller.reverse();
+  void _handleTapCancel() => _controller.reverse();
 
   @override
   Widget build(BuildContext context) {
@@ -66,39 +63,42 @@ class _PrimaryButtonState extends State<PrimaryButton>
       onTapCancel: _handleTapCancel,
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
-          height: 56,
+        child: AnimatedContainer(
+          duration: AppMotionDurations.short,
+          height: widget.height ?? 52,
           decoration: BoxDecoration(
-            gradient: widget.onPressed == null || widget.isLoading
+            gradient: _isDisabled
                 ? const LinearGradient(
                     colors: [Color(0xFFD1D5DB), Color(0xFFD1D5DB)],
                   )
-                : const LinearGradient(
-                    colors: [AppColors.successDark, AppColors.primary],
+                : LinearGradient(
+                    colors: [AppColors.primaryDark, AppColors.primary],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: widget.onPressed == null || widget.isLoading
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: _isDisabled
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.primaryGlow,
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
-                      offset: const Offset(0, 6),
+                      offset: const Offset(0, 5),
                     ),
                   ],
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: widget.isLoading ? null : widget.onPressed,
-              borderRadius: BorderRadius.circular(30),
+              onTap: _isDisabled ? null : widget.onPressed,
+              borderRadius: BorderRadius.circular(14),
+              splashColor: Colors.white.withValues(alpha: 0.15),
+              highlightColor: Colors.white.withValues(alpha: 0.08),
               child: Center(
                 child: widget.isLoading
                     ? const SizedBox(
-                        height: 24,
-                        width: 24,
+                        height: 22,
+                        width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation<Color>(
@@ -108,11 +108,10 @@ class _PrimaryButtonState extends State<PrimaryButton>
                       )
                     : Text(
                         widget.text,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+                        style: AppTypography.button.copyWith(
+                          color: _isDisabled
+                              ? const Color(0xFF9CA3AF)
+                              : Colors.white,
                         ),
                       ),
               ),

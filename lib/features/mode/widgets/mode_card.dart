@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/app_colors.dart';
+import '../../../theme/colors.dart';
 import '../../../theme/motion.dart';
 
 class ModeCard extends StatefulWidget {

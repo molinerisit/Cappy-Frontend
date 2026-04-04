@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../core/app_colors.dart';
+import '../../../theme/colors.dart';
 import '../../../providers/onboarding_selection_provider.dart';
 import '../../../theme/motion.dart';
 

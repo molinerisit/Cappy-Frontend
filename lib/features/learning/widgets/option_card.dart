@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/audio_feedback_service.dart';
+import '../../../theme/colors.dart';
 import '../../../theme/motion.dart';
 
-/// Estados posibles para una opción de respuesta
 enum OptionState { idle, selected, correct, incorrect, disabled }
 
-/// Card de opción de respuesta tipo Duolingo
-/// - Completamente clickeable
-/// - Animaciones inmediatas
-/// - Estados visuales claros
+/// Card de opción de respuesta tipo Duolingo.
+/// Layout horizontal: indicador | texto
+/// - Animación de press instantánea
+/// - Estados visuales claros con color + ícono
 class OptionCard extends StatefulWidget {
   final String text;
   final bool isSelected;
@@ -43,11 +43,12 @@ class _OptionCardState extends State<OptionCard>
       duration: AppMotionDurations.quick,
       vsync: this,
     );
-
-    _scaleAnimation =
-        Tween<double>(begin: 1.0, end: AppMotionValues.pressedScale).animate(
-          CurvedAnimation(parent: _scaleController, curve: AppMotionCurves.tap),
-        );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: AppMotionValues.pressedScale,
+    ).animate(
+      CurvedAnimation(parent: _scaleController, curve: AppMotionCurves.tap),
+    );
   }
 
   @override
@@ -70,76 +71,102 @@ class _OptionCardState extends State<OptionCard>
     }
   }
 
-  void _handleTapCancel() {
-    _scaleController.reverse();
-  }
+  void _handleTapCancel() => _scaleController.reverse();
 
-  Color _getBackgroundColor() {
+  // ── Temas por estado ─────────────────────────────────────────────────────
+
+  Color get _background {
+    if (widget.isSelected && widget.state == OptionState.idle) {
+      return AppColors.primarySoft;
+    }
     switch (widget.state) {
       case OptionState.idle:
-        return widget.isSelected
-            ? const Color(0xFFE8F5E9) // Verde muy claro
-            : const Color(0xFFF8FAFC); // Gris muy claro
+        return AppColors.surface;
       case OptionState.selected:
-        return const Color(0xFFE8F5E9);
+        return AppColors.primarySoft;
       case OptionState.correct:
-        return const Color(0xFFD4EDDA); // Verde más intenso
+        return const Color(0xFFDCFCE7);
       case OptionState.incorrect:
-        return const Color(0xFFF8D7DA); // Rojo muy claro
+        return const Color(0xFFFEE2E2);
       case OptionState.disabled:
-        return const Color(0xFFF3F4F6); // Gris
+        return const Color(0xFFF8FAFC);
     }
   }
 
-  Color _getBorderColor() {
+  Color get _borderColor {
+    if (widget.isSelected && widget.state == OptionState.idle) {
+      return AppColors.primary;
+    }
     switch (widget.state) {
       case OptionState.idle:
-        return widget.isSelected
-            ? const Color(0xFF27AE60) // Verde
-            : const Color(0xFFD1D5DB); // Gris
+        return AppColors.border;
       case OptionState.selected:
-        return const Color(0xFF27AE60);
+        return AppColors.primary;
       case OptionState.correct:
-        return const Color(0xFF20C997); // Verde brillante
+        return AppColors.successDark;
       case OptionState.incorrect:
-        return const Color(0xFFDC3545); // Rojo
+        return AppColors.critical;
       case OptionState.disabled:
-        return const Color(0xFFD1D5DB);
+        return AppColors.border;
     }
   }
 
-  Color _getTextColor() {
-    switch (widget.state) {
-      case OptionState.disabled:
-        return const Color(0xFF9CA3AF); // Gris
-      default:
-        return const Color(0xFF1F2937); // Negro
-    }
-  }
-
-  IconData? _getIcon() {
+  double get _borderWidth {
     switch (widget.state) {
       case OptionState.correct:
-        return Icons.check_circle;
       case OptionState.incorrect:
-        return Icons.cancel;
       case OptionState.selected:
-        return Icons.radio_button_checked;
+        return 2.0;
       default:
-        return null;
+        return widget.isSelected ? 2.0 : 1.5;
     }
   }
 
-  Color? _getIconColor() {
+  Color get _textColor {
+    if (widget.state == OptionState.disabled) return AppColors.textDisabled;
+    return AppColors.textStrong;
+  }
+
+  Widget _buildLeadingIndicator() {
     switch (widget.state) {
       case OptionState.correct:
-        return const Color(0xFF27AE60);
+        return Icon(
+          Icons.check_circle_rounded,
+          color: AppColors.successDark,
+          size: 22,
+        );
       case OptionState.incorrect:
-        return const Color(0xFFDC3545);
+        return Icon(
+          Icons.cancel_rounded,
+          color: AppColors.critical,
+          size: 22,
+        );
       case OptionState.selected:
-        return const Color(0xFF27AE60);
+        return Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary,
+            border: Border.all(color: AppColors.primary, width: 2),
+          ),
+          child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+        );
       default:
-        return null;
+        // idle / disabled — circle indicator
+        return AnimatedContainer(
+          duration: AppMotionDurations.short,
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.isSelected ? AppColors.primarySoft : Colors.transparent,
+            border: Border.all(
+              color: widget.isSelected ? AppColors.primary : AppColors.border,
+              width: widget.isSelected ? 2.0 : 1.5,
+            ),
+          ),
+        );
     }
   }
 
@@ -153,58 +180,36 @@ class _OptionCardState extends State<OptionCard>
         onTapCancel: _handleTapCancel,
         child: AnimatedContainer(
           duration: AppMotionDurations.short,
-          padding: const EdgeInsets.all(12),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: _getBackgroundColor(),
+            color: _background,
             border: Border.all(
-              color: _getBorderColor(),
-              width: widget.isSelected ? 2 : 1.5,
+              color: _borderColor,
+              width: _borderWidth,
             ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icono de estado en la parte superior
-              if (_getIcon() != null)
-                AnimatedScale(
-                  scale: widget.state != OptionState.idle ? 1.1 : 1.0,
-                  duration: AppMotionDurations.medium,
-                  child: Icon(_getIcon(), color: _getIconColor(), size: 28),
-                )
-              else
-              // Radio button para estado idle
-              if (widget.state == OptionState.idle)
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFD1D5DB),
-                      width: 2,
-                    ),
-                  ),
+              AnimatedSwitcher(
+                duration: AppMotionDurations.short,
+                switchInCurve: AppMotionCurves.emphasis,
+                child: KeyedSubtree(
+                  key: ValueKey(widget.state),
+                  child: _buildLeadingIndicator(),
                 ),
-
-              const SizedBox(height: 8),
-
-              // Texto de opción centrado
+              ),
+              const SizedBox(width: 14),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    widget.text,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: _getTextColor(),
-                      height: 1.3,
-                    ),
+                child: Text(
+                  widget.text,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: _textColor,
+                    height: 1.4,
                   ),
                 ),
               ),

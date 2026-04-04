@@ -16,6 +16,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _textSlideAnimation;
 
   @override
   void initState() {
@@ -25,18 +26,30 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
       vsync: this,
     );
 
-    _scaleAnimation =
-        Tween<double>(begin: AppMotionValues.introScaleStart, end: 1.0).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: AppMotionCurves.bounce,
-          ),
-        );
+    _scaleAnimation = Tween<double>(
+      begin: AppMotionValues.introScaleStart,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+      ),
+    );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: AppMotionCurves.entranceSoft,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.35, 0.85, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -64,25 +77,27 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Header con botón atrás
+            // Header — back + progress
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios, size: 20),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                     color: AppColors.textStrong,
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Paso 1 de 3',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.transparent,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _OnboardingProgressBar(
+                      totalSteps: 3,
+                      currentStep: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -95,18 +110,28 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
                   // Mascota animada
                   ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Image.asset(
-                          'assets/logo_cappy.png',
-                          width: 120,
-                          height: 120,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Container(
+                        width: 148,
+                        height: 148,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              blurRadius: 32,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/logo_cappy.png',
+                            width: 110,
+                            height: 110,
+                          ),
                         ),
                       ),
                     ),
@@ -114,35 +139,39 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
 
                   const SizedBox(height: 40),
 
-                  // Texto de presentación
+                  // Texto
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Column(
-                      children: [
-                        Text(
-                          '¡Hola! Yo soy Cho',
-                          style: GoogleFonts.poppins(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textStrong,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            'Tu compañero en esta increíble aventura culinaria. Vamos a aprender juntos y convertirte en un chef extraordinario.',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.textSecondary,
-                              height: 1.6,
+                    child: SlideTransition(
+                      position: _textSlideAnimation,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          children: [
+                            Text(
+                              '¡Hola! Yo soy Cho',
+                              style: GoogleFonts.poppins(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textStrong,
+                                letterSpacing: -0.5,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Tu compañero en esta increíble aventura culinaria. Vamos a aprender juntos y convertirte en un chef extraordinario.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                                color: AppColors.textSecondary,
+                                height: 1.65,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -151,33 +180,118 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen>
 
             // Botón continuar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _handleNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                    shadowColor: AppColors.primaryGlow,
-                  ),
-                  child: Text(
-                    'CONTINUAR',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 36),
+              child: _OnboardingContinueButton(onPressed: _handleNext),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Barra de progreso visual para el onboarding
+class _OnboardingProgressBar extends StatelessWidget {
+  final int totalSteps;
+  final int currentStep;
+
+  const _OnboardingProgressBar({
+    required this.totalSteps,
+    required this.currentStep,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(
+        totalSteps,
+        (i) => Expanded(
+          child: AnimatedContainer(
+            duration: AppMotionDurations.medium,
+            curve: Curves.easeOut,
+            height: 4,
+            margin: EdgeInsets.only(right: i < totalSteps - 1 ? 4 : 0),
+            decoration: BoxDecoration(
+              color: i < currentStep ? AppColors.primary : AppColors.border,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón de continuar del onboarding con micro-animación
+class _OnboardingContinueButton extends StatefulWidget {
+  final VoidCallback onPressed;
+
+  const _OnboardingContinueButton({required this.onPressed});
+
+  @override
+  State<_OnboardingContinueButton> createState() =>
+      _OnboardingContinueButtonState();
+}
+
+class _OnboardingContinueButtonState extends State<_OnboardingContinueButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      duration: AppMotionDurations.micro,
+      vsync: this,
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _c, curve: AppMotionCurves.tap),
+    );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _c.forward(),
+      onTapUp: (_) {
+        _c.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _c.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: double.infinity,
+          height: 54,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              'Continuar',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ),
         ),
       ),
     );

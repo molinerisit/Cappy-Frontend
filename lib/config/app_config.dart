@@ -28,7 +28,7 @@ class AppConfig {
       debugBanner: true,
     ),
     AppEnvironment.production: _EnvironmentConfig(
-      apiBaseUrl: 'https://api.cooklevel.app/api',
+      apiBaseUrl: 'https://cappy-backend-liart.vercel.app/api',
       apiTimeout: Duration(seconds: 60),
       enableLogging: false,
       name: 'Production',
@@ -45,7 +45,7 @@ class AppConfig {
   static void initializeFromDartDefine() {
     const rawEnvironment = String.fromEnvironment(
       'APP_ENVIRONMENT',
-      defaultValue: 'dev',
+      defaultValue: 'production',
     );
     const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
     const rawTimeoutSeconds = String.fromEnvironment(

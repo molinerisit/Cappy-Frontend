@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/colors.dart';
 import '../../theme/motion.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/primary_button.dart';
@@ -288,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 text: "Regístrate",
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF27AE60),
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ],
