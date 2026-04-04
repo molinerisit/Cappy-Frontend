@@ -22,6 +22,16 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   late Future<Map<String, dynamic>> futureRecipe;
   int currentStep = 0;
+  List<bool> _ingredientChecked = [];
+
+  void _initChecklist(int count) {
+    if (_ingredientChecked.length != count) {
+      _ingredientChecked = List.filled(count, false);
+    }
+  }
+
+  bool get _allIngredientsChecked =>
+      _ingredientChecked.isNotEmpty && _ingredientChecked.every((c) => c);
 
   List<Map<String, dynamic>> _normalizeSteps(Map<String, dynamic> recipe) {
     final rawSteps = recipe['steps'] ?? recipe['pasos'];
@@ -148,6 +158,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           final cookTime = recipe['cookTime'] ?? 0;
           final xpReward = recipe['xpReward'] ?? 50;
 
+          _initChecklist(ingredients.length);
+
           if (steps.isEmpty) {
             return LearningEmptyView(
               emoji: '📝',
@@ -221,50 +233,101 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
                 ),
 
-                // Ingredientes
+                // Ingredientes — checklist interactivo
                 if (ingredients.isNotEmpty) ...[
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            const Text(
+                              '🥘 Ingredientes',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF000000),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${_ingredientChecked.where((c) => c).length}/${ingredients.length}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF27AE60),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
                         const Text(
-                          '🥘 Ingredientes',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF000000),
-                          ),
+                          'Marcá los ingredientes que ya tenés listos',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                         const SizedBox(height: 12),
-                        ...ingredients.map((ingredient) {
+                        ...ingredients.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final ingredient = entry.value;
                           final name = ingredient['name'] ?? '';
                           final quantity = ingredient['quantity'] ?? '';
                           final unit = ingredient['unit'] ?? '';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle,
-                                  size: 20,
-                                  color: Color(0xFF27AE60),
+                          final checked = i < _ingredientChecked.length && _ingredientChecked[i];
+                          return GestureDetector(
+                            onTap: () => setState(() {
+                              if (i < _ingredientChecked.length) {
+                                _ingredientChecked[i] = !_ingredientChecked[i];
+                              }
+                            }),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: checked ? const Color(0xFFDCFCE7) : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: checked ? const Color(0xFF22C55E) : const Color(0xFFE2E8F0),
+                                  width: checked ? 1.5 : 1,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    '$name ${quantity.isNotEmpty ? "- $quantity" : ""} ${unit.isNotEmpty ? unit : ""}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF1E293B),
-                                      fontWeight: FontWeight.w500,
+                              ),
+                              child: Row(
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Icon(
+                                      checked ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                                      key: ValueKey(checked),
+                                      size: 22,
+                                      color: checked ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1),
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      '$name${quantity.isNotEmpty ? " · $quantity" : ""}${unit.isNotEmpty ? " $unit" : ""}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: checked ? const Color(0xFF16A34A) : const Color(0xFF1E293B),
+                                        fontWeight: FontWeight.w500,
+                                        decoration: checked ? TextDecoration.lineThrough : null,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         }),
+                        if (!_allIngredientsChecked)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 8),
+                            child: Text(
+                              'Marcá todos los ingredientes para poder comenzar',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B)),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -483,8 +546,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Obtener información del país
+                      onPressed: (ingredients.isEmpty || _allIngredientsChecked) ? () {
                         final recipeData = snapshot.data!;
                         final countryData = recipeData['country'] ?? {};
                         final countryId = countryData['_id'] ?? '';
@@ -507,7 +569,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                         );
-                      },
+                      } : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF27AE60),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -515,9 +577,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Comenzar Modo Cocina',
-                        style: TextStyle(
+                      child: Text(
+                        ingredients.isEmpty || _allIngredientsChecked
+                            ? '¡Listo! Comenzar a cocinar 🍳'
+                            : 'Marcá los ingredientes primero',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
